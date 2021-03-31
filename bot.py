@@ -16,6 +16,7 @@ from constants import ABSENT_MSG, BOUNDARY_MSG, CONFIRMATION_MSG, DAILY_MSG, ERR
 
 # allow no reminders to be set within 10 mins of boundary
 BUFFER_TIME_MINS = 10
+USER_TIMEZONE = "US/Pacific"
 
 logging.basicConfig()
 logging.getLogger('apscheduler').setLevel(logging.DEBUG)
@@ -111,16 +112,19 @@ def add_dose():
     )
     db.session.add(new_dose_record)
     db.session.commit()
-    alarm_datetime = datetime.now().replace(hour=start_hour, minute=start_minute, second=0, microsecond=0)
+    alarm_starttime = datetime.now().replace(hour=start_hour, minute=start_minute, second=0, microsecond=0)
     alarm_endtime = datetime.now().replace(hour=end_hour, minute=end_minute, second=0, microsecond=0)
-    if alarm_datetime < datetime.now():
-        alarm_datetime += timedelta(days=1)
+    if alarm_starttime < datetime.now():
+        alarm_starttime += timedelta(days=1)
+        alarm_endtime += timedelta(days=1)
+    # protect end time > start time invariant across am/pm
+    if alarm_endtime < alarm_starttime:
         alarm_endtime += timedelta(days=1)
     scheduler.add_job(f"{new_dose_record.id}-initial", send_intro_text,
         trigger="interval",
-        start_date=alarm_datetime,
+        start_date=alarm_starttime,
         days=1,
-        args=[phone_number, alarm_datetime, alarm_endtime, new_dose_record.id]
+        args=[phone_number, alarm_starttime, alarm_endtime, new_dose_record.id]
     )
 
     return jsonify()
@@ -188,8 +192,8 @@ def bot():
                 if next_alarm_time > datetime.now():
                     client.messages.create(
                         body= REMINDER_TOO_CLOSE_MSG.substitute(
-                            time=dose_end_time.strftime("%H:%M"),
-                            reminder_time=next_alarm_time.strftime("%H:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.strftime("%H:%M")
+                            time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%H:%M"),
+                            reminder_time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%H:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.strftime("%H:%M")
                         ),
                         from_='+12813771848',
                         to=incoming_phone_number
@@ -201,7 +205,7 @@ def bot():
                     )
                 else:
                     client.messages.create(
-                        body=REMINDER_TOO_LATE_MSG.substitute(time=dose_end_time.strftime("%H:%M")),
+                        body=REMINDER_TOO_LATE_MSG.substitute(time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%H:%M")),
                         from_='+12813771848',
                         to=incoming_phone_number
                     )
@@ -298,7 +302,7 @@ def send_boundary_text(phone_number, dose_id):
 
 def send_intro_text(phone_number, start_date, end_date, dose_id):
     client.messages.create(
-        body=DAILY_MSG.substitute(time=start_date.strftime("%H:%M")),
+        body=DAILY_MSG.substitute(time=start_date.astimezone(timezone(USER_TIMEZONE)).strftime("%H:%M")),
         from_='+12813771848',
         to=phone_number
     )
