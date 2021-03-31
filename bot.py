@@ -9,7 +9,7 @@ import os
 # from twilio.twiml.messaging_response import MessagingResponse
 from twilio.rest import Client
 from datetime import datetime, timedelta
-import json
+from pytz import timezone
 
 import logging
 from constants import ABSENT_MSG, BOUNDARY_MSG, CONFIRMATION_MSG, DAILY_MSG, ERROR_MSG, FOLLOWUP_MSG, NO_DOSE_MSG, REMINDER_TOO_CLOSE_MSG, REMINDER_TOO_LATE_MSG, SKIP_MSG, TAKE_MSG, UNKNOWN_MSG
@@ -111,9 +111,11 @@ def add_dose():
     )
     db.session.add(new_dose_record)
     db.session.commit()
-    alarm_datetime = datetime.now().replace(hour=start_hour, minute=start_minute, second=0, microsecond=0)
-    alarm_endtime = datetime.now().replace(hour=end_hour, minute=end_minute, second=0, microsecond=0)
-    if alarm_datetime < datetime.now():
+    current_date = datetime.now()
+    current_date_pt = current_date.astimezone(timezone('US/Pacific'))
+    alarm_datetime = current_date_pt.replace(hour=start_hour, minute=start_minute, second=0, microsecond=0)
+    alarm_endtime = current_date_pt.replace(hour=end_hour, minute=end_minute, second=0, microsecond=0)
+    if alarm_datetime < current_date:
         alarm_datetime += timedelta(days=1)
         alarm_endtime += timedelta(days=1)
     scheduler.add_job(f"{new_dose_record.id}-initial", send_intro_text,
