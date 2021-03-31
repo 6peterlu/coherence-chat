@@ -170,7 +170,7 @@ def bot():
             .first()
         latest_dose_id = latest_reminder_record.dose_id
         latest_dose_record = list(filter(lambda d: d.id == latest_dose_id, doses))[0]
-        if exists_remaining_reminder_job(latest_dose_id, ["absent", "boundary", "followup"]):
+        if exists_remaining_reminder_job(latest_dose_id, ["boundary"]):
             if incoming_msg in ["1", "2", "3"]:
                 message_delays = {
                         "1": timedelta(seconds=10),
@@ -178,12 +178,9 @@ def bot():
                         "3": timedelta(hours=1)
                     }
                 remove_jobs_helper(latest_dose_id, ["followup", "absent"])
-                dose_end_time = datetime.now().replace(
-                    hour=latest_dose_record.end_hour,
-                    minute=latest_dose_record.end_minute,
-                    second=0,
-                    microsecond=0
-                )
+                boundary_job = scheduler.get_job(f"{latest_dose_id}-boundary")
+                dose_end_time = boundary_job.end_time
+                print(dose_end_time)
                 next_alarm_time = datetime.now() + message_delays[incoming_msg]
                 too_close = False
                 if next_alarm_time > dose_end_time - timedelta(minutes=1):
