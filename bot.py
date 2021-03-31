@@ -10,6 +10,7 @@ import os
 from twilio.rest import Client
 from datetime import datetime, timedelta
 from pytz import timezone
+import pytz
 
 import logging
 from constants import ABSENT_MSG, BOUNDARY_MSG, CONFIRMATION_MSG, DAILY_MSG, ERROR_MSG, FOLLOWUP_MSG, NO_DOSE_MSG, REMINDER_TOO_CLOSE_MSG, REMINDER_TOO_LATE_MSG, SKIP_MSG, TAKE_MSG, UNKNOWN_MSG
@@ -179,7 +180,7 @@ def bot():
                     }
                 remove_jobs_helper(latest_dose_id, ["followup", "absent"])
                 boundary_job = scheduler.get_job(f"{latest_dose_id}-boundary")
-                dose_end_time = boundary_job.next_run_time.astimezone()
+                dose_end_time = pytz.utc.localize(boundary_job.next_run_time)
                 print(dose_end_time)
                 next_alarm_time = datetime.now() + message_delays[incoming_msg]  # timezone aware
                 too_close = False
