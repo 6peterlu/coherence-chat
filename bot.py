@@ -180,9 +180,9 @@ def bot():
                     }
                 remove_jobs_helper(latest_dose_id, ["followup", "absent"])
                 boundary_job = scheduler.get_job(f"{latest_dose_id}-boundary")
-                dose_end_time = pytz.utc.localize(boundary_job.next_run_time)
+                dose_end_time = boundary_job.next_run_time
                 print(dose_end_time)
-                next_alarm_time = datetime.now() + message_delays[incoming_msg]  # timezone aware
+                next_alarm_time = pytz.utc.localize(datetime.now() + message_delays[incoming_msg])  # timezone unaware?
                 too_close = False
                 if next_alarm_time > dose_end_time - timedelta(minutes=1):
                     next_alarm_time = dose_end_time - timedelta(minutes=1)
