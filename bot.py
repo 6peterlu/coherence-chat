@@ -191,7 +191,7 @@ def bot():
                     client.messages.create(
                         body= REMINDER_TOO_CLOSE_MSG.substitute(
                             time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M"),
-                            reminder_time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.astimezone(timezone(USER_TIMEZONE)).substitute(time=next_alarm_time.strftime("%I:%M")
+                            reminder_time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")
                         ),
                         from_='+12813771848',
                         to=incoming_phone_number
