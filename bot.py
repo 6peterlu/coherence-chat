@@ -179,7 +179,7 @@ def bot():
                     }
                 remove_jobs_helper(latest_dose_id, ["followup", "absent"])
                 boundary_job = scheduler.get_job(f"{latest_dose_id}-boundary")
-                dose_end_time = boundary_job.end_time
+                dose_end_time = boundary_job.next_run_time
                 print(dose_end_time)
                 next_alarm_time = datetime.now() + message_delays[incoming_msg]
                 too_close = False
