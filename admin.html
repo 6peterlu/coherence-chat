@@ -1,0 +1,223 @@
+<head>
+</head>
+<body>
+    <button id="getJobs" onclick="retrieveJobs()">Get jobs</button>
+    <button id="getBasicInfo" onclick="getBasicInfo()">Get basic info</button>
+    <button id="createJob" onclick="createJob()">Create job</button>
+    <input id="phoneNumberEntry" type="tel" placeholder="phone"/>
+    <input id="medicationNameEntry" type="text" placeholder="medication name"/>
+    <input id="patientNameEntry" type="text" placeholder = "patient name"/>
+    <input id="startTimeEntry" type="time"/>
+    <input id="endTimeEntry" type="time"/>
+    <p>Job list:</p>
+    <div class="jobList"></div>
+    <p>Dose list:</p>
+    <div class="doseList"></div>
+    <p>Reminder list:</p>
+    <div class="reminderList"></div>
+    <script defer>
+        const jobListDiv = document.querySelector('.jobList');
+        const doseListDiv = document.querySelector('.doseList');
+        const reminderListDiv = document.querySelector('.reminderList');
+        function renderJobs(jobList) {
+            const rows = jobList.map(job => {
+                if (job.trigger === "interval") {
+                    return `
+                        <li>
+                            <p>${job.name}:${job.trigger}:${job.start_date}</p>
+                            <button onclick="deleteJob(\'${job.id}\')">delete job</button>
+                        </li>
+                    `
+                } else {
+                    return `
+                        <li>
+                            <p>${job.name}:${job.trigger}:${job.run_date}</p>
+                            <button onclick="deleteJob(\'${job.id}\')">delete job</button>
+                        </li>
+                    `
+                }
+            });
+            const html = `<ul>${rows.join("")}</ul>`
+            jobListDiv.innerHTML = html;
+        }
+        function renderDoses(doseList) {
+            const rows = doseList.map(dose => {
+                return `
+                    <li>
+                        <p>${dose.id}-${dose.medication_name}, ${dose.patient_name}, ${dose.start_hour}:${dose.start_minute}->${dose.end_hour}:${dose.end_minute}</p>
+                        <button onclick="deleteDose(\'${dose.id}\')">delete dose</button>
+                    </li>
+                `
+            });
+            const html = `<ul>${rows.join("")}</ul>`;
+            doseListDiv.innerHTML = html;
+        }
+        function renderReminders(reminderList) {
+            const rows = reminderList.map(reminder => {
+                return `
+                    <li>
+                        <p>${reminder.reminder_type}-${reminder.dose_id}-${reminder.send_time}</p>
+                        <button onclick="deleteReminder(\'${reminder.id}\')">delete reminder record</button>
+                    </li>
+                `
+            });
+            const html = `<ul>${rows.join("")}</ul>`;
+            reminderListDiv.innerHTML = html;
+        }
+        function getBasicInfo() {
+            const uri = "http://127.0.0.1:5000/scheduler";
+            const initDetails = {
+                method: 'get',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "GET",
+                    "Access-Control_Allow_Headers": "*",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors"
+            };
+            fetch(uri, initDetails).then(response => response.json()).then(result => {
+                console.log("getting basic info");
+                console.log(result);
+            })
+        }
+        function retrieveJobs() {
+            const uri = "http://127.0.0.1:5000/scheduler/jobs";
+            const everythingUri = "http://127.0.0.1:5000/everything";
+            const initDetails = {
+                method: 'get',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "GET",
+                    "Access-Control_Allow_Headers": "*",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors"
+            };
+            fetch(uri, initDetails).then(response => response.json()).then(result => {
+                console.log("rendering jobs");
+                renderJobs(result);
+            })
+            fetch(everythingUri, initDetails).then(response => response.json()).then(result => {
+                console.log("dumping DB");
+                console.log(result);
+                renderDoses(result.doses);
+                renderReminders(result.reminders);
+            })
+        }
+        // helper fn to get next alarm datetime from FE, not currently in use
+        // function getAlarmStartTime(hour, minute) {
+        //     var alarmTime  = new Date();
+        //     const currentHour = alarmTime.getHours();
+        //     const currentMinute = alarmTime.getMinutes();
+        //     if (currentHour > hour || (currentHour == hour && currentMinute > minute)) {
+        //         alarmTime.setDate(alarmTime.getDate() + 1);
+        //     }
+        //     alarmTime.setHours(hour);
+        //     alarmTime.setMinutes(minute);
+        //     alarmTime.setSeconds(0);
+        //     alarmTime.setMilliseconds(0);
+        //     const dateString = `${alarmTime.getFullYear()}-${alarmTime.getMonth() + 1}-${alarmTime.getDate()} ${alarmTime.getHours()}:${alarmTime.getMinutes()}:${alarmTime.getSeconds()}`;
+        //     return dateString;
+        // }
+        function createJob() {
+            const startTime = document.getElementById("startTimeEntry").value;
+            const splitStartTime = startTime.split(":");
+            const startHour = parseInt(splitStartTime[0]);
+            const startMinute = parseInt(splitStartTime[1]);
+            const endTime = document.getElementById("endTimeEntry").value;
+            const splitEndTime = endTime.split(":");
+            const endHour = parseInt(splitEndTime[0]);
+            const endMinute = parseInt(splitEndTime[1]);
+            const phoneNumber = document.getElementById("phoneNumberEntry").value;
+            const patientName = document.getElementById("patientNameEntry").value;
+            const medicationName = document.getElementById("medicationNameEntry").value;
+
+            const uri = "http://127.0.0.1:5000/dose";
+            const body = {
+                startHour,
+                startMinute,
+                endHour,
+                endMinute,
+                phoneNumber,
+                medicationName,
+                patientName
+            };
+            const initDetails = {
+                method: 'post',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "POST",
+                    "Access-Control_Allow_Headers": "*",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors",
+                body: JSON.stringify(body)
+            };
+            fetch(uri, initDetails).then(
+                response => response.json()).then(result => {
+                    console.log("posting job");
+                    console.log(result);
+                    retrieveJobs();
+                }
+            );
+        }
+        function deleteJob(id) {
+            const uri = `http://127.0.0.1:5000/scheduler/jobs/${id}`;
+            const initDetails = {
+                method: 'delete',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "DELETE",
+                    "Access-Control_Allow_Headers": "*",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors",
+            };
+            fetch(uri, initDetails).then(() => {
+                retrieveJobs();
+            })
+        }
+        function deleteDose(id) {
+            const uri = "http://127.0.0.1:5000/dose";
+            const body = { id };
+            const initDetails = {
+                method: 'delete',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "DELETE",
+                    "Access-Control_Allow_Headers": "*",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors",
+                body: JSON.stringify(body)
+            };
+            fetch(uri, initDetails).then(() => {
+                retrieveJobs();
+            });
+        }
+        function deleteReminder(id) {
+            const uri = "http://127.0.0.1:5000/reminder";
+            const body = { id };
+            const initDetails = {
+                method: 'delete',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "DELETE",
+                    "Access-Control_Allow_Headers": "*",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors",
+                body: JSON.stringify(body)
+            };
+            fetch(uri, initDetails).then(() => {
+                retrieveJobs();
+            });
+        }
+    </script>
+</body>
