@@ -247,7 +247,9 @@ scheduler.start()
 @app.route("/manual", methods=["POST"])
 def manual_send():
     incoming_data = request.json
-    dose_id = incoming_data["doseId"]
+    dose_id = int(incoming_data["doseId"])
+    dose_obj = Dose.query.get(dose_id)
+    print(dose_obj.next_end_time)
     reminder_type = incoming_data["reminderType"]
     if reminder_type == "absent":
         send_absent_text(dose_id)
@@ -288,7 +290,6 @@ def send_followup_text(dose_id):
     db.session.add(reminder_record)
     db.session.commit()
     # remove absent jobs, if exist
-    print(dose_obj.next_end_date)
     remove_jobs_helper(dose_id, ["absent", "followup"])
     maybe_schedule_absent(dose_id, dose_obj.next_end_date)
 
