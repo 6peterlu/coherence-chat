@@ -13,6 +13,7 @@
     </div>
     <div>
         <input id="manualPhoneNumberEntry" type="tel" placeholder="phone"/>
+        <input id="doseId" type="number" placeholder="dose id"/>
         <select name="reminderType" id="reminderType">
             <option value="absent">absent</option>
             <option value="followup">followup</option>
@@ -152,7 +153,8 @@
         function sendManual() {
             const phoneNumber = document.getElementById("manualPhoneNumberEntry").value;
             const reminderType = document.getElementById("reminderType").value;
-            const body = { phoneNumber, reminderType }
+            const doseId = document.getElementById("doseId").value;
+            const body = { phoneNumber, reminderType, doseId }
             const uri = `${apiURL}/manual`
             const initDetails = {
                 method: 'post',
