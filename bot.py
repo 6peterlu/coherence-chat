@@ -203,14 +203,36 @@ def online_toggle():
     db.session.commit()
     return jsonify()
 
+def activity_detection(message_str):
+    # not deferring for now because that actually seems worse
+    # if the string contains any numbers or timestrings, defer to the datetime parser
+    # time_strings = ["hr", "min", "hour", "minute", "mins"]
+    # if any(map(str.isdigit, message_str)) or any(map(lambda x: x in message_str, time_strings)):
+    #     return None
+    direct_time_mapped_strings = {
+        "dinner": (timedelta(hours=1), "Have a great dinner! We'll check in later."),
+        "lunch": (timedelta(hours=1), "Have a great lunch! We'll check in later."),
+        "breakfast": (timedelta(hours=1), "Have a great breakfast! We'll check in later."),
+        "eating": (timedelta(hours=1), "Enjoy your meal! We'll check in later."),
+        "meeting": (timedelta(hours=1), "Have a productive meeting! We'll check in later."),
+        "call": (timedelta(hours=1), "Have a great call! We'll check in later."),
+        "out": (timedelta(hours=1), "No problem, we'll check in later."),
+        "busy": (timedelta(hours=1), "No problem, we'll check in later."),
+    }
+    for concept in direct_time_mapped_strings:
+        if concept in message_str:
+            return direct_time_mapped_strings[concept]
+    return None
+
 @app.route('/bot', methods=['POST'])
 def bot():
     incoming_msg = request.values.get('Body', '').lower()
     incoming_phone_number = request.values.get('From', None)
     # attempt to parse time from incoming msg
     time_struct, parse_status = cal.parse(incoming_msg)
+    activity_detection_time = activity_detection(incoming_msg)
     # canned response
-    if incoming_msg in ['1', '2', '3', 't', 's'] or parse_status != 0:
+    if incoming_msg in ['1', '2', '3', 't', 's'] or parse_status != 0 or activity_detection_time is not None:
         print(f"+1{incoming_phone_number[1:]}")
         doses = Dose.query.filter_by(phone_number=f"+1{incoming_phone_number[1:]}").all()
         dose_ids = [dose.id for dose in doses]
@@ -221,7 +243,8 @@ def bot():
             .first()
         latest_dose_id = latest_reminder_record.dose_id
         if exists_remaining_reminder_job(latest_dose_id, ["boundary"]):
-            if incoming_msg in ["1", "2", "3"] or parse_status != 0:
+            if incoming_msg in ["1", "2", "3"] or parse_status != 0 or activity_detection_time is not None:
+                obscure_confirmation = False
                 message_delays = {
                         "1": timedelta(minutes=10),
                         "2": timedelta(minutes=30),
@@ -231,6 +254,9 @@ def bot():
                 dose_end_time = get_current_end_date(latest_dose_id)
                 if incoming_msg in ["1", "2", "3"]:
                     next_alarm_time = datetime.now() + message_delays[incoming_msg]
+                elif activity_detection_time is not None:
+                    next_alarm_time = datetime.now() + activity_detection_time[0]
+                    obscure_confirmation = True
                 else:
                     next_alarm_time = datetime(*time_struct[:6])
                 too_close = False
@@ -238,25 +264,39 @@ def bot():
                     next_alarm_time = dose_end_time - timedelta(minutes=1)
                     too_close = True
                 if next_alarm_time > datetime.now():
-                    client.messages.create(
-                        body= REMINDER_TOO_CLOSE_MSG.substitute(
-                            time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M"),
-                            reminder_time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")
-                        ),
-                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                        to=incoming_phone_number
-                    )
+                    if obscure_confirmation:
+                        client.messages.create(
+                            body= activity_detection_time[1],
+                            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                            to=incoming_phone_number
+                        )
+                    else:
+                        client.messages.create(
+                            body= REMINDER_TOO_CLOSE_MSG.substitute(
+                                time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M"),
+                                reminder_time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")
+                            ),
+                            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                            to=incoming_phone_number
+                        )
                     scheduler.add_job(f"{latest_dose_id}-followup", send_followup_text,
                         args=[latest_dose_id],
                         trigger="date",
                         run_date=next_alarm_time
                     )
                 else:
-                    client.messages.create(
-                        body=REMINDER_TOO_LATE_MSG.substitute(time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")),
-                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                        to=incoming_phone_number
-                    )
+                    if obscure_confirmation:
+                        client.messages.create(
+                            body= activity_detection_time[1],
+                            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                            to=incoming_phone_number
+                        )
+                    else:
+                        client.messages.create(
+                            body=REMINDER_TOO_LATE_MSG.substitute(time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")),
+                            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                            to=incoming_phone_number
+                        )
             elif incoming_msg in ["t", "s"]:
                 message_copy = {
                     "t": TAKE_MSG,
