@@ -10,6 +10,7 @@ import os
 from twilio.rest import Client
 from datetime import datetime, timedelta
 from pytz import timezone
+import parsedatetime
 
 import logging
 from constants import ABSENT_MSG, BOUNDARY_MSG, CONFIRMATION_MSG, DAILY_MSG, ERROR_MSG, FOLLOWUP_MSG, MANUAL_TEXT_NEEDED_MSG, NO_DOSE_MSG, REMINDER_TOO_CLOSE_MSG, REMINDER_TOO_LATE_MSG, SKIP_MSG, TAKE_MSG, UNKNOWN_MSG
@@ -44,6 +45,9 @@ CORS(app)
 
 # sqlalchemy db
 db = SQLAlchemy(app)
+
+# parse datetime calendar object
+cal = parsedatetime.Calendar()
 
 # sqlalchemy models & deserializers
 class Dose(db.Model):
@@ -93,7 +97,7 @@ class Online(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     online = db.Column(db.Boolean)
     def __repr__(self):
-        return f"<Online {id} online={online}>"
+        return f"<Online {id}>"
 
 # initialize tables
 db.create_all()  # are there bad effects from running this every time? edit: I guess not
@@ -203,16 +207,21 @@ def online_toggle():
 def bot():
     incoming_msg = request.values.get('Body', '').lower()
     incoming_phone_number = request.values.get('From', None)
-    if incoming_msg in ['1', '2', '3', 't', 's']:
+    # attempt to parse time from incoming msg
+    time_struct, parse_status = cal.parse(incoming_msg)
+    # canned response
+    if incoming_msg in ['1', '2', '3', 't', 's'] or parse_status != 0:
+        print(f"+1{incoming_phone_number[1:]}")
         doses = Dose.query.filter_by(phone_number=f"+1{incoming_phone_number[1:]}").all()
         dose_ids = [dose.id for dose in doses]
+        print(dose_ids)
         latest_reminder_record = Reminder.query \
             .filter(Reminder.dose_id.in_(dose_ids)) \
             .order_by(Reminder.send_time.desc()) \
             .first()
         latest_dose_id = latest_reminder_record.dose_id
         if exists_remaining_reminder_job(latest_dose_id, ["boundary"]):
-            if incoming_msg in ["1", "2", "3"]:
+            if incoming_msg in ["1", "2", "3"] or parse_status != 0:
                 message_delays = {
                         "1": timedelta(minutes=10),
                         "2": timedelta(minutes=30),
@@ -220,7 +229,10 @@ def bot():
                     }
                 remove_jobs_helper(latest_dose_id, ["followup", "absent"])
                 dose_end_time = get_current_end_date(latest_dose_id)
-                next_alarm_time = datetime.now() + message_delays[incoming_msg]
+                if incoming_msg in ["1", "2", "3"]:
+                    next_alarm_time = datetime.now() + message_delays[incoming_msg]
+                else:
+                    next_alarm_time = datetime(*time_struct[:6])
                 too_close = False
                 if next_alarm_time > dose_end_time - timedelta(minutes=1):
                     next_alarm_time = dose_end_time - timedelta(minutes=1)
@@ -269,22 +281,26 @@ def bot():
                 to=incoming_phone_number
             )
     else:
-        if get_online_status():
-            # if we're online, don't send the unknown text and let us respond.
-            client.messages.create(
-                body=MANUAL_TEXT_NEEDED_MSG.substitute(number=incoming_phone_number),
-                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                to="+13604508655"  # admin phone #
-            )
-        else:
-            client.messages.create(
-                body=UNKNOWN_MSG,
-                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                to=incoming_phone_number
-            )
+        text_fallback(incoming_phone_number)
     return jsonify()
 scheduler.init_app(app)
 scheduler.start()
+
+
+def text_fallback(phone_number):
+    if get_online_status():
+        # if we're online, don't send the unknown text and let us respond.
+        client.messages.create(
+            body=MANUAL_TEXT_NEEDED_MSG.substitute(number=phone_number),
+            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+            to="+13604508655"  # admin phone #
+        )
+    else:
+        client.messages.create(
+            body=UNKNOWN_MSG,
+            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+            to=phone_number
+        )
 
 
 @app.route("/manual", methods=["POST"])

@@ -289,7 +289,7 @@
             const splitEndTime = endTime.split(":");
             const endHour = convertToUTC(parseInt(splitEndTime[0]));
             const endMinute = parseInt(splitEndTime[1]);
-            const phoneNumber = document.getElementById("phoneNumberEntry").value;
+            const phoneNumber = `1${document.getElementById("phoneNumberEntry").value}`;
             const patientName = document.getElementById("patientNameEntry").value;
             const medicationName = document.getElementById("medicationNameEntry").value;
 
