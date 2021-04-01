@@ -17,6 +17,10 @@ from constants import ABSENT_MSG, BOUNDARY_MSG, CONFIRMATION_MSG, DAILY_MSG, ERR
 # allow no reminders to be set within 10 mins of boundary
 BUFFER_TIME_MINS = 10
 USER_TIMEZONE = "US/Pacific"
+TWILIO_PHONE_NUMBERS = {
+    "local": "2813771848",
+    "production": "2673824152"
+}
 
 logging.basicConfig()
 logging.getLogger('apscheduler').setLevel(logging.DEBUG)
@@ -93,6 +97,8 @@ account_sid = os.environ['TWILIO_ACCOUNT_SID']
 auth_token = os.environ['TWILIO_AUTH_TOKEN']
 client = Client(account_sid, auth_token)
 
+# your online status:
+manual_online = False
 
 # initialize scheduler
 scheduler = APScheduler()
@@ -147,12 +153,39 @@ def delete_reminder():
 
 @app.route("/everything", methods=["GET"])
 def get_everything():
+    global manual_online
     all_doses = Dose.query.all()
     all_reminders = Reminder.query.all()
     return jsonify({
         "doses": [dose.as_dict() for dose in all_doses],
-        "reminders": [reminder.as_dict() for reminder in all_reminders]
+        "reminders": [reminder.as_dict() for reminder in all_reminders],
+        "onlineStatus": manual_online
     })
+
+@app.route("/messages", methods=["GET"])
+def get_messages_for_number():
+    # only get messages in the past week.
+    query_phone_number = request.args.get("phoneNumber")
+    print(f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}")
+    date_limit = datetime.now() - timedelta(days=3)
+    truncated_date_limit = date_limit.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+    print(type(datetime.now()))
+    print(type(datetime(2021, 3, 28)))
+    print(truncated_date_limit)
+    print(datetime(2021, 3, 28))
+    messages_list = client.messages.list(
+        date_sent_after=truncated_date_limit,
+        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+        to=f"+1{query_phone_number}"
+    )
+    print(messages_list)
+    return jsonify()
+
+@app.route("/online", methods=["POST"])
+def online_toggle():
+    global manual_online
+    manual_online = not manual_online
+    return jsonify()
 
 @app.route('/bot', methods=['POST'])
 def bot():
@@ -174,7 +207,6 @@ def bot():
                         "3": timedelta(hours=1)
                     }
                 remove_jobs_helper(latest_dose_id, ["followup", "absent"])
-                # TODO: start here
                 dose_end_time = get_current_end_date(latest_dose_id)
                 next_alarm_time = datetime.now() + message_delays[incoming_msg]
                 too_close = False
