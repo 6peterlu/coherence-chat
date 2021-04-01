@@ -257,13 +257,13 @@ def manual_send():
         send_followup_text(dose_id)
     return jsonify()
 
-def maybe_schedule_absent(phone_number, dose_id, end_date):
+def maybe_schedule_absent(dose_id, end_date):
     # schedule absent text in an hour or ten mins before boundary
     desired_absent_reminder = min(datetime.now() + timedelta(hours=1), end_date - timedelta(minutes=BUFFER_TIME_MINS))
     # room to schedule absent
     if desired_absent_reminder > datetime.now():
         scheduler.add_job(f"{dose_id}-absent", send_absent_text,
-            args=[phone_number, dose_id],
+            args=[dose_id],
             trigger="date",
             run_date=desired_absent_reminder
         )
@@ -291,7 +291,7 @@ def send_followup_text(dose_id):
     db.session.commit()
     # remove absent jobs, if exist
     remove_jobs_helper(dose_id, ["absent", "followup"])
-    maybe_schedule_absent(dose_obj.phone_number, dose_id, dose_obj.next_end_date)
+    maybe_schedule_absent(dose_id, dose_obj.next_end_date)
 
 def send_absent_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
@@ -328,7 +328,7 @@ def send_intro_text(dose_id):
     reminder_record = Reminder(dose_id=dose_id, send_time=datetime.now(), reminder_type="initial")
     db.session.add(reminder_record)
     db.session.commit()
-    maybe_schedule_absent(dose_obj.phone_number, dose_id, dose_obj.next_end_date)
+    maybe_schedule_absent(dose_id, dose_obj.next_end_date)
     scheduler.add_job(f"{dose_id}-boundary", send_boundary_text,
         args=[dose_id],
         trigger="date",
