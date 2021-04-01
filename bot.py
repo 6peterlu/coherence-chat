@@ -178,7 +178,7 @@ def bot():
         if exists_remaining_reminder_job(latest_dose_id, ["boundary"]):
             if incoming_msg in ["1", "2", "3"]:
                 message_delays = {
-                        "1": timedelta(minutes=10),
+                        "1": timedelta(seconds=10),
                         "2": timedelta(minutes=30),
                         "3": timedelta(hours=1)
                     }
@@ -307,9 +307,6 @@ def send_absent_text(dose_id):
 
 def send_boundary_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
-    if exists_remaining_reminder_job(dose_id, ["followup"]):
-        # if there's a later followup, don't send the boundary text
-        return
     client.messages.create(
         body=BOUNDARY_MSG,
         from_='+12813771848',
@@ -318,6 +315,8 @@ def send_boundary_text(dose_id):
     reminder_record = Reminder(dose_id=dose_id, send_time=datetime.now(), reminder_type="boundary")
     db.session.add(reminder_record)
     db.session.commit()
+    # this shouldn't be needed, but followups sent manually leave absent artifacts
+    remove_jobs_helper(dose_id, ["absent", "followup"])
 
 def send_intro_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
