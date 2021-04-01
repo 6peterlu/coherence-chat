@@ -20,19 +20,23 @@
         const doseListDiv = document.querySelector('.doseList');
         const reminderListDiv = document.querySelector('.reminderList');
         const apiURL = "https://coherence-chat.herokuapp.com"
+        function convertTZ(date, tzString) {
+            return new Date((typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: tzString}));
+        }
         function renderJobs(jobList) {
             const rows = jobList.map(job => {
+
                 if (job.trigger === "interval") {
                     return `
                         <li>
-                            <p>${job.name}:${job.trigger}:${job.start_date}</p>
+                            <p>${job.name}:${job.trigger}:${convertTZ(job.start_date, "US/Pacific")}</p>
                             <button onclick="deleteJob(\'${job.id}\')">delete job</button>
                         </li>
                     `
                 } else {
                     return `
                         <li>
-                            <p>${job.name}:${job.trigger}:${job.run_date}</p>
+                            <p>${job.name}:${job.trigger}:${convertTZ(job.run_date)}</p>
                             <button onclick="deleteJob(\'${job.id}\')">delete job</button>
                         </li>
                     `
@@ -41,11 +45,22 @@
             const html = `<ul>${rows.join("")}</ul>`
             jobListDiv.innerHTML = html;
         }
+        function convertToPT(hour) {
+            let convertedHour = hour - 7;
+            if (convertedHour < 0) {
+                convertedHour += 24;
+            }
+            return convertedHour;
+        }
+        function convertToUTC(hour) {
+            return (hour + 7) % 24;
+        }
         function renderDoses(doseList) {
             const rows = doseList.map(dose => {
+                const startHour = dose.start_hour;
                 return `
                     <li>
-                        <p>${dose.id}-${dose.medication_name}, ${dose.patient_name}, ${dose.start_hour}:${dose.start_minute}->${dose.end_hour}:${dose.end_minute}</p>
+                        <p>${dose.id}-${dose.medication_name}, ${dose.patient_name}, ${convertToPT(dose.start_hour)}:${dose.start_minute}->${convertToPT(dose.end_hour)}:${dose.end_minute}</p>
                         <button onclick="deleteDose(\'${dose.id}\')">delete dose</button>
                     </li>
                 `
@@ -57,7 +72,7 @@
             const rows = reminderList.map(reminder => {
                 return `
                     <li>
-                        <p>${reminder.reminder_type}-${reminder.dose_id}-${reminder.send_time}</p>
+                        <p>${reminder.reminder_type}-${reminder.dose_id}-${convertTZ(reminder.send_time, "US/Pacific")}</p>
                         <button onclick="deleteReminder(\'${reminder.id}\')">delete reminder record</button>
                     </li>
                 `
@@ -126,11 +141,11 @@
         function createJob() {
             const startTime = document.getElementById("startTimeEntry").value;
             const splitStartTime = startTime.split(":");
-            const startHour = parseInt(splitStartTime[0]);
+            const startHour = convertToUTC(parseInt(splitStartTime[0]));
             const startMinute = parseInt(splitStartTime[1]);
             const endTime = document.getElementById("endTimeEntry").value;
             const splitEndTime = endTime.split(":");
-            const endHour = parseInt(splitEndTime[0]);
+            const endHour = convertToUTC(parseInt(splitEndTime[0]));
             const endMinute = parseInt(splitEndTime[1]);
             const phoneNumber = document.getElementById("phoneNumberEntry").value;
             const patientName = document.getElementById("patientNameEntry").value;

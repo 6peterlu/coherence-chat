@@ -174,7 +174,7 @@ def bot():
         if exists_remaining_reminder_job(latest_dose_id, ["boundary"]):
             if incoming_msg in ["1", "2", "3"]:
                 message_delays = {
-                        "1": timedelta(seconds=10),
+                        "1": timedelta(minutes=10),
                         "2": timedelta(minutes=30),
                         "3": timedelta(hours=1)
                     }
