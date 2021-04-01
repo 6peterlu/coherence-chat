@@ -7,8 +7,8 @@
         <h2 id="onlineStatus" style="display:inline"></h2>
         <button id="onlineToggle" onclick="onlineToggle()"></button>
     </div>
-    <button id="getJobs" onclick="retrieveJobs()">Get jobs</button>
-    <button id="getBasicInfo" onclick="getBasicInfo()">Get basic info</button>
+    <button id="getJobs" onclick="retrieveJobs()">Refresh</button>
+    <button id="getBasicInfo" onclick="getBasicInfo()">Test connection</button>
     <div>
         <input id="phoneNumberEntry" type="tel" placeholder="phone"/>
         <input id="medicationNameEntry" type="text" placeholder="medication name"/>
@@ -237,11 +237,8 @@
                 renderJobs(result);
             })
             fetch(everythingUri, initDetails).then(response => response.json()).then(result => {
-                console.log("dumping DB");
-                console.log(result);
                 renderDoses(result.doses);
                 renderReminders(result.reminders);
-                console.log(result)
                 renderOnlineStatus(result.onlineStatus);
             })
         }

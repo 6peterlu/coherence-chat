@@ -89,6 +89,12 @@ class Reminder(db.Model):
     def as_dict(self):
        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
+class Online(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    online = db.Column(db.Boolean)
+    def __repr__(self):
+        return f"<Online {id} online={online}>"
+
 # initialize tables
 db.create_all()  # are there bad effects from running this every time? edit: I guess not
 
@@ -96,9 +102,6 @@ db.create_all()  # are there bad effects from running this every time? edit: I g
 account_sid = os.environ['TWILIO_ACCOUNT_SID']
 auth_token = os.environ['TWILIO_AUTH_TOKEN']
 client = Client(account_sid, auth_token)
-
-# your online status:
-manual_online = False
 
 # initialize scheduler
 scheduler = APScheduler()
@@ -153,13 +156,12 @@ def delete_reminder():
 
 @app.route("/everything", methods=["GET"])
 def get_everything():
-    global manual_online
     all_doses = Dose.query.all()
     all_reminders = Reminder.query.all()
     return jsonify({
         "doses": [dose.as_dict() for dose in all_doses],
         "reminders": [reminder.as_dict() for reminder in all_reminders],
-        "onlineStatus": manual_online
+        "onlineStatus": get_online_status()
     })
 
 @app.route("/messages", methods=["GET"])
@@ -191,8 +193,10 @@ def get_messages_for_number():
 
 @app.route("/online", methods=["POST"])
 def online_toggle():
-    global manual_online
-    manual_online = not manual_online
+    online_status = get_online_status()
+    online_record = Online.query.get(1)
+    online_record.online = not online_status
+    db.session.commit()
     return jsonify()
 
 @app.route('/bot', methods=['POST'])
@@ -265,7 +269,7 @@ def bot():
                 to=incoming_phone_number
             )
     else:
-        if manual_online:
+        if get_online_status():
             # if we're online, don't send the unknown text and let us respond.
             client.messages.create(
                 body=MANUAL_TEXT_NEEDED_MSG.substitute(number=incoming_phone_number),
@@ -305,6 +309,14 @@ def manual_send_text():
         to=f"+1{target_phone_number}"
     )
     return jsonify()
+
+def get_online_status():
+    online_record = Online.query.filter_by(id=1).one_or_none()
+    if online_record is None:
+        online_record = Online(online=False)
+        db.session.add(online_record)
+        db.session.commit()
+    return online_record.online
 
 def maybe_schedule_absent(dose_id):
     end_date = get_current_end_date(dose_id)
