@@ -249,7 +249,7 @@ def manual_send():
     incoming_data = request.json
     dose_id = int(incoming_data["doseId"])
     dose_obj = Dose.query.get(dose_id)
-    print(dose_obj.next_end_time)
+    print(dose_obj.next_end_date)
     reminder_type = incoming_data["reminderType"]
     if reminder_type == "absent":
         send_absent_text(dose_id)
