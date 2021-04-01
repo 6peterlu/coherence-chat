@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from pytz import timezone
 
 import logging
-from constants import ABSENT_MSG, BOUNDARY_MSG, CONFIRMATION_MSG, DAILY_MSG, ERROR_MSG, FOLLOWUP_MSG, NO_DOSE_MSG, REMINDER_TOO_CLOSE_MSG, REMINDER_TOO_LATE_MSG, SKIP_MSG, TAKE_MSG, UNKNOWN_MSG
+from constants import ABSENT_MSG, BOUNDARY_MSG, CONFIRMATION_MSG, DAILY_MSG, ERROR_MSG, FOLLOWUP_MSG, MANUAL_TEXT_NEEDED_MSG, NO_DOSE_MSG, REMINDER_TOO_CLOSE_MSG, REMINDER_TOO_LATE_MSG, SKIP_MSG, TAKE_MSG, UNKNOWN_MSG
 
 # allow no reminders to be set within 10 mins of boundary
 BUFFER_TIME_MINS = 10
@@ -265,11 +265,19 @@ def bot():
                 to=incoming_phone_number
             )
     else:
-        client.messages.create(
-            body=UNKNOWN_MSG,
-            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-            to=incoming_phone_number
-        )
+        if manual_online:
+            # if we're online, don't send the unknown text and let us respond.
+            client.messages.create(
+                body=MANUAL_TEXT_NEEDED_MSG.substitute(number=incoming_phone_number),
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to="+13604508655"  # admin phone #
+            )
+        else:
+            client.messages.create(
+                body=UNKNOWN_MSG,
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=incoming_phone_number
+            )
     return jsonify()
 scheduler.init_app(app)
 scheduler.start()
@@ -284,6 +292,18 @@ def manual_send():
         send_absent_text(dose_id)
     elif reminder_type == "followup":
         send_followup_text(dose_id)
+    return jsonify()
+
+@app.route("/manual/text", methods=["POST"])
+def manual_send_text():
+    incoming_data = request.json
+    target_phone_number = incoming_data["phoneNumber"]
+    text = incoming_data["text"]
+    client.messages.create(
+        body=text,
+        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+        to=f"+1{target_phone_number}"
+    )
     return jsonify()
 
 def maybe_schedule_absent(dose_id):

@@ -35,6 +35,10 @@
     <div class="manualChat">
         <input id="messageSearchPhoneNumber" type="number" placeholder="phone number"/>
         <button id="searchForConversation" onclick="searchForConversation()">Retrieve conversation</button>
+        <div id="customChat" style="visibility:hidden">
+            <input id="customTextMessage" placeholder="custom text message"/>
+            <button id="searchForConversation" onclick="sendCustomText()">Send custom text</button>
+        </div>
     </div>
     <div class="messageList"></div>
     <script defer>
@@ -46,6 +50,26 @@
         var runningLocally = true;  // if this is false, you're editing PROD.
         headerText.innerHTML = `current env: ${runningLocally ? "local" : "PRODUCTION"}`;
         var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
+
+        function sendCustomText() {
+            const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
+            const text = document.getElementById("customTextMessage").value;
+            const body = { phoneNumber, text };
+            const uri = `${apiURL}/manual/text`;
+            const initDetails = {
+                method: 'post',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "POST",
+                    "Access-Control_Allow_Headers": "*",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors",
+                body: JSON.stringify(body)
+            };
+            fetch(uri, initDetails);
+        }
         function searchForConversation() {
             const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
             const uri = `${apiURL}/messages?phoneNumber=${phoneNumber}`;
@@ -170,6 +194,8 @@
             const onlineButtonToggle = document.getElementById("onlineToggle");
             onlineStatusText.innerHTML = `You're currently ${onlineStatus ? "online" : "offline"}.`;
             onlineButtonToggle.innerHTML = `Go ${onlineStatus ? "offline" : "online"}`;
+            const customChat = document.getElementById("customChat");
+            customChat.style.visibility = onlineStatus ? "visible" : "hidden";
         }
         function onlineToggle() {
             const uri = `${apiURL}/online`;
