@@ -10,7 +10,6 @@ import os
 from twilio.rest import Client
 from datetime import datetime, timedelta
 from pytz import timezone
-import pytz
 
 import logging
 from constants import ABSENT_MSG, BOUNDARY_MSG, CONFIRMATION_MSG, DAILY_MSG, ERROR_MSG, FOLLOWUP_MSG, NO_DOSE_MSG, REMINDER_TOO_CLOSE_MSG, REMINDER_TOO_LATE_MSG, SKIP_MSG, TAKE_MSG, UNKNOWN_MSG
@@ -132,7 +131,6 @@ def add_dose():
 
 @app.route("/dose", methods=["DELETE"])
 def delete_dose():
-    print("deleting dose")
     incoming_data = request.json
     id_to_delete = incoming_data["id"]
     Dose.query.filter_by(id=int(id_to_delete)).delete()
@@ -141,7 +139,6 @@ def delete_dose():
 
 @app.route("/reminder", methods=["DELETE"])
 def delete_reminder():
-    print("deleting reminder")
     incoming_data = request.json
     id_to_delete = incoming_data["id"]
     Reminder.query.filter_by(id=int(id_to_delete)).delete()
@@ -181,8 +178,7 @@ def bot():
                 remove_jobs_helper(latest_dose_id, ["followup", "absent"])
                 boundary_job = scheduler.get_job(f"{latest_dose_id}-boundary")
                 dose_end_time = boundary_job.next_run_time.replace(tzinfo=None)  # make naive
-                print(dose_end_time)
-                next_alarm_time = datetime.now() + message_delays[incoming_msg]  # timezone unaware?
+                next_alarm_time = datetime.now() + message_delays[incoming_msg]
                 too_close = False
                 if next_alarm_time > dose_end_time - timedelta(minutes=1):
                     next_alarm_time = dose_end_time - timedelta(minutes=1)
@@ -239,6 +235,21 @@ def bot():
     return jsonify()
 scheduler.init_app(app)
 scheduler.start()
+
+
+@app.route("/manual", methods=["POST"])
+def manual_send():
+    incoming_data = request.json
+    dose_id = incoming_data["doseId"]
+    phone_number = incoming_data["phoneNumber"]
+    reminder_type = incoming_data["reminderType"]
+    if reminder_type == "absent":
+        remove_jobs_helper(dose_id, ["absent", "followup"])
+        send_absent_text(phone_number, dose_id)
+    elif reminder_type == "followup":
+        remove_jobs_helper(dose_id, ["absent", "followup"])
+        send_followup_text(phone_number, dose_id)
+    return jsonify()
 
 def maybe_schedule_absent(phone_number, dose_id, end_date):
     # schedule absent text in an hour or ten mins before boundary
