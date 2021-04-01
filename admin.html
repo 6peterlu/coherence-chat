@@ -36,10 +36,12 @@
         <input id="messageSearchPhoneNumber" type="number" placeholder="phone number"/>
         <button id="searchForConversation" onclick="searchForConversation()">Retrieve conversation</button>
     </div>
+    <div class="messageList"></div>
     <script defer>
         const jobListDiv = document.querySelector('.jobList');
         const doseListDiv = document.querySelector('.doseList');
         const reminderListDiv = document.querySelector('.reminderList');
+        const messageListDiv = document.querySelector('.messageList');
         const headerText = document.getElementById("header");
         var runningLocally = true;  // if this is false, you're editing PROD.
         headerText.innerHTML = `current env: ${runningLocally ? "local" : "PRODUCTION"}`;
@@ -59,13 +61,25 @@
             };
             fetch(uri, initDetails).then(response => response.json()).then(result => {
                 console.log("pulling conversation");
-                console.log(result);
+                renderMessages(result);
             });
+        }
+        function renderMessages(messagesList) {
+            const rows = messagesList.map(message => {
+                return `
+                    <li>
+                        <p>${message.date_sent}/${message.sender}: ${message.body}</p>
+                    </li>
+                `
+            });
+            const html = `<ul>${rows.join("")}</ul>`;
+            messageListDiv.innerHTML = html;
         }
         function switchEnv() {
             runningLocally = !runningLocally;
             headerText.innerHTML = `current env: ${runningLocally ? "local" : "PRODUCTION"}`;
             apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
+            messageListDiv.innerHTML = "";
             retrieveJobs();
         }
         function convertTZ(date, tzString) {
@@ -89,7 +103,7 @@
                     `
                 }
             });
-            const html = `<ul>${rows.join("")}</ul>`
+            const html = `<ul>${rows.join("")}</ul>`;
             jobListDiv.innerHTML = html;
         }
         function convertToPT(hour) {

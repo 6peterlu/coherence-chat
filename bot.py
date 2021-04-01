@@ -8,7 +8,7 @@ import os
 # import requests
 # from twilio.twiml.messaging_response import MessagingResponse
 from twilio.rest import Client
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from pytz import timezone
 
 import logging
@@ -166,20 +166,28 @@ def get_everything():
 def get_messages_for_number():
     # only get messages in the past week.
     query_phone_number = request.args.get("phoneNumber")
-    print(f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}")
     date_limit = datetime.now() - timedelta(days=3)
     truncated_date_limit = date_limit.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
-    print(type(datetime.now()))
-    print(type(datetime(2021, 3, 28)))
-    print(truncated_date_limit)
-    print(datetime(2021, 3, 28))
-    messages_list = client.messages.list(
+    sent_messages_list = client.messages.list(
         date_sent_after=truncated_date_limit,
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=f"+1{query_phone_number}"
     )
-    print(messages_list)
-    return jsonify()
+    received_messages_list = client.messages.list(
+        date_sent_after=truncated_date_limit,
+        to=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+        from_=f"+1{query_phone_number}"
+    )
+    combined_list = sorted(sent_messages_list + received_messages_list, key= lambda msg: msg.date_sent, reverse=True)
+    json_blob = [
+        {
+            "sender": "us" if message.from_ == f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}" else "them",
+            "body": message.body,
+            "date_sent": message.date_sent.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")
+        }
+        for message in combined_list
+    ]
+    return jsonify(json_blob)
 
 @app.route("/online", methods=["POST"])
 def online_toggle():
