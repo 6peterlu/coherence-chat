@@ -200,7 +200,7 @@ def bot():
                         to=incoming_phone_number
                     )
                     scheduler.add_job(f"{latest_dose_id}-followup", send_followup_text,
-                        args=[incoming_phone_number, latest_dose_id, dose_end_time],
+                        args=[latest_dose_id],
                         trigger="date",
                         run_date=next_alarm_time
                     )
