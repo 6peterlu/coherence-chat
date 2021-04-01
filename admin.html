@@ -31,7 +31,7 @@
         const jobListDiv = document.querySelector('.jobList');
         const doseListDiv = document.querySelector('.doseList');
         const reminderListDiv = document.querySelector('.reminderList');
-        const runningLocally = true;
+        const runningLocally = false;  // if this is false, you're editing PROD.
         const apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
         function convertTZ(date, tzString) {
             return new Date((typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: tzString}));
