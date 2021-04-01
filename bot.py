@@ -96,13 +96,6 @@ client = Client(account_sid, auth_token)
 
 # initialize scheduler
 scheduler = APScheduler()
-# if you don't wanna use a config, you can set options here:
-# scheduler.api_enabled = True
-# interval example
-# misfire grace time: the length of time a job can be late before it's cancelled
-# @scheduler.task('interval', id='do_job_1', seconds=3, misfire_grace_time=900)
-def job1():
-    print('Job 1 executed')
 
 # add a dose
 @app.route("/dose", methods=["POST"])
@@ -163,7 +156,6 @@ def get_everything():
 
 @app.route('/bot', methods=['POST'])
 def bot():
-    print("received incoming POST")
     incoming_msg = request.values.get('Body', '').lower()
     incoming_phone_number = request.values.get('From', None)
     if incoming_msg in ['1', '2', '3', 't', 's']:
@@ -174,7 +166,6 @@ def bot():
             .order_by(Reminder.send_time.desc()) \
             .first()
         latest_dose_id = latest_reminder_record.dose_id
-        latest_dose_record = list(filter(lambda d: d.id == latest_dose_id, doses))[0]
         if exists_remaining_reminder_job(latest_dose_id, ["boundary"]):
             if incoming_msg in ["1", "2", "3"]:
                 message_delays = {
@@ -183,8 +174,8 @@ def bot():
                         "3": timedelta(hours=1)
                     }
                 remove_jobs_helper(latest_dose_id, ["followup", "absent"])
-                boundary_job = scheduler.get_job(f"{latest_dose_id}-boundary")
-                dose_end_time = boundary_job.next_run_time.replace(tzinfo=None)  # make naive
+                # TODO: start here
+                dose_end_time = get_current_end_date(latest_dose_id)
                 next_alarm_time = datetime.now() + message_delays[incoming_msg]
                 too_close = False
                 if next_alarm_time > dose_end_time - timedelta(minutes=1):
@@ -249,7 +240,6 @@ def manual_send():
     incoming_data = request.json
     dose_id = int(incoming_data["doseId"])
     dose_obj = Dose.query.get(dose_id)
-    print(dose_obj.next_end_date)
     reminder_type = incoming_data["reminderType"]
     if reminder_type == "absent":
         send_absent_text(dose_id)
@@ -257,9 +247,12 @@ def manual_send():
         send_followup_text(dose_id)
     return jsonify()
 
-def maybe_schedule_absent(dose_id, end_date):
+def maybe_schedule_absent(dose_id):
+    end_date = get_current_end_date(dose_id)
     # schedule absent text in an hour or ten mins before boundary
-    desired_absent_reminder = min(datetime.now() + timedelta(hours=1), end_date - timedelta(minutes=BUFFER_TIME_MINS))
+    desired_absent_reminder = datetime.now() + timedelta(hours=1)
+    if end_date is not None:  # if it's none, there's no boundary set up
+        desired_absent_reminder = min(datetime.now() + timedelta(hours=1), end_date - timedelta(minutes=BUFFER_TIME_MINS))
     # room to schedule absent
     if desired_absent_reminder > datetime.now():
         scheduler.add_job(f"{dose_id}-absent", send_absent_text,
@@ -279,6 +272,13 @@ def exists_remaining_reminder_job(dose_id, job_list):
             return True
     return False
 
+def get_current_end_date(dose_id):
+    scheduled_job = scheduler.get_job(f"{dose_id}-boundary")
+    if scheduled_job is None:
+        return None
+    current_end_date = scheduled_job.next_run_time.replace(tzinfo=None)
+    return current_end_date
+
 def send_followup_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
@@ -291,7 +291,7 @@ def send_followup_text(dose_id):
     db.session.commit()
     # remove absent jobs, if exist
     remove_jobs_helper(dose_id, ["absent", "followup"])
-    maybe_schedule_absent(dose_id, dose_obj.next_end_date)
+    maybe_schedule_absent(dose_id)
 
 def send_absent_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
@@ -328,11 +328,11 @@ def send_intro_text(dose_id):
     reminder_record = Reminder(dose_id=dose_id, send_time=datetime.now(), reminder_type="initial")
     db.session.add(reminder_record)
     db.session.commit()
-    maybe_schedule_absent(dose_id, dose_obj.next_end_date)
+    maybe_schedule_absent(dose_id)
     scheduler.add_job(f"{dose_id}-boundary", send_boundary_text,
         args=[dose_id],
         trigger="date",
-        run_date=dose_obj.next_end_date
+        run_date=dose_obj.next_end_date - timedelta(days=1)  # HACK, assumes this executes after start_date
     )
 
 if __name__ == '__main__':

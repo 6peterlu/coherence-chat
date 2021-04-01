@@ -31,7 +31,8 @@
         const jobListDiv = document.querySelector('.jobList');
         const doseListDiv = document.querySelector('.doseList');
         const reminderListDiv = document.querySelector('.reminderList');
-        const apiURL = "https://coherence-chat.herokuapp.com"
+        const runningLocally = true;
+        const apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
         function convertTZ(date, tzString) {
             return new Date((typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: tzString}));
         }
@@ -58,6 +59,9 @@
             jobListDiv.innerHTML = html;
         }
         function convertToPT(hour) {
+            if (runningLocally) {
+                return hour;
+            }
             let convertedHour = hour - 7;
             if (convertedHour < 0) {
                 convertedHour += 24;
@@ -65,6 +69,9 @@
             return convertedHour;
         }
         function convertToUTC(hour) {
+            if (runningLocally) {
+                return hour;
+            }
             return (hour + 7) % 24;
         }
         function renderDoses(doseList) {
