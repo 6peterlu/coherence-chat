@@ -250,10 +250,8 @@ def manual_send():
     dose_id = incoming_data["doseId"]
     reminder_type = incoming_data["reminderType"]
     if reminder_type == "absent":
-        remove_jobs_helper(dose_id, ["absent", "followup"])
         send_absent_text(dose_id)
     elif reminder_type == "followup":
-        remove_jobs_helper(dose_id, ["absent", "followup"])
         send_followup_text(dose_id)
     return jsonify()
 
@@ -290,6 +288,7 @@ def send_followup_text(dose_id):
     db.session.add(reminder_record)
     db.session.commit()
     # remove absent jobs, if exist
+    print(dose_obj.next_end_date)
     remove_jobs_helper(dose_id, ["absent", "followup"])
     maybe_schedule_absent(dose_id, dose_obj.next_end_date)
 
@@ -303,6 +302,7 @@ def send_absent_text(dose_id):
     reminder_record = Reminder(dose_id=dose_id, send_time=datetime.now(), reminder_type="absent")
     db.session.add(reminder_record)
     db.session.commit()
+    remove_jobs_helper(dose_id, ["absent", "followup"])
 
 def send_boundary_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
