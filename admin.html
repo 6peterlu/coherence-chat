@@ -3,12 +3,24 @@
 <body>
     <button id="getJobs" onclick="retrieveJobs()">Get jobs</button>
     <button id="getBasicInfo" onclick="getBasicInfo()">Get basic info</button>
-    <button id="createJob" onclick="createJob()">Create job</button>
-    <input id="phoneNumberEntry" type="tel" placeholder="phone"/>
-    <input id="medicationNameEntry" type="text" placeholder="medication name"/>
-    <input id="patientNameEntry" type="text" placeholder = "patient name"/>
-    <input id="startTimeEntry" type="time"/>
-    <input id="endTimeEntry" type="time"/>
+    <div>
+        <input id="phoneNumberEntry" type="tel" placeholder="phone"/>
+        <input id="medicationNameEntry" type="text" placeholder="medication name"/>
+        <input id="patientNameEntry" type="text" placeholder = "patient name"/>
+        <input id="startTimeEntry" type="time"/>
+        <input id="endTimeEntry" type="time"/>
+        <button id="createJob" onclick="createJob()">Create job</button>
+    </div>
+    <div>
+        <input id="manualPhoneNumberEntry" type="tel" placeholder="phone"/>
+        <input id="doseId" type="number" placeholder="dose id"/>
+        <select name="reminderType" id="reminderType">
+            <option value="absent">absent</option>
+            <option value="followup">followup</option>
+        </select>
+        <button id="sendManual" onclick="sendManual()">Send manual</button>
+    </div>
+
     <p>Job list:</p>
     <div class="jobList"></div>
     <p>Dose list:</p>
@@ -19,7 +31,8 @@
         const jobListDiv = document.querySelector('.jobList');
         const doseListDiv = document.querySelector('.doseList');
         const reminderListDiv = document.querySelector('.reminderList');
-        const apiURL = "https://coherence-chat.herokuapp.com"
+        const runningLocally = false;  // if this is false, you're editing PROD.
+        const apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
         function convertTZ(date, tzString) {
             return new Date((typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: tzString}));
         }
@@ -46,6 +59,9 @@
             jobListDiv.innerHTML = html;
         }
         function convertToPT(hour) {
+            if (runningLocally) {
+                return hour;
+            }
             let convertedHour = hour - 7;
             if (convertedHour < 0) {
                 convertedHour += 24;
@@ -53,6 +69,9 @@
             return convertedHour;
         }
         function convertToUTC(hour) {
+            if (runningLocally) {
+                return hour;
+            }
             return (hour + 7) % 24;
         }
         function renderDoses(doseList) {
@@ -138,6 +157,30 @@
         //     const dateString = `${alarmTime.getFullYear()}-${alarmTime.getMonth() + 1}-${alarmTime.getDate()} ${alarmTime.getHours()}:${alarmTime.getMinutes()}:${alarmTime.getSeconds()}`;
         //     return dateString;
         // }
+        function sendManual() {
+            const phoneNumber = document.getElementById("manualPhoneNumberEntry").value;
+            const reminderType = document.getElementById("reminderType").value;
+            const doseId = document.getElementById("doseId").value;
+            const body = { phoneNumber, reminderType, doseId }
+            const uri = `${apiURL}/manual`
+            const initDetails = {
+                method: 'post',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "POST",
+                    "Access-Control_Allow_Headers": "*",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors",
+                body: JSON.stringify(body)
+            };
+            fetch(uri, initDetails).then(
+                response => response.json()).then(result => {
+                    retrieveJobs();
+                }
+            );
+        }
         function createJob() {
             const startTime = document.getElementById("startTimeEntry").value;
             const splitStartTime = startTime.split(":");
