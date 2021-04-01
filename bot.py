@@ -321,7 +321,7 @@ def send_boundary_text(dose_id):
 def send_intro_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
-        body=DAILY_MSG.substitute(time=dose_obj.next_start_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")),
+        body=DAILY_MSG.substitute(time=dose_obj.next_start_date.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")),
         from_='+12813771848',
         to=dose_obj.phone_number
     )
