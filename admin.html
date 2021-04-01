@@ -18,7 +18,6 @@
         <button id="createJob" onclick="createJob()">Create job</button>
     </div>
     <div>
-        <input id="manualPhoneNumberEntry" type="tel" placeholder="phone"/>
         <input id="doseId" type="number" placeholder="dose id"/>
         <select name="reminderType" id="reminderType">
             <option value="absent">absent</option>
@@ -222,10 +221,9 @@
         //     return dateString;
         // }
         function sendManual() {
-            const phoneNumber = document.getElementById("manualPhoneNumberEntry").value;
             const reminderType = document.getElementById("reminderType").value;
             const doseId = document.getElementById("doseId").value;
-            const body = { phoneNumber, reminderType, doseId }
+            const body = { reminderType, doseId }
             const uri = `${apiURL}/manual`
             const initDetails = {
                 method: 'post',

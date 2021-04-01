@@ -219,7 +219,7 @@ def bot():
                             time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M"),
                             reminder_time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")
                         ),
-                        from_='+12813771848',
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                         to=incoming_phone_number
                     )
                     scheduler.add_job(f"{latest_dose_id}-followup", send_followup_text,
@@ -230,7 +230,7 @@ def bot():
                 else:
                     client.messages.create(
                         body=REMINDER_TOO_LATE_MSG.substitute(time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")),
-                        from_='+12813771848',
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                         to=incoming_phone_number
                     )
             elif incoming_msg in ["t", "s"]:
@@ -240,26 +240,26 @@ def bot():
                 }
                 client.messages.create(
                     body=message_copy[incoming_msg],
-                    from_='+12813771848',
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                     to=incoming_phone_number
                 )
                 remove_jobs_helper(latest_dose_id, ["absent", "followup", "boundary"])
             else:
                 client.messages.create(
                     body=ERROR_MSG,
-                    from_='+12813771848',
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                     to=incoming_phone_number
                 )
         else:
             client.messages.create(
                 body=NO_DOSE_MSG,
-                from_='+12813771848',
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                 to=incoming_phone_number
             )
     else:
         client.messages.create(
             body=UNKNOWN_MSG,
-            from_='+12813771848',
+            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
             to=incoming_phone_number
         )
     return jsonify()
@@ -271,7 +271,6 @@ scheduler.start()
 def manual_send():
     incoming_data = request.json
     dose_id = int(incoming_data["doseId"])
-    dose_obj = Dose.query.get(dose_id)
     reminder_type = incoming_data["reminderType"]
     if reminder_type == "absent":
         send_absent_text(dose_id)
@@ -315,7 +314,7 @@ def send_followup_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
         body=FOLLOWUP_MSG,
-        from_='+12813771848',
+        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=dose_obj.phone_number
     )
     reminder_record = Reminder(dose_id=dose_id, send_time=datetime.now(), reminder_type="followup")
@@ -329,7 +328,7 @@ def send_absent_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
         body=ABSENT_MSG,
-        from_='+12813771848',
+        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=dose_obj.phone_number
     )
     reminder_record = Reminder(dose_id=dose_id, send_time=datetime.now(), reminder_type="absent")
@@ -341,7 +340,7 @@ def send_boundary_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
         body=BOUNDARY_MSG,
-        from_='+12813771848',
+        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=dose_obj.phone_number
     )
     reminder_record = Reminder(dose_id=dose_id, send_time=datetime.now(), reminder_type="boundary")
@@ -354,7 +353,7 @@ def send_intro_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
         body=DAILY_MSG.substitute(time=dose_obj.next_start_date.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")),
-        from_='+12813771848',
+        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=dose_obj.phone_number
     )
     reminder_record = Reminder(dose_id=dose_id, send_time=datetime.now(), reminder_type="initial")
