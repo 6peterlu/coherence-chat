@@ -5,12 +5,33 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_apscheduler import APScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 import os
-# import requests
 # from twilio.twiml.messaging_response import MessagingResponse
 from twilio.rest import Client
 from datetime import datetime, timedelta
 from pytz import timezone
 import parsedatetime
+
+# fuzzy nlp handling
+import spacy
+
+nlp = spacy.load("en_core_web_md")
+
+TOKENS_TO_RECOGNIZE = [
+    "dinner",
+    "breakfast",
+    "lunch",
+    "eating",
+    "out",
+    "call",
+    "meeting",
+    "busy",
+    "thanks",
+    "help",
+    "ok"
+]
+
+# load on server start
+SPACY_EMBED_MAP = {token: nlp(token) for token in TOKENS_TO_RECOGNIZE}
 
 import logging
 from constants import ABSENT_MSG, BOUNDARY_MSG, CONFIRMATION_MSG, DAILY_MSG, ERROR_MSG, FOLLOWUP_MSG, MANUAL_TEXT_NEEDED_MSG, NO_DOSE_MSG, REMINDER_TOO_CLOSE_MSG, REMINDER_TOO_LATE_MSG, SKIP_MSG, TAKE_MSG, UNKNOWN_MSG
@@ -219,10 +240,34 @@ def activity_detection(message_str):
         "out": (timedelta(hours=1), "No problem, we'll check in later."),
         "busy": (timedelta(hours=1), "No problem, we'll check in later."),
     }
+    best_match_score = 0.0
+    best_match_concept = None
     for concept in direct_time_mapped_strings:
-        if concept in message_str:
-            return direct_time_mapped_strings[concept]
+        match_score = nlp(message_str).similarity(SPACY_EMBED_MAP[concept])
+        if match_score > best_match_score:
+            best_match_score = match_score
+            best_match_concept = concept
+    if best_match_score > 0.7:
+        return direct_time_mapped_strings[best_match_concept]
     return None
+
+def canned_responses(message_str):
+    responses = {
+        "thanks": "No problem, glad to help.",
+        "help": "If you'd like to delay your reminder, feel free to tell me a time delay, such as '20 min', use a menu item (1,2,3,S,T), or respond with an activity ('eating dinner').",
+        "ok": "👍"
+    }
+    best_match_score = 0.0
+    best_match_concept = None
+    for concept in responses:
+        match_score = nlp(message_str).similarity(SPACY_EMBED_MAP[concept])
+        if match_score > best_match_score:
+            best_match_score = match_score
+            best_match_concept = concept
+    if best_match_score > 0.7:
+        return responses[best_match_concept]
+    return None
+
 
 @app.route('/bot', methods=['POST'])
 def bot():
@@ -231,6 +276,7 @@ def bot():
     # attempt to parse time from incoming msg
     time_struct, parse_status = cal.parse(incoming_msg)
     activity_detection_time = activity_detection(incoming_msg)
+    canned_response = canned_responses(incoming_msg)
     # canned response
     if incoming_msg in ['1', '2', '3', 't', 's'] or parse_status != 0 or activity_detection_time is not None:
         print(f"+1{incoming_phone_number[1:]}")
@@ -260,8 +306,8 @@ def bot():
                 else:
                     next_alarm_time = datetime(*time_struct[:6])
                 too_close = False
-                if next_alarm_time > dose_end_time - timedelta(minutes=1):
-                    next_alarm_time = dose_end_time - timedelta(minutes=1)
+                if next_alarm_time > dose_end_time - timedelta(minutes=10):
+                    next_alarm_time = dose_end_time - timedelta(minutes=10)
                     too_close = True
                 if next_alarm_time > datetime.now():
                     if obscure_confirmation:
@@ -320,6 +366,12 @@ def bot():
                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                 to=incoming_phone_number
             )
+    elif canned_response is not None:
+        client.messages.create(
+            body=canned_response,
+            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+            to=incoming_phone_number
+        )
     else:
         text_fallback(incoming_phone_number)
     return jsonify()
