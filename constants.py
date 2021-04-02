@@ -53,3 +53,5 @@ NO_DOSE_MSG = """There's no dose to be taken right now. If you've received this 
 REMINDER_TOO_LATE_MSG = Template("""Sorry, we can't schedule a reminder after your latest dose time, which is $time.""")
 
 REMINDER_TOO_CLOSE_MSG = Template("""We can't schedule a reminder after your latest dose time of $time, so we've scheduled it right before, at $reminder_time. See you then!""")
+
+MANUAL_TEXT_NEEDED_MSG = Template("""The phone number $number requires your manual intervention.""")

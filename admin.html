@@ -1,8 +1,14 @@
 <head>
 </head>
 <body>
-    <button id="getJobs" onclick="retrieveJobs()">Get jobs</button>
-    <button id="getBasicInfo" onclick="getBasicInfo()">Get basic info</button>
+    <h1 id="header"></h1>
+    <button id="switchEnv" onclick="switchEnv()">Switch environment</button>
+    <div>
+        <h2 id="onlineStatus" style="display:inline"></h2>
+        <button id="onlineToggle" onclick="onlineToggle()"></button>
+    </div>
+    <button id="getJobs" onclick="retrieveJobs()">Refresh</button>
+    <button id="getBasicInfo" onclick="getBasicInfo()">Test connection</button>
     <div>
         <input id="phoneNumberEntry" type="tel" placeholder="phone"/>
         <input id="medicationNameEntry" type="text" placeholder="medication name"/>
@@ -12,7 +18,6 @@
         <button id="createJob" onclick="createJob()">Create job</button>
     </div>
     <div>
-        <input id="manualPhoneNumberEntry" type="tel" placeholder="phone"/>
         <input id="doseId" type="number" placeholder="dose id"/>
         <select name="reminderType" id="reminderType">
             <option value="absent">absent</option>
@@ -27,35 +32,102 @@
     <div class="doseList"></div>
     <p>Reminder list:</p>
     <div class="reminderList"></div>
+    <div class="manualChat">
+        <input id="messageSearchPhoneNumber" type="number" placeholder="phone number"/>
+        <button id="searchForConversation" onclick="searchForConversation()">Retrieve conversation</button>
+        <div id="customChat" style="visibility:hidden">
+            <input id="customTextMessage" placeholder="custom text message"/>
+            <button id="searchForConversation" onclick="sendCustomText()">Send custom text</button>
+        </div>
+    </div>
+    <div class="messageList"></div>
     <script defer>
         const jobListDiv = document.querySelector('.jobList');
         const doseListDiv = document.querySelector('.doseList');
         const reminderListDiv = document.querySelector('.reminderList');
-        const runningLocally = false;  // if this is false, you're editing PROD.
-        const apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
+        const messageListDiv = document.querySelector('.messageList');
+        const headerText = document.getElementById("header");
+        var runningLocally = true;  // if this is false, you're editing PROD.
+        headerText.innerHTML = `current env: ${runningLocally ? "local" : "PRODUCTION"}`;
+        var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
+
+        function sendCustomText() {
+            const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
+            const text = document.getElementById("customTextMessage").value;
+            const body = { phoneNumber, text };
+            const uri = `${apiURL}/manual/text`;
+            const initDetails = {
+                method: 'post',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "POST",
+                    "Access-Control_Allow_Headers": "*",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors",
+                body: JSON.stringify(body)
+            };
+            fetch(uri, initDetails);
+        }
+        function searchForConversation() {
+            const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
+            const uri = `${apiURL}/messages?phoneNumber=${phoneNumber}`;
+            const initDetails = {
+                method: 'get',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "GET",
+                    "Access-Control_Allow_Headers": "*",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors"
+            };
+            fetch(uri, initDetails).then(response => response.json()).then(result => {
+                console.log("pulling conversation");
+                renderMessages(result);
+            });
+        }
+        function renderMessages(messagesList) {
+            const rows = messagesList.map(message => {
+                return `
+                    <li>
+                        <p>${message.date_sent}/${message.sender}: ${message.body}</p>
+                    </li>
+                `
+            });
+            const html = `<ul>${rows.join("")}</ul>`;
+            messageListDiv.innerHTML = html;
+        }
+        function switchEnv() {
+            runningLocally = !runningLocally;
+            headerText.innerHTML = `current env: ${runningLocally ? "local" : "PRODUCTION"}`;
+            apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
+            messageListDiv.innerHTML = "";
+            retrieveJobs();
+        }
         function convertTZ(date, tzString) {
             return new Date((typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: tzString}));
         }
         function renderJobs(jobList) {
             const rows = jobList.map(job => {
-
                 if (job.trigger === "interval") {
                     return `
                         <li>
-                            <p>${job.name}:${job.trigger}:${convertTZ(job.start_date, "US/Pacific")}</p>
+                            <p style="display:inline">${job.name}:${job.trigger}:${convertTZ(job.start_date, "US/Pacific")}</p>
                             <button onclick="deleteJob(\'${job.id}\')">delete job</button>
                         </li>
                     `
                 } else {
                     return `
                         <li>
-                            <p>${job.name}:${job.trigger}:${convertTZ(job.run_date)}</p>
+                            <p style="display:inline">${job.name}:${job.trigger}:${convertTZ(job.run_date)}</p>
                             <button onclick="deleteJob(\'${job.id}\')">delete job</button>
                         </li>
                     `
                 }
             });
-            const html = `<ul>${rows.join("")}</ul>`
+            const html = `<ul>${rows.join("")}</ul>`;
             jobListDiv.innerHTML = html;
         }
         function convertToPT(hour) {
@@ -79,7 +151,7 @@
                 const startHour = dose.start_hour;
                 return `
                     <li>
-                        <p>${dose.id}-${dose.medication_name}, ${dose.patient_name}, ${convertToPT(dose.start_hour)}:${dose.start_minute}->${convertToPT(dose.end_hour)}:${dose.end_minute}</p>
+                        <p style="display:inline">${dose.id}-${dose.medication_name}, ${dose.patient_name}, ${convertToPT(dose.start_hour)}:${dose.start_minute}->${convertToPT(dose.end_hour)}:${dose.end_minute}</p>
                         <button onclick="deleteDose(\'${dose.id}\')">delete dose</button>
                     </li>
                 `
@@ -91,7 +163,7 @@
             const rows = reminderList.map(reminder => {
                 return `
                     <li>
-                        <p>${reminder.reminder_type}-${reminder.dose_id}-${convertTZ(reminder.send_time, "US/Pacific")}</p>
+                        <p style="display:inline">${reminder.reminder_type}-${reminder.dose_id}-${convertTZ(reminder.send_time, "US/Pacific")}</p>
                         <button onclick="deleteReminder(\'${reminder.id}\')">delete reminder record</button>
                     </li>
                 `
@@ -115,11 +187,40 @@
             fetch(uri, initDetails).then(response => response.json()).then(result => {
                 console.log("getting basic info");
                 console.log(result);
-            })
+            });
+        }
+        function renderOnlineStatus(onlineStatus) {
+            const onlineStatusText = document.getElementById("onlineStatus");
+            const onlineButtonToggle = document.getElementById("onlineToggle");
+            onlineStatusText.innerHTML = `You're currently ${onlineStatus ? "online" : "offline"}.`;
+            onlineButtonToggle.innerHTML = `Go ${onlineStatus ? "offline" : "online"}`;
+            const customChat = document.getElementById("customChat");
+            customChat.style.visibility = onlineStatus ? "visible" : "hidden";
+        }
+        function onlineToggle() {
+            const uri = `${apiURL}/online`;
+            const initDetails = {
+                method: 'post',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "POST",
+                    "Access-Control_Allow_Headers": "*",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors",
+                body: JSON.stringify({})
+            };
+            fetch(uri, initDetails).then(
+                response => response.json()).then(result => {
+                    retrieveJobs();
+                }
+            );
         }
         function retrieveJobs() {
             const uri = `${apiURL}/scheduler/jobs`;
             const everythingUri = `${apiURL}/everything`;
+            console.log(everythingUri);
             const initDetails = {
                 method: 'get',
                 headers: {
@@ -136,10 +237,9 @@
                 renderJobs(result);
             })
             fetch(everythingUri, initDetails).then(response => response.json()).then(result => {
-                console.log("dumping DB");
-                console.log(result);
                 renderDoses(result.doses);
                 renderReminders(result.reminders);
+                renderOnlineStatus(result.onlineStatus);
             })
         }
         // helper fn to get next alarm datetime from FE, not currently in use
@@ -158,10 +258,9 @@
         //     return dateString;
         // }
         function sendManual() {
-            const phoneNumber = document.getElementById("manualPhoneNumberEntry").value;
             const reminderType = document.getElementById("reminderType").value;
             const doseId = document.getElementById("doseId").value;
-            const body = { phoneNumber, reminderType, doseId }
+            const body = { reminderType, doseId }
             const uri = `${apiURL}/manual`
             const initDetails = {
                 method: 'post',
@@ -190,7 +289,7 @@
             const splitEndTime = endTime.split(":");
             const endHour = convertToUTC(parseInt(splitEndTime[0]));
             const endMinute = parseInt(splitEndTime[1]);
-            const phoneNumber = document.getElementById("phoneNumberEntry").value;
+            const phoneNumber = `1${document.getElementById("phoneNumberEntry").value}`;
             const patientName = document.getElementById("patientNameEntry").value;
             const medicationName = document.getElementById("medicationNameEntry").value;
 
@@ -278,5 +377,6 @@
                 retrieveJobs();
             });
         }
+        retrieveJobs();
     </script>
 </body>
