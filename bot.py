@@ -285,7 +285,7 @@ def bot():
             .filter(Reminder.dose_id.in_(dose_ids)) \
             .order_by(Reminder.send_time.desc()) \
             .first()
-        latest_dose_id = latest_reminder_record.dose_id
+        latest_dose_id = None if latest_reminder_record is None else latest_reminder_record.dose_id
         if exists_remaining_reminder_job(latest_dose_id, ["boundary"]):
             if incoming_msg in ["1", "2", "3"] or parse_status != 0 or activity_detection_time is not None:
                 obscure_confirmation = False
