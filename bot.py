@@ -530,6 +530,7 @@ def send_intro_text(dose_id):
     )
 
 print(scheduler.get_job("18-boundary"))
+print(exists_remaining_reminder_job(18, ["boundary"]))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
