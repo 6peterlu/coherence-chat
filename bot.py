@@ -10,6 +10,7 @@ from twilio.rest import Client
 from datetime import datetime, timedelta
 from pytz import timezone
 import parsedatetime
+import random
 
 # fuzzy nlp handling
 import spacy
@@ -23,11 +24,16 @@ TOKENS_TO_RECOGNIZE = [
     "eating",
     "out",
     "call",
+    "on a call",
     "meeting",
     "busy",
     "thanks",
     "help",
-    "ok"
+    "ok",
+    "great",
+    "no problem",
+    "hello",
+    "confused"
 ]
 
 # load on server start
@@ -230,15 +236,18 @@ def activity_detection(message_str):
     # time_strings = ["hr", "min", "hour", "minute", "mins"]
     # if any(map(str.isdigit, message_str)) or any(map(lambda x: x in message_str, time_strings)):
     #     return None
+    computing_prefix = "Computing ideal reminder time...done."
+    time_delay = timedelta(random.randint(30,60))
     direct_time_mapped_strings = {
-        "dinner": (timedelta(hours=1), "Have a great dinner! We'll check in later."),
-        "lunch": (timedelta(hours=1), "Have a great lunch! We'll check in later."),
-        "breakfast": (timedelta(hours=1), "Have a great breakfast! We'll check in later."),
-        "eating": (timedelta(hours=1), "Enjoy your meal! We'll check in later."),
-        "meeting": (timedelta(hours=1), "Have a productive meeting! We'll check in later."),
-        "call": (timedelta(hours=1), "Have a great call! We'll check in later."),
-        "out": (timedelta(hours=1), "No problem, we'll check in later."),
-        "busy": (timedelta(hours=1), "No problem, we'll check in later."),
+        "dinner": (time_delay, f"{computing_prefix} Have a great dinner! We'll check in later."),
+        "lunch": (time_delay, f"{computing_prefix} Have a great lunch! We'll check in later."),
+        "breakfast": (time_delay, f"{computing_prefix} Have a great breakfast! We'll check in later."),
+        "eating": (time_delay, f"{computing_prefix} Enjoy your meal! We'll check in later."),
+        "meeting": (time_delay, f"{computing_prefix} Have a productive meeting! We'll check in later."),
+        "call": (time_delay, f"{computing_prefix} Have a great call! We'll check in later."),
+        "on a call": (time_delay, f"{computing_prefix} Have a great call! We'll check in later."),
+        "out": (time_delay, f"{computing_prefix} No problem, we'll check in later."),
+        "busy": (time_delay, f"{computing_prefix} No problem, we'll check in later."),
     }
     best_match_score = 0.0
     best_match_concept = None
@@ -252,10 +261,19 @@ def activity_detection(message_str):
     return None
 
 def canned_responses(message_str):
+    hardcoded_responses = {
+        "x": "Thanks for reporting. We've noted the error and are working on it."
+    }
+    if message_str in hardcoded_responses:
+        return hardcoded_responses[message_str]
     responses = {
         "thanks": "No problem, glad to help.",
         "help": "If you'd like to delay your reminder, feel free to tell me a time delay, such as '20 min', use a menu item (1,2,3,S,T), or respond with an activity ('eating dinner').",
-        "ok": "👍"
+        "confused": "If you'd like to delay your reminder, feel free to tell me a time delay, such as '20 min', use a menu item (1,2,3,S,T), or respond with an activity ('eating dinner').",
+        "ok": "👍",
+        "great": "👍",
+        "no problem": "👍",
+        "hello": "Hello! 👋"
     }
     best_match_score = 0.0
     best_match_concept = None
@@ -271,7 +289,7 @@ def canned_responses(message_str):
 
 @app.route('/bot', methods=['POST'])
 def bot():
-    incoming_msg = request.values.get('Body', '').lower()
+    incoming_msg = request.values.get('Body', '').lower().strip()
     incoming_phone_number = request.values.get('From', None)
     # attempt to parse time from incoming msg
     time_struct, parse_status = cal.parse(incoming_msg)

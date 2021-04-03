@@ -36,19 +36,21 @@ TAKE_MSG = """Awesome work. Take confirmed."""
 
 SKIP_MSG = """Skip confirmed."""
 
-UNKNOWN_MSG = """Sorry, I can only understand the following commands right now:
+UNKNOWN_MSG = """I can only understand the following commands right now:
 [T] mark medication as taken
 [S] skip this dose
 [1] check in with you in 10 minutes
 [2] to check in in 30
 [3] to check in in an hour
+[x] report an error
+activities such as "dinner", "meeting", etc.
 
 Working hard on understanding more! 📚🧠
 """
 
-ERROR_MSG = """Something went wrong. Please reach out to +1(360)450-8655 with a description of how you got this message. Thank you!"""
+ERROR_MSG = """Something went wrong. Please text 'x' and we'll be notified."""
 
-NO_DOSE_MSG = """There's no dose to be taken right now. If you've received this message in error, please reach out to +1(360)450-8655 with a description of your situation. Thank you!"""
+NO_DOSE_MSG = """There's no dose to be taken right now. If you've received this message in error, please text 'x' and we'll be notified."""
 
 REMINDER_TOO_LATE_MSG = Template("""Sorry, we can't schedule a reminder after your latest dose time, which is $time.""")
 
