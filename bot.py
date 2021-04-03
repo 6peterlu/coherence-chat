@@ -26,6 +26,8 @@ TOKENS_TO_RECOGNIZE = [
     "call",
     "on a call",
     "meeting",
+    "walking",
+    "going for a walk",
     "busy",
     "thanks",
     "help",
@@ -239,11 +241,13 @@ def activity_detection(message_str):
     # if any(map(str.isdigit, message_str)) or any(map(lambda x: x in message_str, time_strings)):
     #     return None
     computing_prefix = "Computing ideal reminder time...done."
-    time_delay = timedelta(random.randint(30,60))
+    time_delay = timedelta(minutes=random.randint(30,60))
     direct_time_mapped_strings = {
         "dinner": (time_delay, f"{computing_prefix} Have a great dinner! We'll check in later."),
         "lunch": (time_delay, f"{computing_prefix} Have a great lunch! We'll check in later."),
         "breakfast": (time_delay, f"{computing_prefix} Have a great breakfast! We'll check in later."),
+        "walking": (time_delay, f"{computing_prefix} Enjoy your walk! We'll check in later."),
+        "going for a walk": (time_delay, f"{computing_prefix} Enjoy your walk! We'll check in later."),
         "eating": (time_delay, f"{computing_prefix} Enjoy your meal! We'll check in later."),
         "meeting": (time_delay, f"{computing_prefix} Have a productive meeting! We'll check in later."),
         "call": (time_delay, f"{computing_prefix} Have a great call! We'll check in later."),
@@ -528,9 +532,6 @@ def send_intro_text(dose_id):
         trigger="date",
         run_date=dose_obj.next_end_date - timedelta(days=1)  # HACK, assumes this executes after start_date
     )
-
-print(scheduler.get_job("18-boundary"))
-print(exists_remaining_reminder_job(18, ["boundary"]))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
