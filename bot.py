@@ -136,6 +136,10 @@ client = Client(account_sid, auth_token)
 
 # initialize scheduler
 scheduler = APScheduler()
+scheduler.init_app(app)
+scheduler.start()
+
+print(scheduler.get_job(f"18-boundary"))
 
 # add a dose
 @app.route("/dose", methods=["POST"])
@@ -391,9 +395,6 @@ def bot():
     else:
         text_fallback(incoming_phone_number)
     return jsonify()
-scheduler.init_app(app)
-scheduler.start()
-
 
 def text_fallback(phone_number):
     if get_online_status():
