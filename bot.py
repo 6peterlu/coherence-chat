@@ -139,8 +139,6 @@ scheduler = APScheduler()
 scheduler.init_app(app)
 scheduler.start()
 
-print(scheduler.get_job(f"18-boundary"))
-
 # add a dose
 @app.route("/dose", methods=["POST"])
 def add_dose():
@@ -530,6 +528,8 @@ def send_intro_text(dose_id):
         trigger="date",
         run_date=dose_obj.next_end_date - timedelta(days=1)  # HACK, assumes this executes after start_date
     )
+
+print(scheduler.get_job("18-boundary"))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
