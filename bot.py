@@ -42,7 +42,7 @@ TOKENS_TO_RECOGNIZE = [
 SPACY_EMBED_MAP = {token: nlp(token) for token in TOKENS_TO_RECOGNIZE}
 
 import logging
-from constants import ABSENT_MSG, BOUNDARY_MSG, CONFIRMATION_MSG, DAILY_MSG, ERROR_MSG, FOLLOWUP_MSG, MANUAL_TEXT_NEEDED_MSG, NO_DOSE_MSG, REMINDER_TOO_CLOSE_MSG, REMINDER_TOO_LATE_MSG, SKIP_MSG, TAKE_MSG, UNKNOWN_MSG
+from constants import ABSENT_MSG, BOUNDARY_MSG, CONFIRMATION_MSG, INITIAL_MSGS, ERROR_MSG, FOLLOWUP_MSGS, MANUAL_TEXT_NEEDED_MSG, NO_DOSE_MSG, REMINDER_TOO_CLOSE_MSG, REMINDER_TOO_LATE_MSG, SKIP_MSG, TAKE_MSG, UNKNOWN_MSG, ACTION_MENU
 
 # allow no reminders to be set within 10 mins of boundary
 BUFFER_TIME_MINS = 10
@@ -140,6 +140,13 @@ client = Client(account_sid, auth_token)
 scheduler = APScheduler()
 scheduler.init_app(app)
 scheduler.start()
+
+# message helpers
+def get_followup_message():
+    return f"{random.choice(FOLLOWUP_MSGS)}{ACTION_MENU}"
+
+def get_initial_message():
+    return random.choice(INITIAL_MSGS)  # returns a template
 
 # add a dose
 @app.route("/dose", methods=["POST"])
@@ -480,7 +487,7 @@ def get_current_end_date(dose_id):
 def send_followup_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
-        body=FOLLOWUP_MSG,
+        body=get_followup_message(),
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=dose_obj.phone_number
     )
@@ -519,7 +526,7 @@ def send_boundary_text(dose_id):
 def send_intro_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
-        body=DAILY_MSG.substitute(time=dose_obj.next_start_date.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")),
+        body=f"{get_initial_message().substitute(time=dose_obj.next_start_date.astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M'))}{ACTION_MENU}",
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=dose_obj.phone_number
     )

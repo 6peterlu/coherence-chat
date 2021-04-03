@@ -1,23 +1,25 @@
 from string import Template
 
-DAILY_MSG = Template("""Here’s your $time reminder.
-[T] mark medication as taken
-[S] skip this dose
-If now isn’t a good time, you can also reply with
-[1] to check in with you in 10 minutes,
-[2] to check in in 30,
-[3] to check in in an hour,
-or any other time delay you prefer (“35 min”).
-""")
+INITIAL_MSGS = [
+    Template("""Here’s your $time reminder.\n"""),
+    Template("""It's $time, which means it's time for your dose!\n"""),
+    Template("""Hope you're having a great day. Just wanted to let you know that it's $time and remind you about your dose.\n"""),
+    Template("""Hello 👋 You have a dose to take at $time.\n"""),
+    Template("""Hey there, just wanted to let you know it's time for your $time dose.\n"""),
+]
 
-FOLLOWUP_MSG = """Hello, checking in at your requested time.
-[T] mark medication as taken
-[S] skip this dose
-If now isn’t a good time, you can also reply with
-[1] to check in with you in 10 minutes,
-[2] to check in in 30,
-[3] to check in in an hour,
-or any other time delay you prefer (“35 min”)."""
+FOLLOWUP_MSGS = [
+"""Hello, checking in at your requested time.
+""",
+"""Hey, hope you're having a great day. Just checking in again.
+""",
+"""Hello! Following up on my last message.
+""",
+"""Just wanted to see if now is a better time.
+""",
+"""Following up to see if you are free now!
+"""
+]
 
 ABSENT_MSG = """Hope you're having a great day. Just a friendly note to take your medication 😊
 [T] mark medication as taken
@@ -43,7 +45,7 @@ UNKNOWN_MSG = """I can only understand the following commands right now:
 [2] to check in in 30
 [3] to check in in an hour
 [x] report an error
-activities such as "dinner", "meeting", etc.
+activities such as "eating dinner", "on a walk", etc.
 
 Working hard on understanding more! 📚🧠
 """
@@ -57,3 +59,12 @@ REMINDER_TOO_LATE_MSG = Template("""Sorry, we can't schedule a reminder after yo
 REMINDER_TOO_CLOSE_MSG = Template("""We can't schedule a reminder after your latest dose time of $time, so we've scheduled it at $reminder_time. See you then!""")
 
 MANUAL_TEXT_NEEDED_MSG = Template("""The phone number $number requires your manual intervention.""")
+
+ACTION_MENU = """You can reply with the following commands:
+[T] mark medication as taken
+[S] skip this dose
+[1] check in with you in 10 minutes
+[2] to check in in 30
+[3] to check in in an hour
+[x] report an error
+activities such as "eating dinner", "on a walk", etc."""
