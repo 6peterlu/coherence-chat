@@ -190,7 +190,7 @@ def delete_reminder():
 @app.route("/everything", methods=["GET"])
 def get_everything():
     all_doses = Dose.query.all()
-    all_reminders = Reminder.query.all()
+    all_reminders = Reminder.query.order_by(Reminder.send_time.desc()).all()
     return jsonify({
         "doses": [dose.as_dict() for dose in all_doses],
         "reminders": [reminder.as_dict() for reminder in all_reminders],
