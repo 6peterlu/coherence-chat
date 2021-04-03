@@ -14,7 +14,7 @@ import parsedatetime
 # fuzzy nlp handling
 import spacy
 
-nlp = spacy.load("en_core_web_md")
+nlp = spacy.load("en_core_web_sm")
 
 TOKENS_TO_RECOGNIZE = [
     "dinner",
@@ -279,10 +279,8 @@ def bot():
     canned_response = canned_responses(incoming_msg)
     # canned response
     if incoming_msg in ['1', '2', '3', 't', 's'] or parse_status != 0 or activity_detection_time is not None:
-        print(f"+1{incoming_phone_number[1:]}")
         doses = Dose.query.filter_by(phone_number=f"+1{incoming_phone_number[1:]}").all()
         dose_ids = [dose.id for dose in doses]
-        print(dose_ids)
         latest_reminder_record = Reminder.query \
             .filter(Reminder.dose_id.in_(dose_ids)) \
             .order_by(Reminder.send_time.desc()) \
