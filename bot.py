@@ -279,8 +279,8 @@ def activity_detection(message_str):
         "on a call": (time_delay, f"{computing_prefix} Have a great call! We'll check in later."),
         "out": (time_delay, f"{computing_prefix} No problem, we'll check in later."),
         "busy": (time_delay, f"{computing_prefix} No problem, we'll check in later."),
-        "bathroom": (time_delay, f"{computing_prefix} No problem, we'll check in later."),
-        "reading": (time_delay, f"{computing_prefix} No problem, we'll check in later."),
+        "bathroom": (time_delay, f"{computing_prefix} No problem, we'll check in in a bit."),
+        "reading": (time_delay, f"{computing_prefix} Enjoy your book, we'll check in later."),
     }
     best_match_score = 0.0
     best_match_concept = None
