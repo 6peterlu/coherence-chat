@@ -5,3 +5,8 @@ Chatservice for Coherence
 `python manage.py db migrate`
 
 `python manage.py db upgrade`
+
+## ngrok for local dev
+`ngrok http 5000`
+
+Update twilio URL
