@@ -34,6 +34,7 @@
     <div class="reminderList"></div>
     <div class="manualChat">
         <input id="messageSearchPhoneNumber" type="number" placeholder="phone number"/>
+        <input id="daysToPull" type="number" placeholder="days to pull"/>
         <button id="searchForConversation" onclick="searchForConversation()">Retrieve conversation</button>
         <div id="customChat" style="visibility:hidden">
             <input id="customTextMessage" placeholder="custom text message"/>
@@ -72,7 +73,8 @@
         }
         function searchForConversation() {
             const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
-            const uri = `${apiURL}/messages?phoneNumber=${phoneNumber}`;
+            const days = document.getElementById("daysToPull").value;
+            const uri = `${apiURL}/messages?phoneNumber=${phoneNumber}&days=${days}`;
             const initDetails = {
                 method: 'get',
                 headers: {

@@ -221,7 +221,8 @@ def get_everything():
 def get_messages_for_number():
     # only get messages in the past week.
     query_phone_number = request.args.get("phoneNumber")
-    date_limit = datetime.now() - timedelta(days=7)
+    query_days = int(request.args.get("days"))
+    date_limit = datetime.now() - timedelta(days=query_days)
     truncated_date_limit = date_limit.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
     sent_messages_list = client.messages.list(
         date_sent_after=truncated_date_limit,
