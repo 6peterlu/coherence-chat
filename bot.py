@@ -37,7 +37,9 @@ TOKENS_TO_RECOGNIZE = [
     "great",
     "no problem",
     "hello",
-    "confused"
+    "confused",
+    "run",
+    "running"
 ]
 
 # load on server start
@@ -281,6 +283,8 @@ def activity_detection(message_str):
         "busy": (time_delay, f"{computing_prefix} No problem, we'll check in later."),
         "bathroom": (time_delay, f"{computing_prefix} No problem, we'll check in in a bit."),
         "reading": (time_delay, f"{computing_prefix} Enjoy your book, we'll check in later."),
+        "run": (time_delay, f"{computing_prefix} Have a great run! We'll see you later."),
+        "running": (time_delay, f"{computing_prefix} Have a great run! We'll see you later."),
     }
     best_match_score = 0.0
     best_match_concept = None
