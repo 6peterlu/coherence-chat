@@ -21,14 +21,14 @@ FOLLOWUP_MSGS = [
 """
 ]
 
-ABSENT_MSG = """Hope you're having a great day. Just a friendly note to take your medication 😊
-[T] mark medication as taken
-[S] skip this dose
-If now isn’t a good time, you can also reply with
-[1] to check in with you in 10 minutes,
-[2] to check in in 30,
-[3] to check in in an hour,
-or any other time delay you prefer (“35 min”)."""
+ABSENT_MSG = [
+    """Hope you're having a great day. Just a friendly note to take your medication 😊\n""",
+    """Hello, just wanted to make sure you remember to stick to your meds today!\n""",
+    """You're doing great, and we hope you'll keep it up by taking your medication today 😊\n""",
+    """Hope everything is going well. Just wanted to let you know you haven't marked your medication as taken yet!\n""",
+    """We're here to support you in your medication habits!\n""",
+    """Hello friend 😊 Wanted to check in about your medication.\n""",
+]
 
 BOUNDARY_MSG = """It's the end of the designated dose period. We've marked the dose as skipped."""
 
@@ -66,5 +66,4 @@ ACTION_MENU = """You can reply with the following commands:
 [1] check in with you in 10 minutes
 [2] to check in in 30
 [3] to check in in an hour
-[x] report an error
 activities such as "eating dinner", "on a walk", etc."""

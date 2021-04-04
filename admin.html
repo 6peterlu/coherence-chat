@@ -92,7 +92,7 @@
             const rows = messagesList.map(message => {
                 return `
                     <li>
-                        <p>${message.date_sent}/${message.sender}: ${message.body}</p>
+                        <p style="color:${message.sender === 'them' ? 'blue' : 'black'}">${message.date_sent}/${message.sender}: ${message.body}</p>
                     </li>
                 `
             });

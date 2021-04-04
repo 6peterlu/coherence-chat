@@ -128,6 +128,15 @@ class Online(db.Model):
     def __repr__(self):
         return f"<Online {id}>"
 
+class Concept(db.Model):
+    name = db.Column(db.String, primary_key=True)  # must be unique
+    time_range_start = db.Column(db.Integer)  # in minutes
+    time_range_end = db.Column(db.Integer)  # in minutes
+
+    def as_dict(self):
+       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
 # initialize tables
 db.create_all()  # are there bad effects from running this every time? edit: I guess not
 
@@ -200,9 +209,11 @@ def delete_reminder():
 def get_everything():
     all_doses = Dose.query.all()
     all_reminders = Reminder.query.order_by(Reminder.send_time.desc()).all()
+    all_concepts = Concept.query.all()
     return jsonify({
         "doses": [dose.as_dict() for dose in all_doses],
         "reminders": [reminder.as_dict() for reminder in all_reminders],
+        "concepts": [concept.as_dict() for concept in all_concepts],
         "onlineStatus": get_online_status()
     })
 
@@ -227,7 +238,7 @@ def get_messages_for_number():
         {
             "sender": "us" if message.from_ == f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}" else "them",
             "body": message.body,
-            "date_sent": message.date_sent.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")
+            "date_sent": message.date_sent.astimezone(timezone(USER_TIMEZONE)).strftime("%b %d, %I:%M%p")
         }
         for message in combined_list
     ]
@@ -240,6 +251,10 @@ def online_toggle():
     online_record.online = not online_status
     db.session.commit()
     return jsonify()
+
+# @app.route("/concept", methods=["POST"])
+# def manually_update_concept():
+
 
 def activity_detection(message_str):
     # not deferring for now because that actually seems worse
