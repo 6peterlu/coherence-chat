@@ -32,9 +32,9 @@ ABSENT_MSG = [
 
 BOUNDARY_MSG = """It's the end of the designated dose period. We've marked the dose as skipped."""
 
-CONFIRMATION_MSG = Template("""Great, we'll check in again at $time. See you then!""")
+CONFIRMATION_MSG = Template("""Great, we'll text again at $time. See you then!""")
 
-TAKE_MSG = """Awesome work. Take confirmed."""
+TAKE_MSG = """Awesome! We've recorded it for you. 💊"""
 
 SKIP_MSG = """Skip confirmed."""
 
@@ -60,10 +60,11 @@ REMINDER_TOO_CLOSE_MSG = Template("""We can't schedule a reminder after your lat
 
 MANUAL_TEXT_NEEDED_MSG = Template("""The phone number $number requires your manual intervention.""")
 
-ACTION_MENU = """You can reply with the following commands:
+ACTION_MENU = """I can understand the following commands:
 [T] mark medication as taken
 [S] skip this dose
 [1] check in with you in 10 minutes
 [2] to check in in 30
 [3] to check in in an hour
+a specific amount of time such as "2 hours", "20 minutes"
 activities such as "eating dinner", "on a walk", etc."""

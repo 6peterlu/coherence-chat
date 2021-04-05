@@ -293,7 +293,7 @@ def activity_detection(message_str):
         if match_score > best_match_score:
             best_match_score = match_score
             best_match_concept = concept
-    if best_match_score > 0.7:
+    if best_match_score > 0.8:
         return direct_time_mapped_strings[best_match_concept]
     return None
 
