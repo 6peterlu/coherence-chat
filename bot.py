@@ -562,7 +562,7 @@ def send_boundary_text(dose_id):
 def send_intro_text(dose_id, manual=False):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
-        body=f"{get_initial_message().substitute(time=dose_obj.next_start_date.astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M'))}{ACTION_MENU}",
+        body=f"{get_initial_message().substitute(time=datetime.now().astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M'))}{ACTION_MENU}",
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=dose_obj.phone_number
     )
