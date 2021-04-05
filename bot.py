@@ -316,8 +316,8 @@ def canned_responses(message_str):
         return hardcoded_responses[message_str]
     responses = {
         "thanks": "No problem, glad to help.",
-        "help": "If you'd like to delay your reminder, feel free to tell me a time delay, such as '20 min', use a menu item (1,2,3,S,T), or respond with an activity ('eating dinner').",
-        "confused": "If you'd like to delay your reminder, feel free to tell me a time delay, such as '20 min', use a menu item (1,2,3,S,T), or respond with an activity ('eating dinner').",
+        "help": UNKNOWN_MSG,
+        "confused": UNKNOWN_MSG,
         "ok": "👍",
         "great": "👍",
         "no problem": "👍",

@@ -42,16 +42,16 @@ TAKE_MSGS = [
 
 SKIP_MSG = """Skip confirmed."""
 
-UNKNOWN_MSG = """I can only understand the following commands right now:
+UNKNOWN_MSG = """I can understand the following commands:
 [T] mark medication as taken
 [S] skip this dose
 [1] check in with you in 10 minutes
 [2] to check in in 30
 [3] to check in in an hour
 [x] report an error
+"I need help", "I'm confused"
+a specific amount of time such as "2 hours", "20 minutes"
 activities such as "eating dinner", "on a walk", etc.
-
-Working hard on understanding more! 📚🧠
 """
 
 ERROR_MSG = """Something went wrong. Please text 'x' and we'll be notified."""
