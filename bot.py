@@ -334,7 +334,6 @@ def canned_responses(message_str):
         return responses[best_match_concept]
     return None
 
-
 @app.route('/bot', methods=['POST'])
 def bot():
     incoming_msg = request.values.get('Body', '').lower().strip()
@@ -465,6 +464,8 @@ def manual_send():
         send_absent_text(dose_id)
     elif reminder_type == "followup":
         send_followup_text(dose_id)
+    elif reminder_type == "initial":
+        send_intro_text(dose_id)
     return jsonify()
 
 @app.route("/manual/text", methods=["POST"])
@@ -558,7 +559,7 @@ def send_boundary_text(dose_id):
     # this shouldn't be needed, but followups sent manually leave absent artifacts
     remove_jobs_helper(dose_id, ["absent", "followup"])
 
-def send_intro_text(dose_id):
+def send_intro_text(dose_id, manual=False):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
         body=f"{get_initial_message().substitute(time=dose_obj.next_start_date.astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M'))}{ACTION_MENU}",
@@ -568,12 +569,13 @@ def send_intro_text(dose_id):
     reminder_record = Reminder(dose_id=dose_id, send_time=datetime.now(), reminder_type="initial")
     db.session.add(reminder_record)
     db.session.commit()
-    maybe_schedule_absent(dose_id)
     scheduler.add_job(f"{dose_id}-boundary", send_boundary_text,
         args=[dose_id],
         trigger="date",
-        run_date=dose_obj.next_end_date - timedelta(days=1)  # HACK, assumes this executes after start_date
+        run_date=dose_obj.next_end_date if manual else dose_obj.next_end_date - timedelta(days=1)  # HACK, assumes this executes after start_date
     )
+    maybe_schedule_absent(dose_id)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
