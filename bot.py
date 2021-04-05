@@ -239,12 +239,14 @@ def delete_reminder():
 def get_everything():
     all_doses = Dose.query.all()
     all_reminders = Reminder.query.order_by(Reminder.send_time.desc()).all()
+    all_takeover = ManualTakeover.query.all()
     # all_concepts = Concept.query.all()
     return jsonify({
         "doses": [dose.as_dict() for dose in all_doses],
         "reminders": [reminder.as_dict() for reminder in all_reminders],
         # "concepts": [concept.as_dict() for concept in all_concepts],
-        "onlineStatus": get_online_status()
+        "onlineStatus": get_online_status(),
+        "manualTakeover": [mt.phone_number for mt in all_takeover]
     })
 
 @app.route("/events", methods=["GET"])
@@ -290,6 +292,8 @@ def get_messages_for_number():
 @app.route("/online", methods=["POST"])
 def online_toggle():
     online_status = get_online_status()
+    if online_status:  # is online, we need to clear manual takeover on going offline
+        ManualTakeover.query.delete()
     online_record = Online.query.get(1)
     online_record.online = not online_status
     db.session.commit()
@@ -364,6 +368,12 @@ def canned_responses(message_str):
         return responses[best_match_concept]
     return None
 
+
+def should_force_manual(phone_number):  # phone number format: +13604508655
+    all_takeover = ManualTakeover.query.all()
+    takeover_numbers = [mt.phone_number for mt in all_takeover]
+    return f"+1{phone_number[1:]}" in takeover_numbers
+
 @app.route('/bot', methods=['POST'])
 def bot():
     incoming_msg = request.values.get('Body', '').lower().strip()
@@ -373,8 +383,10 @@ def bot():
     activity_detection_time = activity_detection(incoming_msg)
     canned_response = canned_responses(incoming_msg)
     # canned response
-    if incoming_phone_number != "+13609042210" and (incoming_msg in ['1', '2', '3', 't', 's'] or parse_status != 0 or activity_detection_time is not None):
-        doses = Dose.query.filter_by(phone_number=f"+1{incoming_phone_number[1:]}").all()
+    if not should_force_manual(incoming_phone_number) and (
+            incoming_msg in ['1', '2', '3', 't', 's'] or parse_status != 0 or activity_detection_time is not None
+        ):
+        doses = Dose.query.filter_by(phone_number=f"+1{incoming_phone_number[1:]}").all()  # +113604508655
         dose_ids = [dose.id for dose in doses]
         latest_reminder_record = Reminder.query \
             .filter(Reminder.dose_id.in_(dose_ids)) \
@@ -467,7 +479,7 @@ def bot():
                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                 to=incoming_phone_number
             )
-    elif incoming_phone_number != "+13609042210" and (canned_response is not None):
+    elif not should_force_manual(incoming_phone_number) and (canned_response is not None):
         log_event("conversational", incoming_phone_number, description=incoming_msg)
         client.messages.create(
             body=canned_response,
@@ -494,7 +506,6 @@ def text_fallback(phone_number):
             to=phone_number
         )
 
-
 @app.route("/manual", methods=["POST"])
 def manual_send():
     incoming_data = request.json
@@ -514,7 +525,7 @@ def manual_takeover():
     target_phone_number = incoming_data["phoneNumber"]
     takeover_record = ManualTakeover.query.get(f"+11{target_phone_number}")
     if takeover_record is None:
-        new_takeover_record = ManualTakeover(phone_number=target_phone_number)
+        new_takeover_record = ManualTakeover(phone_number=f"+11{target_phone_number}")
         db.session.add(new_takeover_record)
         db.session.commit()
     return jsonify()
@@ -525,7 +536,7 @@ def end_manual_takeover():
     target_phone_number = incoming_data["phoneNumber"]
     takeover_record = ManualTakeover.query.get(f"+11{target_phone_number}")
     if takeover_record is not None:
-        takeover_record.delete()
+        db.session.delete(takeover_record)
         db.session.commit()
     return jsonify()
 

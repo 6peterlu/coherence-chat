@@ -38,7 +38,8 @@
         <input id="daysToPull" type="number" placeholder="days to pull"/>
         <button id="searchForConversation" onclick="searchForConversation()">Retrieve conversation</button>
         <button id="getEventsForPhoneNumber" onclick="getEventsForPhoneNumber()">Retrieve events</button>
-        <button id="manuallyTakeover" onclick="manualTakeover()">Manually takeover</button>
+        <button id="manuallyTakeover" style="visibility:hidden" onclick="manualTakeover()">Manually takeover</button>
+        <p id="takeoverList" style="visibility:hidden"></p>
         <div id="customChat" style="visibility:hidden">
             <textarea id="customTextMessage" placeholder="custom text message"></textarea>
             <button id="searchForConversation" onclick="sendCustomText()">Send custom text</button>
@@ -79,11 +80,11 @@
             await retrieveJobs();
             const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
             const uri = `${apiURL}/manual/takeover`;
-            const body = {
-                phoneNumber: `+11${phoneNumber}`
-            };
-            if (manualTakeoverList.includes(phoneNumber)) {
-                const initDetails = {
+            const body = { phoneNumber };
+            var initDetails = {};
+            if (manualTakeoverList.includes(`+11${phoneNumber}`)) {
+                console.log("deleting")
+                initDetails = {
                     method: 'delete',
                     headers: {
                         "Access-Control-Allow-Origin": "*",
@@ -95,7 +96,23 @@
                     mode: "cors",
                     body: JSON.stringify(body)
                 };
-            };
+            } else {
+                initDetails = {
+                    method: 'post',
+                    headers: {
+                        "Access-Control-Allow-Origin": "*",
+                        "Access-Control-Allow_Methods": "POST",
+                        "Access-Control_Allow_Headers": "*",
+                        "Content-Type": "application/json; charset=utf-8",
+                        "Cache-Control": "no-cache"
+                    },
+                    mode: "cors",
+                    body: JSON.stringify(body)
+                };
+            }
+            await fetch(uri, initDetails).then(response => response.json()).then(result => {
+                retrieveJobs();
+            });
         }
         function searchForConversation() {
             const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
@@ -228,13 +245,21 @@
                 console.log(result);
             });
         }
-        function renderOnlineStatus(onlineStatus) {
+        function renderOnlineStatus(onlineStatus, manualTakeoverData) {
             const onlineStatusText = document.getElementById("onlineStatus");
             const onlineButtonToggle = document.getElementById("onlineToggle");
             onlineStatusText.innerHTML = `You're currently ${onlineStatus ? "online" : "offline"}.`;
             onlineButtonToggle.innerHTML = `Go ${onlineStatus ? "offline" : "online"}`;
             const customChat = document.getElementById("customChat");
             customChat.style.visibility = onlineStatus ? "visible" : "hidden";
+            const manualTakeover = document.getElementById("manuallyTakeover");
+            manualTakeover.style.visibility = onlineStatus ? "visible" : "hidden";
+            const manualTakeoverList = document.getElementById("takeoverList");
+            manualTakeoverList.style.visibility = onlineStatus ? "visible" : "hidden";
+            console.log(manualTakeoverData)
+            manualTakeoverList.innerHTML = manualTakeoverData;
+            // manualTakeoverList.innerHTML = "hello";
+
         }
         function onlineToggle() {
             const uri = `${apiURL}/online`;
@@ -275,9 +300,11 @@
                 renderJobs(result);
             })
             await fetch(everythingUri, initDetails).then(response => response.json()).then(result => {
+                console.log(result.manualTakeover)
                 renderDoses(result.doses);
                 renderReminders(result.reminders);
-                renderOnlineStatus(result.onlineStatus);
+                renderOnlineStatus(result.onlineStatus, result.manualTakeover);
+                manualTakeoverList = result.manualTakeover;
             })
         }
         function getEventsForPhoneNumber() {
