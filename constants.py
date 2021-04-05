@@ -6,35 +6,39 @@ INITIAL_MSGS = [
     Template("""Hope you're having a great day. Just wanted to let you know that it's $time and remind you about your dose.\n"""),
     Template("""Hello 👋 You have a dose to take at $time.\n"""),
     Template("""Hey there, just wanted to let you know it's time for your $time dose.\n"""),
+    Template("""Are you ready for your $time dose?\n"""),
+    Template("""Let me know if you can take your $time dose.\n"""),
 ]
 
 FOLLOWUP_MSGS = [
-"""Hello, checking in at your requested time.
-""",
-"""Hey, hope you're having a great day. Just checking in again.
-""",
-"""Hello! Following up on my last message.
-""",
-"""Just wanted to see if now is a better time.
-""",
-"""Following up to see if you are free now!
-"""
+    """Hello, checking in at your requested time.\n""",
+    """Hey, hope you're having a great day. Just checking in again.\n""",
+    """Hello! Following up on my last message.\n""",
+    """Just wanted to see if now is a better time.\n""",
+    """Following up to see if you are free now!\n""",
+    """Let me know if you're free now!\n"""
 ]
 
 ABSENT_MSG = [
-    """Hope you're having a great day. Just a friendly note to take your medication 😊\n""",
+    """Hope you're having a great day. Just a friendly note to take your medication.\n""",
     """Hello, just wanted to make sure you remember to stick to your meds today!\n""",
-    """You're doing great, and we hope you'll keep it up by taking your medication today 😊\n""",
+    """You're doing great, and we hope you'll keep it up by taking your medication today.\n""",
     """Hope everything is going well. Just wanted to let you know you haven't marked your medication as taken yet!\n""",
     """We're here to support you in your medication habits!\n""",
-    """Hello friend 😊 Wanted to check in about your medication.\n""",
+    """Hello friend! Wanted to check in about your medication.\n""",
 ]
 
 BOUNDARY_MSG = """It's the end of the designated dose period. We've marked the dose as skipped."""
 
 CONFIRMATION_MSG = Template("""Great, we'll text again at $time. See you then!""")
 
-TAKE_MSG = """Awesome! We've recorded it for you. 💊"""
+TAKE_MSGS = [
+    """Awesome! I've recorded it for you. 💊""",
+    """Great, I've recorded it for you. 💊""",
+    """Glad to hear it. I've recorded it for you. 💊""",
+    """Thanks for letting me know. I've recorded it for you. 💊""",
+    """Thanks! I've recorded it for you. 💊""",
+]
 
 SKIP_MSG = """Skip confirmed."""
 

@@ -39,14 +39,20 @@ TOKENS_TO_RECOGNIZE = [
     "hello",
     "confused",
     "run",
-    "running"
+    "running",
+    "sleeping",
+    "out to dinner",
+    "out to lunch",
+    "out to breakfast",
+    "out to brunch",
+    "brunch"
 ]
 
 # load on server start
 SPACY_EMBED_MAP = {token: nlp(token) for token in TOKENS_TO_RECOGNIZE}
 
 import logging
-from constants import ABSENT_MSG, BOUNDARY_MSG, CONFIRMATION_MSG, INITIAL_MSGS, ERROR_MSG, FOLLOWUP_MSGS, MANUAL_TEXT_NEEDED_MSG, NO_DOSE_MSG, REMINDER_TOO_CLOSE_MSG, REMINDER_TOO_LATE_MSG, SKIP_MSG, TAKE_MSG, UNKNOWN_MSG, ACTION_MENU
+from constants import ABSENT_MSG, BOUNDARY_MSG, CONFIRMATION_MSG, INITIAL_MSGS, ERROR_MSG, FOLLOWUP_MSGS, MANUAL_TEXT_NEEDED_MSG, NO_DOSE_MSG, REMINDER_TOO_CLOSE_MSG, REMINDER_TOO_LATE_MSG, SKIP_MSG, TAKE_MSGS, UNKNOWN_MSG, ACTION_MENU
 
 # allow no reminders to be set within 10 mins of boundary
 BUFFER_TIME_MINS = 10
@@ -161,6 +167,9 @@ def get_followup_message():
 def get_initial_message():
     return random.choice(INITIAL_MSGS)  # returns a template
 
+def get_take_message():
+    return random.choice(TAKE_MSGS)
+
 # add a dose
 @app.route("/dose", methods=["POST"])
 def add_dose():
@@ -257,10 +266,6 @@ def online_toggle():
     db.session.commit()
     return jsonify()
 
-# @app.route("/concept", methods=["POST"])
-# def manually_update_concept():
-
-
 def activity_detection(message_str):
     # not deferring for now because that actually seems worse
     # if the string contains any numbers or timestrings, defer to the datetime parser
@@ -270,9 +275,14 @@ def activity_detection(message_str):
     computing_prefix = "Computing ideal reminder time...done."
     time_delay = timedelta(minutes=random.randint(30,60))
     direct_time_mapped_strings = {
+        "brunch": (time_delay, f"{computing_prefix} Have a great brunch! We'll check in later."),
+        "out to brunch": (time_delay, f"{computing_prefix} Have a great brunch! We'll check in later."),
         "dinner": (time_delay, f"{computing_prefix} Have a great dinner! We'll check in later."),
+        "out to dinner": (time_delay, f"{computing_prefix} Have a great dinner! We'll check in later."),
         "lunch": (time_delay, f"{computing_prefix} Have a great lunch! We'll check in later."),
+        "out to lunch": (time_delay, f"{computing_prefix} Have a great lunch! We'll check in later."),
         "breakfast": (time_delay, f"{computing_prefix} Have a great breakfast! We'll check in later."),
+        "out to breakfast": (time_delay, f"{computing_prefix} Have a great breakfast! We'll check in later."),
         "walking": (time_delay, f"{computing_prefix} Enjoy your walk! We'll check in later."),
         "going for a walk": (time_delay, f"{computing_prefix} Enjoy your walk! We'll check in later."),
         "eating": (time_delay, f"{computing_prefix} Enjoy your meal! We'll check in later."),
@@ -285,6 +295,7 @@ def activity_detection(message_str):
         "reading": (time_delay, f"{computing_prefix} Enjoy your book, we'll check in later."),
         "run": (time_delay, f"{computing_prefix} Have a great run! We'll see you later."),
         "running": (time_delay, f"{computing_prefix} Have a great run! We'll see you later."),
+        "sleeping": (time_delay, f"{computing_prefix} Sleep well! We'll see you later."),
     }
     best_match_score = 0.0
     best_match_concept = None
@@ -398,7 +409,7 @@ def bot():
                         )
             elif incoming_msg in ["t", "s"]:
                 message_copy = {
-                    "t": TAKE_MSG,
+                    "t": get_take_message(),
                     "s": SKIP_MSG
                 }
                 client.messages.create(
