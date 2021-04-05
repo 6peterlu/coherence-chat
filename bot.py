@@ -45,7 +45,8 @@ TOKENS_TO_RECOGNIZE = [
     "out to lunch",
     "out to breakfast",
     "out to brunch",
-    "brunch"
+    "brunch",
+    "later"
 ]
 
 # load on server start
@@ -146,6 +147,13 @@ class Concept(db.Model):
     def as_dict(self):
        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
+class Event(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    event_type = db.Column(db.String, nullable=False)
+    event_time = db.Column(db.DateTime, nullable=False)
+    phone_number = db.Column(db.String(13), nullable=False)
+    description = db.Column(db.String)
+
 
 # initialize tables
 db.create_all()  # are there bad effects from running this every time? edit: I guess not
@@ -169,6 +177,12 @@ def get_initial_message():
 
 def get_take_message():
     return random.choice(TAKE_MSGS)
+
+
+def log_event(event_type, phone_number, event_time=datetime.now(), description=None):
+    new_event = Event(event_type=event_type, phone_number=phone_number, event_time=event_time, description=description)
+    db.session.add(new_event)
+    db.session.commit()
 
 # add a dose
 @app.route("/dose", methods=["POST"])
@@ -222,12 +236,24 @@ def delete_reminder():
 def get_everything():
     all_doses = Dose.query.all()
     all_reminders = Reminder.query.order_by(Reminder.send_time.desc()).all()
-    all_concepts = Concept.query.all()
+    # all_concepts = Concept.query.all()
     return jsonify({
         "doses": [dose.as_dict() for dose in all_doses],
         "reminders": [reminder.as_dict() for reminder in all_reminders],
-        "concepts": [concept.as_dict() for concept in all_concepts],
+        # "concepts": [concept.as_dict() for concept in all_concepts],
         "onlineStatus": get_online_status()
+    })
+
+@app.route("/events", methods=["GET"])
+def get_events_for_number():
+    query_phone_number = request.args.get("phoneNumber")
+    query_days = int(request.args.get("days"))
+    earliest_date = datetime.now() - timedelta(days=query_days)
+    matching_events = Event.query.filter(
+            Event.event_time > earliest_date, Event.phone_number == query_phone_number
+        ).order_by(Event.event_time.desc()).all()
+    return jsonify({
+        "events": [event.as_dict() for event in matching_events]
     })
 
 @app.route("/messages", methods=["GET"])
@@ -291,6 +317,7 @@ def activity_detection(message_str):
         "on a call": (time_delay, f"{computing_prefix} Have a great call! We'll check in later."),
         "out": (time_delay, f"{computing_prefix} No problem, we'll check in later."),
         "busy": (time_delay, f"{computing_prefix} No problem, we'll check in later."),
+        "later": (time_delay, f"{computing_prefix} No problem, we'll check in later."),
         "bathroom": (time_delay, f"{computing_prefix} No problem, we'll check in in a bit."),
         "reading": (time_delay, f"{computing_prefix} Enjoy your book, we'll check in later."),
         "run": (time_delay, f"{computing_prefix} Have a great run! We'll see you later."),
@@ -362,10 +389,12 @@ def bot():
                 remove_jobs_helper(latest_dose_id, ["followup", "absent"])
                 dose_end_time = get_current_end_date(latest_dose_id)
                 if incoming_msg in ["1", "2", "3"]:
+                    log_event("requested_time_delay", incoming_phone_number, description=f"{message_delays[incoming_msg]}")
                     next_alarm_time = datetime.now() + message_delays[incoming_msg]
                 elif activity_detection_time is not None:
                     next_alarm_time = datetime.now() + activity_detection_time[0]
                     obscure_confirmation = True
+                    log_event("activity", incoming_phone_number, description=incoming_msg)
                 else:
                     next_alarm_time = datetime(*time_struct[:6])
                 too_close = False
@@ -373,6 +402,7 @@ def bot():
                     next_alarm_time = dose_end_time - timedelta(minutes=10)
                     too_close = True
                 if next_alarm_time > datetime.now():
+                    log_event("reminder_delay", incoming_phone_number, description=f"delayed to {next_alarm_time}")
                     if obscure_confirmation:
                         client.messages.create(
                             body= activity_detection_time[1],
@@ -411,6 +441,10 @@ def bot():
                     "t": get_take_message(),
                     "s": SKIP_MSG
                 }
+                if incoming_msg == "t":
+                    log_event("take", incoming_phone_number)
+                if incoming_msg == "s":
+                    log_event("skip", incoming_phone_number)
                 client.messages.create(
                     body=message_copy[incoming_msg],
                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
@@ -424,18 +458,21 @@ def bot():
                     to=incoming_phone_number
                 )
         else:
+            log_event("out_of_range", incoming_phone_number, description=incoming_msg)
             client.messages.create(
                 body=NO_DOSE_MSG,
                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                 to=incoming_phone_number
             )
     elif canned_response is not None:
+        log_event("conversational", incoming_phone_number, description=incoming_msg)
         client.messages.create(
             body=canned_response,
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
             to=incoming_phone_number
         )
     else:
+        log_event("not_interpretable", incoming_phone_number, description=incoming_msg)
         text_fallback(incoming_phone_number)
     return jsonify()
 
@@ -478,6 +515,7 @@ def manual_send_text():
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=f"+1{target_phone_number}"
     )
+    log_event("manual_text", f"+1{target_phone_number}", description=text)
     return jsonify()
 
 def get_online_status():
@@ -533,6 +571,7 @@ def send_followup_text(dose_id):
     # remove absent jobs, if exist
     remove_jobs_helper(dose_id, ["absent", "followup"])
     maybe_schedule_absent(dose_id)
+    log_event("followup", dose_obj.phone_number)
 
 def send_absent_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
@@ -545,6 +584,7 @@ def send_absent_text(dose_id):
     db.session.add(reminder_record)
     db.session.commit()
     remove_jobs_helper(dose_id, ["absent", "followup"])
+    log_event("absent", dose_obj.phone_number)
 
 def send_boundary_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
@@ -558,6 +598,7 @@ def send_boundary_text(dose_id):
     db.session.commit()
     # this shouldn't be needed, but followups sent manually leave absent artifacts
     remove_jobs_helper(dose_id, ["absent", "followup"])
+    log_event("boundary", dose_obj.phone_number)
 
 def send_intro_text(dose_id, manual=False):
     dose_obj = Dose.query.get(dose_id)
@@ -575,6 +616,7 @@ def send_intro_text(dose_id, manual=False):
         run_date=dose_obj.next_end_date if manual else dose_obj.next_end_date - timedelta(days=1)  # HACK, assumes this executes after start_date
     )
     maybe_schedule_absent(dose_id)
+    log_event("initial", dose_obj.phone_number)
 
 
 if __name__ == '__main__':
