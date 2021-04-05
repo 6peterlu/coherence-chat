@@ -38,6 +38,7 @@
         <input id="daysToPull" type="number" placeholder="days to pull"/>
         <button id="searchForConversation" onclick="searchForConversation()">Retrieve conversation</button>
         <button id="getEventsForPhoneNumber" onclick="getEventsForPhoneNumber()">Retrieve events</button>
+        <button id="manuallyTakeover" onclick="manualTakeover()">Manually takeover</button>
         <div id="customChat" style="visibility:hidden">
             <textarea id="customTextMessage" placeholder="custom text message"></textarea>
             <button id="searchForConversation" onclick="sendCustomText()">Send custom text</button>
@@ -51,6 +52,7 @@
         const messageListDiv = document.querySelector('.messageList');
         const headerText = document.getElementById("header");
         var runningLocally = true;  // if this is false, you're editing PROD.
+        var manualTakeoverList = [];  // list of numbers that are taken over
         headerText.innerHTML = `current env: ${runningLocally ? "local" : "PRODUCTION"}`;
         var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
 
@@ -72,6 +74,28 @@
                 body: JSON.stringify(body)
             };
             fetch(uri, initDetails);
+        }
+        async function manualTakeover() {
+            await retrieveJobs();
+            const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
+            const uri = `${apiURL}/manual/takeover`;
+            const body = {
+                phoneNumber: `+11${phoneNumber}`
+            };
+            if (manualTakeoverList.includes(phoneNumber)) {
+                const initDetails = {
+                    method: 'delete',
+                    headers: {
+                        "Access-Control-Allow-Origin": "*",
+                        "Access-Control-Allow_Methods": "DELETE",
+                        "Access-Control_Allow_Headers": "*",
+                        "Content-Type": "application/json; charset=utf-8",
+                        "Cache-Control": "no-cache"
+                    },
+                    mode: "cors",
+                    body: JSON.stringify(body)
+                };
+            };
         }
         function searchForConversation() {
             const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
@@ -232,7 +256,7 @@
                 }
             );
         }
-        function retrieveJobs() {
+        async function retrieveJobs() {
             const uri = `${apiURL}/scheduler/jobs`;
             const everythingUri = `${apiURL}/everything`;
             const initDetails = {
@@ -246,11 +270,11 @@
                 },
                 mode: "cors"
             };
-            fetch(uri, initDetails).then(response => response.json()).then(result => {
+            await fetch(uri, initDetails).then(response => response.json()).then(result => {
                 console.log("rendering jobs");
                 renderJobs(result);
             })
-            fetch(everythingUri, initDetails).then(response => response.json()).then(result => {
+            await fetch(everythingUri, initDetails).then(response => response.json()).then(result => {
                 renderDoses(result.doses);
                 renderReminders(result.reminders);
                 renderOnlineStatus(result.onlineStatus);

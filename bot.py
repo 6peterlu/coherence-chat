@@ -154,6 +154,9 @@ class Event(db.Model):
     phone_number = db.Column(db.String(13), nullable=False)
     description = db.Column(db.String)
 
+class ManualTakeover(db.Model):
+    phone_number = db.Column(db.String(13), primary_key=True)
+
 
 # initialize tables
 db.create_all()  # are there bad effects from running this every time? edit: I guess not
@@ -370,7 +373,7 @@ def bot():
     activity_detection_time = activity_detection(incoming_msg)
     canned_response = canned_responses(incoming_msg)
     # canned response
-    if incoming_msg in ['1', '2', '3', 't', 's'] or parse_status != 0 or activity_detection_time is not None:
+    if incoming_phone_number != "+13609042210" and (incoming_msg in ['1', '2', '3', 't', 's'] or parse_status != 0 or activity_detection_time is not None):
         doses = Dose.query.filter_by(phone_number=f"+1{incoming_phone_number[1:]}").all()
         dose_ids = [dose.id for dose in doses]
         latest_reminder_record = Reminder.query \
@@ -464,7 +467,7 @@ def bot():
                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                 to=incoming_phone_number
             )
-    elif canned_response is not None:
+    elif incoming_phone_number != "+13609042210" and (canned_response is not None):
         log_event("conversational", incoming_phone_number, description=incoming_msg)
         client.messages.create(
             body=canned_response,
@@ -504,6 +507,28 @@ def manual_send():
     elif reminder_type == "initial":
         send_intro_text(dose_id)
     return jsonify()
+
+@app.route("/manual/takeover", methods=["POST"])
+def manual_takeover():
+    incoming_data = request.json
+    target_phone_number = incoming_data["phoneNumber"]
+    takeover_record = ManualTakeover.query.get(f"+11{target_phone_number}")
+    if takeover_record is None:
+        new_takeover_record = ManualTakeover(phone_number=target_phone_number)
+        db.session.add(new_takeover_record)
+        db.session.commit()
+    return jsonify()
+
+@app.route("/manual/takeover", methods=["DELETE"])
+def end_manual_takeover():
+    incoming_data = request.json
+    target_phone_number = incoming_data["phoneNumber"]
+    takeover_record = ManualTakeover.query.get(f"+11{target_phone_number}")
+    if takeover_record is not None:
+        takeover_record.delete()
+        db.session.commit()
+    return jsonify()
+
 
 @app.route("/manual/text", methods=["POST"])
 def manual_send_text():
