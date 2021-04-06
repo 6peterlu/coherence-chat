@@ -180,7 +180,7 @@ scheduler.start()
 
 # message helpers
 def get_followup_message():
-    return f"{random.choice(FOLLOWUP_MSGS)}{ACTION_MENU}"
+    return random.choice(FOLLOWUP_MSGS)
 
 def get_initial_message():
     return random.choice(INITIAL_MSGS)  # returns a template
@@ -592,9 +592,8 @@ def get_online_status():
 def maybe_schedule_absent(dose_id):
     end_date = get_current_end_date(dose_id)
     # schedule absent text in an hour or ten mins before boundary
-    desired_absent_reminder = datetime.now() + timedelta(hours=1)
     if end_date is not None:  # if it's none, there's no boundary set up
-        desired_absent_reminder = min(datetime.now() + timedelta(hours=1), end_date - timedelta(minutes=BUFFER_TIME_MINS))
+        desired_absent_reminder = min(datetime.now() + timedelta(minutes=random.randint(45,75)), end_date - timedelta(minutes=BUFFER_TIME_MINS))
     # room to schedule absent
     if desired_absent_reminder > datetime.now():
         scheduler.add_job(f"{dose_id}-absent", send_absent_text,
@@ -648,6 +647,7 @@ def send_absent_text(dose_id):
     db.session.commit()
     remove_jobs_helper(dose_id, ["absent", "followup"])
     log_event("absent", dose_obj.phone_number)
+    maybe_schedule_absent(dose_id)
 
 def send_boundary_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
