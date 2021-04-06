@@ -385,6 +385,12 @@ def should_force_manual(phone_number):  # phone number format: +13604508655
     takeover_numbers = [mt.phone_number for mt in all_takeover]
     return f"+1{phone_number[1:]}" in takeover_numbers
 
+def extract_integer(message):
+    try:
+        return int(message)
+    except ValueError:
+        return None
+
 @app.route('/bot', methods=['POST'])
 def bot():
     incoming_msg = request.values.get('Body', '').lower().strip()
@@ -393,9 +399,13 @@ def bot():
     time_struct, parse_status = cal.parse(incoming_msg)
     activity_detection_time = activity_detection(incoming_msg)
     canned_response = canned_responses(incoming_msg)
+    extracted_integer = extract_integer(incoming_msg)
     # canned response
     if not should_force_manual(incoming_phone_number) and (
-            incoming_msg in ['1', '2', '3', 't', 's'] or parse_status != 0 or activity_detection_time is not None
+            incoming_msg in ['1', '2', '3', 't', 's']
+            or parse_status != 0
+            or activity_detection_time is not None
+            or extracted_integer is not None
         ):
         doses = Dose.query.filter_by(phone_number=f"+1{incoming_phone_number[1:]}").all()  # +113604508655
         dose_ids = [dose.id for dose in doses]
@@ -405,7 +415,10 @@ def bot():
             .first()
         latest_dose_id = None if latest_reminder_record is None else latest_reminder_record.dose_id
         if exists_remaining_reminder_job(latest_dose_id, ["boundary"]):
-            if incoming_msg in ["1", "2", "3"] or parse_status != 0 or activity_detection_time is not None:
+            if incoming_msg in ["1", "2", "3"] \
+                or parse_status != 0 \
+                or activity_detection_time is not None \
+                or extracted_integer is not None:
                 obscure_confirmation = False
                 message_delays = {
                         "1": timedelta(minutes=10),
@@ -417,6 +430,9 @@ def bot():
                 if incoming_msg in ["1", "2", "3"]:
                     log_event("requested_time_delay", incoming_phone_number, description=f"{message_delays[incoming_msg]}")
                     next_alarm_time = datetime.now() + message_delays[incoming_msg]
+                elif extracted_integer is not None:
+                    log_event("requested_time_delay", incoming_phone_number, description=f"{timedelta(minutes=10)}")
+                    next_alarm_time = datetime.now() + timedelta(minutes=extracted_integer)
                 elif activity_detection_time is not None:
                     next_alarm_time = datetime.now() + activity_detection_time[0]
                     obscure_confirmation = True
