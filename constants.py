@@ -32,12 +32,16 @@ BOUNDARY_MSG = """It's the end of the designated dose period. We've marked the d
 
 CONFIRMATION_MSG = Template("""Great, we'll text again at $time. See you then!""")
 
+TAKE_HEADER = Template("""🕒 $time""")
+
+TAKE_FOOTER = "💊💊💊💊"
+
 TAKE_MSGS = [
-    """Awesome! I've recorded it for you. 💊""",
-    """Great, I've recorded it for you. 💊""",
-    """Glad to hear it. I've recorded it for you. 💊""",
-    """Thanks for letting me know. I've recorded it for you. 💊""",
-    """Thanks! I've recorded it for you. 💊""",
+    """Awesome! I've recorded it for you.""",
+    """Great, I've recorded it for you.""",
+    """Glad to hear it. I've recorded it for you.""",
+    """Thanks for letting me know. I've recorded it for you.""",
+    """Thanks! I've recorded it for you.""",
 ]
 
 SKIP_MSG = """Skip confirmed."""

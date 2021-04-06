@@ -57,7 +57,24 @@ TOKENS_TO_RECOGNIZE = [
 SPACY_EMBED_MAP = {token: nlp(token) for token in TOKENS_TO_RECOGNIZE}
 
 import logging
-from constants import ABSENT_MSG, BOUNDARY_MSG, CONFIRMATION_MSG, INITIAL_MSGS, ERROR_MSG, FOLLOWUP_MSGS, MANUAL_TEXT_NEEDED_MSG, NO_DOSE_MSG, REMINDER_TOO_CLOSE_MSG, REMINDER_TOO_LATE_MSG, SKIP_MSG, TAKE_MSGS, UNKNOWN_MSG, ACTION_MENU
+from constants import (
+    ABSENT_MSG,
+    BOUNDARY_MSG,
+    CONFIRMATION_MSG,
+    INITIAL_MSGS,
+    ERROR_MSG,
+    FOLLOWUP_MSGS,
+    MANUAL_TEXT_NEEDED_MSG,
+    NO_DOSE_MSG,
+    REMINDER_TOO_CLOSE_MSG,
+    REMINDER_TOO_LATE_MSG,
+    SKIP_MSG,
+    TAKE_HEADER,
+    TAKE_FOOTER,
+    TAKE_MSGS,
+    UNKNOWN_MSG,
+    ACTION_MENU
+)
 
 # allow no reminders to be set within 10 mins of boundary
 BUFFER_TIME_MINS = 10
@@ -186,7 +203,8 @@ def get_initial_message():
     return random.choice(INITIAL_MSGS)  # returns a template
 
 def get_take_message():
-    return random.choice(TAKE_MSGS)
+    datestring = datetime.now().astimezone(timezone(USER_TIMEZONE)).strftime('%b %d, %I:%M %p')
+    return f"{TAKE_HEADER.substitute(time=datestring)}\n{random.choice(TAKE_MSGS)}\n{TAKE_FOOTER}"
 
 
 def log_event(event_type, phone_number, event_time=datetime.now(), description=None):
