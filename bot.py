@@ -431,7 +431,7 @@ def bot():
                     log_event("requested_time_delay", incoming_phone_number, description=f"{message_delays[incoming_msg]}")
                     next_alarm_time = datetime.now() + message_delays[incoming_msg]
                 elif extracted_integer is not None:
-                    log_event("requested_time_delay", incoming_phone_number, description=f"{timedelta(minutes=10)}")
+                    log_event("requested_time_delay", incoming_phone_number, description=f"{timedelta(minutes=extracted_integer)}")
                     next_alarm_time = datetime.now() + timedelta(minutes=extracted_integer)
                 elif activity_detection_time is not None:
                     next_alarm_time = datetime.now() + activity_detection_time[0]
