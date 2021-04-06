@@ -217,15 +217,15 @@
             reminderListDiv.innerHTML = html;
         }
         function renderEvents(eventList) {
-            const rows = eventList.map(event => {
+            const rows = eventList.events.map(event => {
                 return `
                     <li>
-                        <p>${event.event_time}, ${event.event_type}: ${event.phone_number}/${event.description}</p>
+                        <p>${event.phone_number}|${event.event_time}, ${event.event_type}: ${event.description}</p>
                     </li>
                 `;
             })
             const html = `<ul>${rows.join("")}</ul>`;
-            reminderListDiv.innerHTML = html;
+            messageListDiv.innerHTML = html;
         }
         function getBasicInfo() {
             const uri = `${apiURL}/scheduler`;
@@ -323,8 +323,8 @@
                 mode: "cors"
             };
             fetch(uri, initDetails).then(response => response.json()).then(result => {
-                renderJobs(result);
-            })
+                renderEvents(result);
+            });
         }
         // helper fn to get next alarm datetime from FE, not currently in use
         // function getAlarmStartTime(hour, minute) {

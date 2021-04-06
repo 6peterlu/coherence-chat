@@ -46,7 +46,11 @@ TOKENS_TO_RECOGNIZE = [
     "out to breakfast",
     "out to brunch",
     "brunch",
-    "later"
+    "later",
+    "golf",
+    "tennis",
+    "swimming",
+    "basketball"
 ]
 
 # load on server start
@@ -154,6 +158,9 @@ class Event(db.Model):
     phone_number = db.Column(db.String(13), nullable=False)
     description = db.Column(db.String)
 
+    def as_dict(self):
+       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
 class ManualTakeover(db.Model):
     phone_number = db.Column(db.String(13), primary_key=True)
 
@@ -255,7 +262,7 @@ def get_events_for_number():
     query_days = int(request.args.get("days"))
     earliest_date = datetime.now() - timedelta(days=query_days)
     matching_events = Event.query.filter(
-            Event.event_time > earliest_date, Event.phone_number == query_phone_number
+            Event.event_time > earliest_date, Event.phone_number == f"+1{query_phone_number}"
         ).order_by(Event.event_time.desc()).all()
     return jsonify({
         "events": [event.as_dict() for event in matching_events]
@@ -330,6 +337,10 @@ def activity_detection(message_str):
         "run": (time_delay, f"{computing_prefix} Have a great run! We'll see you later."),
         "running": (time_delay, f"{computing_prefix} Have a great run! We'll see you later."),
         "sleeping": (time_delay, f"{computing_prefix} Sleep well! We'll see you later."),
+        "golf": (time_delay, f"{computing_prefix} Have fun out there! We'll see you later."),
+        "tennis": (time_delay, f"{computing_prefix} Have fun out there! We'll see you later."),
+        "swimming": (time_delay, f"{computing_prefix} Have fun out there! We'll see you later."),
+        "basketball": (time_delay, f"{computing_prefix} Have fun out there! We'll see you later."),
     }
     best_match_score = 0.0
     best_match_concept = None
