@@ -1,57 +1,71 @@
 from string import Template
 
-DAILY_MSG = Template("""Here’s your $time reminder.
-[T] mark medication as taken
-[S] skip this dose
-If now isn’t a good time, you can also reply with
-[1] to check in with you in 10 minutes,
-[2] to check in in 30,
-[3] to check in in an hour,
-or any other time delay you prefer (“35 min”).
-""")
+INITIAL_MSGS = [
+    Template("""Here’s your $time reminder.\n"""),
+    Template("""It's $time, which means it's time for your dose!\n"""),
+    Template("""Hope you're having a great day. Just wanted to let you know that it's $time and remind you about your dose.\n"""),
+    Template("""Hello 👋 You have a dose to take at $time.\n"""),
+    Template("""Hey there, just wanted to let you know it's time for your $time dose.\n"""),
+    Template("""Are you ready for your $time dose?\n"""),
+    Template("""Let me know if you can take your $time dose.\n"""),
+]
 
-FOLLOWUP_MSG = """Hello, checking in at your requested time.
-[T] mark medication as taken
-[S] skip this dose
-If now isn’t a good time, you can also reply with
-[1] to check in with you in 10 minutes,
-[2] to check in in 30,
-[3] to check in in an hour,
-or any other time delay you prefer (“35 min”)."""
+FOLLOWUP_MSGS = [
+    """Hello, checking in at your requested time.\n""",
+    """Hey, hope you're having a great day. Just checking in again.\n""",
+    """Hello! Following up on my last message.\n""",
+    """Just wanted to see if now is a better time.\n""",
+    """Following up to see if you are free now!\n""",
+    """Let me know if you're free now!\n"""
+]
 
-ABSENT_MSG = """Hope you're having a great day. Just a friendly note to take your medication 😊
-[T] mark medication as taken
-[S] skip this dose
-If now isn’t a good time, you can also reply with
-[1] to check in with you in 10 minutes,
-[2] to check in in 30,
-[3] to check in in an hour,
-or any other time delay you prefer (“35 min”)."""
+ABSENT_MSG = [
+    """Hope you're having a great day. Just a friendly note to take your medication.\n""",
+    """Hello, just wanted to make sure you remember to stick to your meds today!\n""",
+    """You're doing great, and we hope you'll keep it up by taking your medication today.\n""",
+    """Hope everything is going well. Just wanted to let you know you haven't marked your medication as taken yet!\n""",
+    """We're here to support you in your medication habits! Just wanted to see if you've taken your medication yet.\n""",
+    """Hello friend! Wanted to check in about your medication.\n""",
+    """We haven't gotten a record of your dose yet, so please let us know if you've taken it.\n""",
+]
 
 BOUNDARY_MSG = """It's the end of the designated dose period. We've marked the dose as skipped."""
 
-CONFIRMATION_MSG = Template("""Great, we'll check in again at $time. See you then!""")
+CLINICAL_BOUNDARY_MSG = Template("""It's $time, so here's a reminder not to take your medication after this point.""")
 
-TAKE_MSG = """Awesome work. Take confirmed."""
+CONFIRMATION_MSG = Template("""Great, we'll text again at $time. See you then!""")
 
-SKIP_MSG = """Skip confirmed."""
+TAKE_MSG = Template("""🕒 $time\nDose recorded.\n💊💊💊💊""")
 
-UNKNOWN_MSG = """Sorry, I can only understand the following commands right now:
+SKIP_MSG = """Dose skipped. We won't send you any more reminders for this dose today."""
+
+UNKNOWN_MSG = """I can understand the following commands:
 [T] mark medication as taken
 [S] skip this dose
 [1] check in with you in 10 minutes
 [2] to check in in 30
 [3] to check in in an hour
-
-Working hard on understanding more! 📚🧠
+[x] report an error
+"I need help", "I'm confused"
+a specific amount of time such as "2 hours", "20 minutes"
+activities such as "eating dinner", "on a walk", etc.
 """
 
-ERROR_MSG = """Something went wrong. Please reach out to +1(360)450-8655 with a description of how you got this message. Thank you!"""
+ERROR_MSG = """Something went wrong. Please text 'x' and we'll be notified."""
 
-NO_DOSE_MSG = """There's no dose to be taken right now. If you've received this message in error, please reach out to +1(360)450-8655 with a description of your situation. Thank you!"""
+NO_DOSE_MSG = """There's no dose to be taken right now. If you've received this message in error, please text 'x' and we'll be notified."""
 
 REMINDER_TOO_LATE_MSG = Template("""Sorry, we can't schedule a reminder after your latest dose time, which is $time.""")
 
-REMINDER_TOO_CLOSE_MSG = Template("""We can't schedule a reminder after your latest dose time of $time, so we've scheduled it right before, at $reminder_time. See you then!""")
+REMINDER_TOO_CLOSE_MSG = Template("""We can't schedule a reminder after your latest dose time of $time, so we've scheduled it at $reminder_time. See you then!""")
 
 MANUAL_TEXT_NEEDED_MSG = Template("""The phone number $number requires your manual intervention.""")
+
+ACTION_MENU = """I can understand the following commands:
+[T] mark medication as taken
+[S] skip this dose
+[1] check in with you in 10 minutes
+[2] to check in in 30
+[3] to check in in an hour
+a specific amount of time such as "2 hours", "20 minutes"
+activities such as "eating dinner", "on a walk", etc."""

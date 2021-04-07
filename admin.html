@@ -22,6 +22,7 @@
         <select name="reminderType" id="reminderType">
             <option value="absent">absent</option>
             <option value="followup">followup</option>
+            <option value="initial">initial</option>
         </select>
         <button id="sendManual" onclick="sendManual()">Send manual</button>
     </div>
@@ -31,12 +32,16 @@
     <p>Dose list:</p>
     <div class="doseList"></div>
     <p>Reminder list:</p>
-    <div class="reminderList"></div>
+    <div class="reminderList" style="overflow: scroll; max-height: 500px;"></div>
     <div class="manualChat">
         <input id="messageSearchPhoneNumber" type="number" placeholder="phone number"/>
+        <input id="daysToPull" type="number" placeholder="days to pull"/>
         <button id="searchForConversation" onclick="searchForConversation()">Retrieve conversation</button>
+        <button id="getEventsForPhoneNumber" onclick="getEventsForPhoneNumber()">Retrieve events</button>
+        <button id="manuallyTakeover" style="visibility:hidden" onclick="manualTakeover()">Manually takeover</button>
+        <p id="takeoverList" style="visibility:hidden"></p>
         <div id="customChat" style="visibility:hidden">
-            <input id="customTextMessage" placeholder="custom text message"/>
+            <textarea id="customTextMessage" placeholder="custom text message"></textarea>
             <button id="searchForConversation" onclick="sendCustomText()">Send custom text</button>
         </div>
     </div>
@@ -48,6 +53,7 @@
         const messageListDiv = document.querySelector('.messageList');
         const headerText = document.getElementById("header");
         var runningLocally = true;  // if this is false, you're editing PROD.
+        var manualTakeoverList = [];  // list of numbers that are taken over
         headerText.innerHTML = `current env: ${runningLocally ? "local" : "PRODUCTION"}`;
         var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
 
@@ -70,9 +76,48 @@
             };
             fetch(uri, initDetails);
         }
+        async function manualTakeover() {
+            await retrieveJobs();
+            const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
+            const uri = `${apiURL}/manual/takeover`;
+            const body = { phoneNumber };
+            var initDetails = {};
+            if (manualTakeoverList.includes(`+11${phoneNumber}`)) {
+                console.log("deleting")
+                initDetails = {
+                    method: 'delete',
+                    headers: {
+                        "Access-Control-Allow-Origin": "*",
+                        "Access-Control-Allow_Methods": "DELETE",
+                        "Access-Control_Allow_Headers": "*",
+                        "Content-Type": "application/json; charset=utf-8",
+                        "Cache-Control": "no-cache"
+                    },
+                    mode: "cors",
+                    body: JSON.stringify(body)
+                };
+            } else {
+                initDetails = {
+                    method: 'post',
+                    headers: {
+                        "Access-Control-Allow-Origin": "*",
+                        "Access-Control-Allow_Methods": "POST",
+                        "Access-Control_Allow_Headers": "*",
+                        "Content-Type": "application/json; charset=utf-8",
+                        "Cache-Control": "no-cache"
+                    },
+                    mode: "cors",
+                    body: JSON.stringify(body)
+                };
+            }
+            await fetch(uri, initDetails).then(response => response.json()).then(result => {
+                retrieveJobs();
+            });
+        }
         function searchForConversation() {
             const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
-            const uri = `${apiURL}/messages?phoneNumber=${phoneNumber}`;
+            const days = document.getElementById("daysToPull").value;
+            const uri = `${apiURL}/messages?phoneNumber=${phoneNumber}&days=${days}`;
             const initDetails = {
                 method: 'get',
                 headers: {
@@ -92,7 +137,7 @@
             const rows = messagesList.map(message => {
                 return `
                     <li>
-                        <p>${message.date_sent}/${message.sender}: ${message.body}</p>
+                        <p style="color:${message.sender === 'them' ? 'blue' : 'black'}">${message.date_sent}/${message.sender}: ${message.body}</p>
                     </li>
                 `
             });
@@ -151,7 +196,7 @@
                 const startHour = dose.start_hour;
                 return `
                     <li>
-                        <p style="display:inline">${dose.id}-${dose.medication_name}, ${dose.patient_name}, ${convertToPT(dose.start_hour)}:${dose.start_minute}->${convertToPT(dose.end_hour)}:${dose.end_minute}</p>
+                        <p style="display:inline">${dose.id}-${dose.medication_name}, ${dose.patient_name}/${dose.phone_number}, ${convertToPT(dose.start_hour)}:${dose.start_minute}->${convertToPT(dose.end_hour)}:${dose.end_minute}</p>
                         <button onclick="deleteDose(\'${dose.id}\')">delete dose</button>
                     </li>
                 `
@@ -171,6 +216,18 @@
             const html = `<ul>${rows.join("")}</ul>`;
             reminderListDiv.innerHTML = html;
         }
+        function renderEvents(eventList) {
+            const rows = eventList.events.map(event => {
+                return `
+                    <li>
+                        <p style="display:inline">${event.phone_number}|${convertTZ(event.event_time, "US/Pacific")}, ${event.event_type}: ${event.description}</p>
+                        <button onclick="deleteEvent(\'${event.id}\')">delete event record</button>
+                    </li>
+                `;
+            })
+            const html = `<ul>${rows.join("")}</ul>`;
+            messageListDiv.innerHTML = html;
+        }
         function getBasicInfo() {
             const uri = `${apiURL}/scheduler`;
             const initDetails = {
@@ -189,13 +246,21 @@
                 console.log(result);
             });
         }
-        function renderOnlineStatus(onlineStatus) {
+        function renderOnlineStatus(onlineStatus, manualTakeoverData) {
             const onlineStatusText = document.getElementById("onlineStatus");
             const onlineButtonToggle = document.getElementById("onlineToggle");
             onlineStatusText.innerHTML = `You're currently ${onlineStatus ? "online" : "offline"}.`;
             onlineButtonToggle.innerHTML = `Go ${onlineStatus ? "offline" : "online"}`;
             const customChat = document.getElementById("customChat");
             customChat.style.visibility = onlineStatus ? "visible" : "hidden";
+            const manualTakeover = document.getElementById("manuallyTakeover");
+            manualTakeover.style.visibility = onlineStatus ? "visible" : "hidden";
+            const manualTakeoverList = document.getElementById("takeoverList");
+            manualTakeoverList.style.visibility = onlineStatus ? "visible" : "hidden";
+            console.log(manualTakeoverData)
+            manualTakeoverList.innerHTML = manualTakeoverData;
+            // manualTakeoverList.innerHTML = "hello";
+
         }
         function onlineToggle() {
             const uri = `${apiURL}/online`;
@@ -217,10 +282,36 @@
                 }
             );
         }
-        function retrieveJobs() {
+        async function retrieveJobs() {
             const uri = `${apiURL}/scheduler/jobs`;
             const everythingUri = `${apiURL}/everything`;
-            console.log(everythingUri);
+            const initDetails = {
+                method: 'get',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "GET",
+                    "Access-Control_Allow_Headers": "*",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors"
+            };
+            await fetch(uri, initDetails).then(response => response.json()).then(result => {
+                console.log("rendering jobs");
+                renderJobs(result);
+            })
+            await fetch(everythingUri, initDetails).then(response => response.json()).then(result => {
+                console.log(result.manualTakeover)
+                renderDoses(result.doses);
+                renderReminders(result.reminders);
+                renderOnlineStatus(result.onlineStatus, result.manualTakeover);
+                manualTakeoverList = result.manualTakeover;
+            })
+        }
+        function getEventsForPhoneNumber() {
+            const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
+            const days = document.getElementById("daysToPull").value;
+            const uri = `${apiURL}/events?phoneNumber=${phoneNumber}&days=${days}`;
             const initDetails = {
                 method: 'get',
                 headers: {
@@ -233,14 +324,8 @@
                 mode: "cors"
             };
             fetch(uri, initDetails).then(response => response.json()).then(result => {
-                console.log("rendering jobs");
-                renderJobs(result);
-            })
-            fetch(everythingUri, initDetails).then(response => response.json()).then(result => {
-                renderDoses(result.doses);
-                renderReminders(result.reminders);
-                renderOnlineStatus(result.onlineStatus);
-            })
+                renderEvents(result);
+            });
         }
         // helper fn to get next alarm datetime from FE, not currently in use
         // function getAlarmStartTime(hour, minute) {
@@ -375,6 +460,25 @@
             };
             fetch(uri, initDetails).then(() => {
                 retrieveJobs();
+            });
+        }
+        function deleteEvent(id) {
+            const uri = `${apiURL}/events`;
+            const body = { id };
+            const initDetails = {
+                method: 'delete',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "DELETE",
+                    "Access-Control_Allow_Headers": "*",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors",
+                body: JSON.stringify(body)
+            };
+            fetch(uri, initDetails).then(() => {
+                getEventsForPhoneNumber();
             });
         }
         retrieveJobs();
