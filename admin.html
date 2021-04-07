@@ -220,7 +220,7 @@
             const rows = eventList.events.map(event => {
                 return `
                     <li>
-                        <p>${event.phone_number}|${event.event_time}, ${event.event_type}: ${event.description}</p>
+                        <p>${event.phone_number}|${convertTZ(event.event_time, "US/Pacific")}, ${event.event_type}: ${event.description}</p>
                     </li>
                 `;
             })

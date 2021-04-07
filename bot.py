@@ -458,7 +458,7 @@ def bot():
                 elif activity_detection_time is not None:
                     next_alarm_time = datetime.now() + activity_detection_time[0]
                     obscure_confirmation = True
-                    log_event("activity", incoming_phone_number, description=incoming_msg)
+                    log_event("activity", f"+1{incoming_phone_number[1:]}", description=incoming_msg)
                 else:
                     next_alarm_time = datetime(*time_struct[:6])
                 too_close = False
@@ -466,7 +466,7 @@ def bot():
                     next_alarm_time = dose_end_time - timedelta(minutes=10)
                     too_close = True
                 if next_alarm_time > datetime.now():
-                    log_event("reminder_delay", incoming_phone_number, description=f"delayed to {next_alarm_time}")
+                    log_event("reminder_delay", f"+1{incoming_phone_number[1:]}", description=f"delayed to {next_alarm_time}")
                     if obscure_confirmation:
                         client.messages.create(
                             body= activity_detection_time[1],
@@ -506,9 +506,9 @@ def bot():
                     "s": SKIP_MSG
                 }
                 if incoming_msg == "t":
-                    log_event("take", incoming_phone_number)
+                    log_event("take", f"+1{incoming_phone_number[1:]}")
                 if incoming_msg == "s":
-                    log_event("skip", incoming_phone_number)
+                    log_event("skip", f"+1{incoming_phone_number[1:]}")
                 client.messages.create(
                     body=message_copy[incoming_msg],
                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
@@ -529,14 +529,14 @@ def bot():
                 to=incoming_phone_number
             )
     elif not should_force_manual(incoming_phone_number) and (canned_response is not None):
-        log_event("conversational", incoming_phone_number, description=incoming_msg)
+        log_event("conversational", f"+1{incoming_phone_number[1:]}", description=incoming_msg)
         client.messages.create(
             body=canned_response,
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
             to=incoming_phone_number
         )
     else:
-        log_event("not_interpretable", incoming_phone_number, description=incoming_msg)
+        log_event("not_interpretable", f"+1{incoming_phone_number[1:]}", description=incoming_msg)
         text_fallback(incoming_phone_number)
     return jsonify()
 
