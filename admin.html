@@ -176,9 +176,6 @@
             jobListDiv.innerHTML = html;
         }
         function convertToPT(hour) {
-            if (runningLocally) {
-                return hour;
-            }
             let convertedHour = hour - 7;
             if (convertedHour < 0) {
                 convertedHour += 24;
@@ -186,9 +183,6 @@
             return convertedHour;
         }
         function convertToUTC(hour) {
-            if (runningLocally) {
-                return hour;
-            }
             return (hour + 7) % 24;
         }
         function renderDoses(doseList) {
@@ -259,7 +253,6 @@
             manualTakeoverList.style.visibility = onlineStatus ? "visible" : "hidden";
             console.log(manualTakeoverData)
             manualTakeoverList.innerHTML = manualTakeoverData;
-            // manualTakeoverList.innerHTML = "hello";
 
         }
         function onlineToggle() {
