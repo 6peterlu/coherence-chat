@@ -50,7 +50,8 @@ TOKENS_TO_RECOGNIZE = [
     "golf",
     "tennis",
     "swimming",
-    "basketball"
+    "basketball",
+    "watching tv"
 ]
 
 # load on server start
@@ -369,6 +370,7 @@ def activity_detection(message_str):
         "tennis": (time_delay, f"{computing_prefix} Have fun out there! We'll see you later."),
         "swimming": (time_delay, f"{computing_prefix} Have fun out there! We'll see you later."),
         "basketball": (time_delay, f"{computing_prefix} Have fun out there! We'll see you later."),
+        "watching tv": (time_delay, f"{computing_prefix} Have fun, we'll check in later."),
     }
     best_match_score = 0.0
     best_match_concept = None
@@ -608,7 +610,7 @@ def manual_send_text():
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=f"+1{target_phone_number}"
     )
-    log_event("manual_text", f"+1{target_phone_number}", description=text)
+    log_event("manual_text", f"+11{target_phone_number}", description=text)
     return jsonify()
 
 def get_online_status():
