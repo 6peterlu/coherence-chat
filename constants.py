@@ -24,27 +24,20 @@ ABSENT_MSG = [
     """Hello, just wanted to make sure you remember to stick to your meds today!\n""",
     """You're doing great, and we hope you'll keep it up by taking your medication today.\n""",
     """Hope everything is going well. Just wanted to let you know you haven't marked your medication as taken yet!\n""",
-    """We're here to support you in your medication habits!\n""",
+    """We're here to support you in your medication habits! Just wanted to see if you've taken your medication yet.\n""",
     """Hello friend! Wanted to check in about your medication.\n""",
+    """We haven't gotten a record of your dose yet, so please let us know if you've taken it.\n""",
 ]
 
 BOUNDARY_MSG = """It's the end of the designated dose period. We've marked the dose as skipped."""
 
+CLINICAL_BOUNDARY_MSG = Template("""It's $time, so here's a reminder not to take your medication after this point.""")
+
 CONFIRMATION_MSG = Template("""Great, we'll text again at $time. See you then!""")
 
-TAKE_HEADER = Template("""🕒 $time""")
+TAKE_MSG = Template("""🕒 $time\nDose recorded.\n💊💊💊💊""")
 
-TAKE_FOOTER = "💊💊💊💊"
-
-TAKE_MSGS = [
-    """Awesome! I've recorded it for you.""",
-    """Great, I've recorded it for you.""",
-    """Glad to hear it. I've recorded it for you.""",
-    """Thanks for letting me know. I've recorded it for you.""",
-    """Thanks! I've recorded it for you.""",
-]
-
-SKIP_MSG = """Skip confirmed."""
+SKIP_MSG = """Dose skipped. We won't send you any more reminders for this dose today."""
 
 UNKNOWN_MSG = """I can understand the following commands:
 [T] mark medication as taken

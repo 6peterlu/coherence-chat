@@ -60,6 +60,7 @@ import logging
 from constants import (
     ABSENT_MSG,
     BOUNDARY_MSG,
+    CLINICAL_BOUNDARY_MSG,
     CONFIRMATION_MSG,
     INITIAL_MSGS,
     ERROR_MSG,
@@ -69,9 +70,7 @@ from constants import (
     REMINDER_TOO_CLOSE_MSG,
     REMINDER_TOO_LATE_MSG,
     SKIP_MSG,
-    TAKE_HEADER,
-    TAKE_FOOTER,
-    TAKE_MSGS,
+    TAKE_MSG,
     UNKNOWN_MSG,
     ACTION_MENU
 )
@@ -83,6 +82,9 @@ TWILIO_PHONE_NUMBERS = {
     "local": "2813771848",
     "production": "2673824152"
 }
+
+# numbers for which the person should NOT take it after the dose period.
+CLINICAL_BOUNDARY_PHONE_NUMBERS = ["8587761377"]
 
 logging.basicConfig()
 logging.getLogger('apscheduler').setLevel(logging.DEBUG)
@@ -204,7 +206,7 @@ def get_initial_message():
 
 def get_take_message():
     datestring = datetime.now().astimezone(timezone(USER_TIMEZONE)).strftime('%b %d, %I:%M %p')
-    return f"{TAKE_HEADER.substitute(time=datestring)}\n{random.choice(TAKE_MSGS)}\n{TAKE_FOOTER}"
+    return TAKE_MSG.substitute(time=datestring)
 
 
 def log_event(event_type, phone_number, event_time=datetime.now(), description=None):
@@ -367,7 +369,7 @@ def activity_detection(message_str):
         if match_score > best_match_score:
             best_match_score = match_score
             best_match_concept = concept
-    if best_match_score > 0.8:
+    if best_match_score > 0.75:
         return direct_time_mapped_strings[best_match_concept]
     return None
 
@@ -415,6 +417,8 @@ def bot():
     incoming_phone_number = request.values.get('From', None)
     # attempt to parse time from incoming msg
     time_struct, parse_status = cal.parse(incoming_msg)
+    if not any(char.isdigit() for char in incoming_msg):
+        parse_status = 0  # force parse to be zero if the string was pure concept.
     activity_detection_time = activity_detection(incoming_msg)
     canned_response = canned_responses(incoming_msg)
     extracted_integer = extract_integer(incoming_msg)
@@ -670,7 +674,7 @@ def send_absent_text(dose_id):
 def send_boundary_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
-        body=BOUNDARY_MSG,
+        body=CLINICAL_BOUNDARY_MSG.substitute(time=datetime.now().astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M')) if dose_obj.phone_number[3:] in CLINICAL_BOUNDARY_PHONE_NUMBERS else BOUNDARY_MSG,
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=dose_obj.phone_number
     )
