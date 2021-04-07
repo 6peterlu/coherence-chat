@@ -453,7 +453,8 @@ def incoming_message_processing(incoming_msg):
         final_message_list.append("t")
     elif len(skip_list) > 0:
         final_message_list.append("s")
-    final_message_list.append(" ".join(everything_else))
+    if len(everything_else) > 0:
+        final_message_list.append(" ".join(everything_else))
     return final_message_list
 
 @app.route('/bot', methods=['POST'])
