@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from pytz import timezone
 import parsedatetime
 import random
+import string
 
 # fuzzy nlp handling
 import spacy
@@ -421,9 +422,14 @@ def extract_integer(message):
     except ValueError:
         return None
 
+def incoming_message_processing(incoming_msg):
+    processed_msg = incoming_msg.lower().strip()
+    processed_msg = processed_msg.translate(str.maketrans("", "", string.punctuation))
+    return processed_msg
+
 @app.route('/bot', methods=['POST'])
 def bot():
-    incoming_msg = request.values.get('Body', '').lower().strip()
+    incoming_msg = incoming_message_processing(request.values.get('Body', ''))
     incoming_phone_number = request.values.get('From', None)
     # attempt to parse time from incoming msg
     time_struct, parse_status = cal.parse(incoming_msg)
