@@ -7,7 +7,7 @@ from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 import os
 # from twilio.twiml.messaging_response import MessagingResponse
 from twilio.rest import Client
-from datetime import datetime, timedelta, timezone as dt_timezone
+from datetime import datetime, timedelta
 from pytz import timezone, utc as pytzutc
 import parsedatetime
 import random
@@ -222,7 +222,6 @@ def get_take_message():
 def log_event(event_type, phone_number, event_time=None, description=None):
     if event_time is None:
         event_time = get_time_now()  # done at runtime for accurate timing
-    print(event_time)
     new_event = Event(event_type=event_type, phone_number=phone_number, event_time=event_time, description=description)
     db.session.add(new_event)
     db.session.commit()
@@ -302,11 +301,19 @@ def get_events_for_number():
     })
 
 @app.route("/events", methods=["DELETE"])
-def delete_even():
+def delete_event():
     incoming_data = request.json
     id_to_delete = incoming_data["id"]
     Event.query.filter_by(id=int(id_to_delete)).delete()
     db.session.commit()
+    return jsonify()
+
+@app.route("/events", methods=["POST"])
+def post_event():
+    incoming_data = request.json
+    phone_number = f"+11{incoming_data['phoneNumber']}"
+    event_type = incoming_data["eventType"]
+    log_event(event_type=event_type, phone_number=phone_number)
     return jsonify()
 
 @app.route("/messages", methods=["GET"])
@@ -443,7 +450,7 @@ def bot():
     incoming_msg = incoming_message_processing(request.values.get('Body', ''))
     incoming_phone_number = request.values.get('From', None)
     # attempt to parse time from incoming msg
-    time_struct, parse_status = cal.parse(incoming_msg)
+    datetime_data, parse_status = cal.parseDT(incoming_msg, tzinfo=pytzutc)  # this doesn't actually work, asking in this github issue https://github.com/bear/parsedatetime/issues/259
     if not any(char.isdigit() for char in incoming_msg):
         parse_status = 0  # force parse to be zero if the string was pure concept.
     activity_detection_time = activity_detection(incoming_msg)
@@ -487,7 +494,10 @@ def bot():
                     obscure_confirmation = True
                     log_event("activity", f"+1{incoming_phone_number[1:]}", description=incoming_msg)
                 else:
-                    next_alarm_time = datetime(*time_struct[:6])
+                    next_alarm_time = datetime_data
+                    if os.environ['FLASK_ENV'] == "local":  # HACK: required to get this to work on local
+                        pacific_time = timezone(USER_TIMEZONE)
+                        next_alarm_time = pacific_time.localize(datetime_data.replace(tzinfo=None))
                 too_close = False
                 if next_alarm_time > dose_end_time - timedelta(minutes=10):
                     next_alarm_time = dose_end_time - timedelta(minutes=10)
