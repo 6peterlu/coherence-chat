@@ -445,6 +445,7 @@ def incoming_message_processing(incoming_msg):
     processed_msg = incoming_msg.lower().strip()
     processed_msg = processed_msg.translate(str.maketrans("", "", string.punctuation))
     processed_msg_tokens = processed_msg.split()
+    print(processed_msg_tokens)
     take_list = list(filter(lambda x: x == "t", processed_msg_tokens))
     skip_list = list(filter(lambda x: x == "s", processed_msg_tokens))
     everything_else = list(filter(lambda x: x != "t" and x != "s", processed_msg_tokens))
@@ -453,14 +454,18 @@ def incoming_message_processing(incoming_msg):
         final_message_list.append("t")
     elif len(skip_list) > 0:
         final_message_list.append("s")
-    final_message_list.append(" ".join(everything_else))
+    if len(everything_else) > 0:
+        final_message_list.append(" ".join(everything_else))
     return final_message_list
 
 @app.route('/bot', methods=['POST'])
 def bot():
     incoming_msg_list = incoming_message_processing(request.values.get('Body', ''))
     incoming_phone_number = request.values.get('From', None)
+    print("incoming")
     for incoming_msg in incoming_msg_list:
+        print("msg")
+        print(incoming_msg)
         # attempt to parse time from incoming msg
         datetime_data, parse_status = cal.parseDT(incoming_msg, tzinfo=pytzutc)  # this doesn't actually work, asking in this github issue https://github.com/bear/parsedatetime/issues/259
         if not any(char.isdigit() for char in incoming_msg):
