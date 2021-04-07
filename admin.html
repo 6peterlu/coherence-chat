@@ -44,6 +44,13 @@
             <textarea id="customTextMessage" placeholder="custom text message"></textarea>
             <button id="searchForConversation" onclick="sendCustomText()">Send custom text</button>
         </div>
+        <div id="addEventDiv">
+            <select name="eventType" id="eventType">
+                <option value="take">take</option>
+                <option value="skip">skip</option>
+            </select>
+            <button id="addEventButton" onclick="addEvent()">Manually add event</button>
+        </div>
     </div>
     <div class="messageList"></div>
     <script defer>
@@ -83,7 +90,6 @@
             const body = { phoneNumber };
             var initDetails = {};
             if (manualTakeoverList.includes(`+11${phoneNumber}`)) {
-                console.log("deleting")
                 initDetails = {
                     method: 'delete',
                     headers: {
@@ -129,7 +135,6 @@
                 mode: "cors"
             };
             fetch(uri, initDetails).then(response => response.json()).then(result => {
-                console.log("pulling conversation");
                 renderMessages(result);
             });
         }
@@ -176,9 +181,6 @@
             jobListDiv.innerHTML = html;
         }
         function convertToPT(hour) {
-            if (runningLocally) {
-                return hour;
-            }
             let convertedHour = hour - 7;
             if (convertedHour < 0) {
                 convertedHour += 24;
@@ -186,9 +188,6 @@
             return convertedHour;
         }
         function convertToUTC(hour) {
-            if (runningLocally) {
-                return hour;
-            }
             return (hour + 7) % 24;
         }
         function renderDoses(doseList) {
@@ -257,9 +256,7 @@
             manualTakeover.style.visibility = onlineStatus ? "visible" : "hidden";
             const manualTakeoverList = document.getElementById("takeoverList");
             manualTakeoverList.style.visibility = onlineStatus ? "visible" : "hidden";
-            console.log(manualTakeoverData)
             manualTakeoverList.innerHTML = manualTakeoverData;
-            // manualTakeoverList.innerHTML = "hello";
 
         }
         function onlineToggle() {
@@ -282,6 +279,28 @@
                 }
             );
         }
+        function addEvent() {
+            const uri = `${apiURL}/events`
+            const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
+            const eventType = document.getElementById("eventType").value;
+            const initDetails = {
+                method: 'post',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "POST",
+                    "Access-Control_Allow_Headers": "*",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors",
+                body: JSON.stringify({ phoneNumber, eventType })
+            };
+            fetch(uri, initDetails).then(
+                response => response.json()).then(result => {
+                    getEventsForPhoneNumber();
+                }
+            );
+        }
         async function retrieveJobs() {
             const uri = `${apiURL}/scheduler/jobs`;
             const everythingUri = `${apiURL}/everything`;
@@ -297,11 +316,9 @@
                 mode: "cors"
             };
             await fetch(uri, initDetails).then(response => response.json()).then(result => {
-                console.log("rendering jobs");
                 renderJobs(result);
             })
             await fetch(everythingUri, initDetails).then(response => response.json()).then(result => {
-                console.log(result.manualTakeover)
                 renderDoses(result.doses);
                 renderReminders(result.reminders);
                 renderOnlineStatus(result.onlineStatus, result.manualTakeover);
@@ -402,8 +419,6 @@
             };
             fetch(uri, initDetails).then(
                 response => response.json()).then(result => {
-                    console.log("posting job");
-                    console.log(result);
                     retrieveJobs();
                 }
             );

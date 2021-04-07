@@ -8,7 +8,7 @@ import os
 # from twilio.twiml.messaging_response import MessagingResponse
 from twilio.rest import Client
 from datetime import datetime, timedelta
-from pytz import timezone
+from pytz import timezone, utc as pytzutc
 import parsedatetime
 import random
 import string
@@ -134,14 +134,14 @@ class Dose(db.Model):
 
     @property
     def next_start_date(self):
-        alarm_starttime = datetime.now().replace(hour=self.start_hour, minute=self.start_minute, second=0, microsecond=0)
-        if alarm_starttime < datetime.now():
+        alarm_starttime = get_time_now().replace(hour=self.start_hour, minute=self.start_minute, second=0, microsecond=0)
+        if alarm_starttime < get_time_now():
             alarm_starttime += timedelta(days=1)
         return alarm_starttime
     @property
     def next_end_date(self):
-        alarm_endtime = datetime.now().replace(hour=self.end_hour, minute=self.end_minute, second=0, microsecond=0)
-        if alarm_endtime < datetime.now():
+        alarm_endtime = get_time_now().replace(hour=self.end_hour, minute=self.end_minute, second=0, microsecond=0)
+        if alarm_endtime < get_time_now():
             alarm_endtime += timedelta(days=1)
         if alarm_endtime < self.next_start_date:
             alarm_endtime += timedelta(days=1)
@@ -156,7 +156,9 @@ class Reminder(db.Model):
     def __repr__(self):
         return f"<Reminder {id}>"
     def as_dict(self):
-       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+       return_dict = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+       return_dict["send_time"] = self.send_time.replace(tzinfo=datetime.now().astimezone().tzinfo)
+       return return_dict
 
 class Online(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -180,7 +182,9 @@ class Event(db.Model):
     description = db.Column(db.String)
 
     def as_dict(self):
-       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+       return_dict = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+       return_dict["event_time"] = self.event_time.replace(tzinfo=datetime.now().astimezone().tzinfo)
+       return return_dict
 
 class ManualTakeover(db.Model):
     phone_number = db.Column(db.String(13), primary_key=True)
@@ -199,6 +203,10 @@ scheduler = APScheduler()
 scheduler.init_app(app)
 scheduler.start()
 
+# not calling this with false anywhere
+def get_time_now(tzaware=True):
+    return datetime.now(pytzutc) if tzaware else datetime.utcnow()
+
 # message helpers
 def get_followup_message():
     return random.choice(FOLLOWUP_MSGS)
@@ -207,11 +215,13 @@ def get_initial_message():
     return random.choice(INITIAL_MSGS)  # returns a template
 
 def get_take_message():
-    datestring = datetime.now().astimezone(timezone(USER_TIMEZONE)).strftime('%b %d, %I:%M %p')
+    datestring = get_time_now().astimezone(timezone(USER_TIMEZONE)).strftime('%b %d, %I:%M %p')
     return TAKE_MSG.substitute(time=datestring)
 
 
-def log_event(event_type, phone_number, event_time=datetime.now(), description=None):
+def log_event(event_type, phone_number, event_time=None, description=None):
+    if event_time is None:
+        event_time = get_time_now()  # done at runtime for accurate timing
     new_event = Event(event_type=event_type, phone_number=phone_number, event_time=event_time, description=description)
     db.session.add(new_event)
     db.session.commit()
@@ -282,7 +292,7 @@ def get_everything():
 def get_events_for_number():
     query_phone_number = request.args.get("phoneNumber")
     query_days = int(request.args.get("days"))
-    earliest_date = datetime.now() - timedelta(days=query_days)
+    earliest_date = get_time_now() - timedelta(days=query_days)
     matching_events = Event.query.filter(
             Event.event_time > earliest_date, Event.phone_number == f"+11{query_phone_number}"
         ).order_by(Event.event_time.desc()).all()
@@ -291,11 +301,19 @@ def get_events_for_number():
     })
 
 @app.route("/events", methods=["DELETE"])
-def delete_even():
+def delete_event():
     incoming_data = request.json
     id_to_delete = incoming_data["id"]
     Event.query.filter_by(id=int(id_to_delete)).delete()
     db.session.commit()
+    return jsonify()
+
+@app.route("/events", methods=["POST"])
+def post_event():
+    incoming_data = request.json
+    phone_number = f"+11{incoming_data['phoneNumber']}"
+    event_type = incoming_data["eventType"]
+    log_event(event_type=event_type, phone_number=phone_number)
     return jsonify()
 
 @app.route("/messages", methods=["GET"])
@@ -303,7 +321,7 @@ def get_messages_for_number():
     # only get messages in the past week.
     query_phone_number = request.args.get("phoneNumber")
     query_days = int(request.args.get("days"))
-    date_limit = datetime.now() - timedelta(days=query_days)
+    date_limit = get_time_now() - timedelta(days=query_days)
     truncated_date_limit = date_limit.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
     sent_messages_list = client.messages.list(
         date_sent_after=truncated_date_limit,
@@ -432,7 +450,7 @@ def bot():
     incoming_msg = incoming_message_processing(request.values.get('Body', ''))
     incoming_phone_number = request.values.get('From', None)
     # attempt to parse time from incoming msg
-    time_struct, parse_status = cal.parse(incoming_msg)
+    datetime_data, parse_status = cal.parseDT(incoming_msg, tzinfo=pytzutc)  # this doesn't actually work, asking in this github issue https://github.com/bear/parsedatetime/issues/259
     if not any(char.isdigit() for char in incoming_msg):
         parse_status = 0  # force parse to be zero if the string was pure concept.
     activity_detection_time = activity_detection(incoming_msg)
@@ -467,22 +485,25 @@ def bot():
                 dose_end_time = get_current_end_date(latest_dose_id)
                 if incoming_msg in ["1", "2", "3"]:
                     log_event("requested_time_delay", incoming_phone_number, description=f"{message_delays[incoming_msg]}")
-                    next_alarm_time = datetime.now() + message_delays[incoming_msg]
+                    next_alarm_time = get_time_now() + message_delays[incoming_msg]
                 elif extracted_integer is not None:
                     log_event("requested_time_delay", incoming_phone_number, description=f"{timedelta(minutes=extracted_integer)}")
-                    next_alarm_time = datetime.now() + timedelta(minutes=extracted_integer)
+                    next_alarm_time = get_time_now() + timedelta(minutes=extracted_integer)
                 elif activity_detection_time is not None:
-                    next_alarm_time = datetime.now() + activity_detection_time[0]
+                    next_alarm_time = get_time_now() + activity_detection_time[0]
                     obscure_confirmation = True
                     log_event("activity", f"+1{incoming_phone_number[1:]}", description=incoming_msg)
                 else:
-                    next_alarm_time = datetime(*time_struct[:6])
+                    next_alarm_time = datetime_data
+                    if os.environ['FLASK_ENV'] == "local":  # HACK: required to get this to work on local
+                        pacific_time = timezone(USER_TIMEZONE)
+                        next_alarm_time = pacific_time.localize(datetime_data.replace(tzinfo=None))
                 too_close = False
                 if next_alarm_time > dose_end_time - timedelta(minutes=10):
                     next_alarm_time = dose_end_time - timedelta(minutes=10)
                     too_close = True
-                if next_alarm_time > datetime.now():
-                    log_event("reminder_delay", f"+1{incoming_phone_number[1:]}", description=f"delayed to {next_alarm_time}")
+                if next_alarm_time > get_time_now():
+                    log_event("reminder_delay", f"+1{incoming_phone_number[1:]}", description=f"delayed to {next_alarm_time.astimezone(timezone(USER_TIMEZONE))}")
                     if obscure_confirmation:
                         client.messages.create(
                             body= activity_detection_time[1],
@@ -631,9 +652,9 @@ def maybe_schedule_absent(dose_id):
     end_date = get_current_end_date(dose_id)
     # schedule absent text in an hour or ten mins before boundary
     if end_date is not None:  # if it's none, there's no boundary set up
-        desired_absent_reminder = min(datetime.now() + timedelta(minutes=random.randint(45,75)), end_date - timedelta(minutes=BUFFER_TIME_MINS))
+        desired_absent_reminder = min(get_time_now() + timedelta(minutes=random.randint(45,75)), end_date - timedelta(minutes=BUFFER_TIME_MINS))
     # room to schedule absent
-    if desired_absent_reminder > datetime.now():
+    if desired_absent_reminder > get_time_now():
         scheduler.add_job(f"{dose_id}-absent", send_absent_text,
             args=[dose_id],
             trigger="date",
@@ -655,7 +676,7 @@ def get_current_end_date(dose_id):
     scheduled_job = scheduler.get_job(f"{dose_id}-boundary")
     if scheduled_job is None:
         return None
-    current_end_date = scheduled_job.next_run_time.replace(tzinfo=None)
+    current_end_date = scheduled_job.next_run_time
     return current_end_date
 
 def send_followup_text(dose_id):
@@ -665,7 +686,7 @@ def send_followup_text(dose_id):
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=dose_obj.phone_number
     )
-    reminder_record = Reminder(dose_id=dose_id, send_time=datetime.now(), reminder_type="followup")
+    reminder_record = Reminder(dose_id=dose_id, send_time=get_time_now(), reminder_type="followup")
     db.session.add(reminder_record)
     db.session.commit()
     # remove absent jobs, if exist
@@ -680,21 +701,21 @@ def send_absent_text(dose_id):
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=dose_obj.phone_number
     )
-    reminder_record = Reminder(dose_id=dose_id, send_time=datetime.now(), reminder_type="absent")
+    reminder_record = Reminder(dose_id=dose_id, send_time=get_time_now(), reminder_type="absent")
     db.session.add(reminder_record)
     db.session.commit()
     remove_jobs_helper(dose_id, ["absent", "followup"])
-    log_event("absent", dose_obj.phone_number)
+    log_event("absent", dose_obj.phone_number)  # need this bc the function is cached during scheduling
     maybe_schedule_absent(dose_id)
 
 def send_boundary_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
-        body=CLINICAL_BOUNDARY_MSG.substitute(time=datetime.now().astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M')) if dose_obj.phone_number[3:] in CLINICAL_BOUNDARY_PHONE_NUMBERS else BOUNDARY_MSG,
+        body=CLINICAL_BOUNDARY_MSG.substitute(time=get_time_now().astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M')) if dose_obj.phone_number[3:] in CLINICAL_BOUNDARY_PHONE_NUMBERS else BOUNDARY_MSG,
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=dose_obj.phone_number
     )
-    reminder_record = Reminder(dose_id=dose_id, send_time=datetime.now(), reminder_type="boundary")
+    reminder_record = Reminder(dose_id=dose_id, send_time=get_time_now(), reminder_type="boundary")
     db.session.add(reminder_record)
     db.session.commit()
     # this shouldn't be needed, but followups sent manually leave absent artifacts
@@ -704,11 +725,11 @@ def send_boundary_text(dose_id):
 def send_intro_text(dose_id, manual=False):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
-        body=f"{get_initial_message().substitute(time=datetime.now().astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M'))}{ACTION_MENU}",
+        body=f"{get_initial_message().substitute(time=get_time_now().astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M'))}{ACTION_MENU}",
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=dose_obj.phone_number
     )
-    reminder_record = Reminder(dose_id=dose_id, send_time=datetime.now(), reminder_type="initial")
+    reminder_record = Reminder(dose_id=dose_id, send_time=get_time_now(), reminder_type="initial")
     db.session.add(reminder_record)
     db.session.commit()
     scheduler.add_job(f"{dose_id}-boundary", send_boundary_text,
