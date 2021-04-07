@@ -671,7 +671,7 @@ def send_followup_text(dose_id):
     # remove absent jobs, if exist
     remove_jobs_helper(dose_id, ["absent", "followup"])
     maybe_schedule_absent(dose_id)
-    log_event("followup", dose_obj.phone_number)
+    log_event("followup", dose_obj.phone_number, event_time=datetime.now())
 
 def send_absent_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
@@ -684,7 +684,7 @@ def send_absent_text(dose_id):
     db.session.add(reminder_record)
     db.session.commit()
     remove_jobs_helper(dose_id, ["absent", "followup"])
-    log_event("absent", dose_obj.phone_number)
+    log_event("absent", dose_obj.phone_number, event_time=datetime.now())  # need this bc the function is cached during scheduling
     maybe_schedule_absent(dose_id)
 
 def send_boundary_text(dose_id):
@@ -699,7 +699,7 @@ def send_boundary_text(dose_id):
     db.session.commit()
     # this shouldn't be needed, but followups sent manually leave absent artifacts
     remove_jobs_helper(dose_id, ["absent", "followup"])
-    log_event("boundary", dose_obj.phone_number)
+    log_event("boundary", dose_obj.phone_number, event_time=datetime.now())
 
 def send_intro_text(dose_id, manual=False):
     dose_obj = Dose.query.get(dose_id)
@@ -717,7 +717,7 @@ def send_intro_text(dose_id, manual=False):
         run_date=dose_obj.next_end_date if manual else dose_obj.next_end_date - timedelta(days=1)  # HACK, assumes this executes after start_date
     )
     maybe_schedule_absent(dose_id)
-    log_event("initial", dose_obj.phone_number)
+    log_event("initial", dose_obj.phone_number, event_time=datetime.now())
 
 
 if __name__ == '__main__':
