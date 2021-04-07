@@ -262,6 +262,14 @@ def delete_reminder():
     db.session.commit()
     return jsonify()
 
+@app.route("/event", methods=["DELETE"])
+def delete_even():
+    incoming_data = request.json
+    id_to_delete = incoming_data["id"]
+    Event.query.filter_by(id=int(id_to_delete)).delete()
+    db.session.commit()
+    return jsonify()
+
 @app.route("/everything", methods=["GET"])
 def get_everything():
     all_doses = Dose.query.all()

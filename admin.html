@@ -220,7 +220,8 @@
             const rows = eventList.events.map(event => {
                 return `
                     <li>
-                        <p>${event.phone_number}|${convertTZ(event.event_time, "US/Pacific")}, ${event.event_type}: ${event.description}</p>
+                        <p style="display:inline">${event.phone_number}|${convertTZ(event.event_time, "US/Pacific")}, ${event.event_type}: ${event.description}</p>
+                        <button onclick="deleteEvent(\'${event.id}\')">delete event record</button>
                     </li>
                 `;
             })
@@ -459,6 +460,25 @@
             };
             fetch(uri, initDetails).then(() => {
                 retrieveJobs();
+            });
+        }
+        function deleteEvent(id) {
+            const uri = `${apiURL}/event`;
+            const body = { id };
+            const initDetails = {
+                method: 'delete',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "DELETE",
+                    "Access-Control_Allow_Headers": "*",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors",
+                body: JSON.stringify(body)
+            };
+            fetch(uri, initDetails).then(() => {
+                getEventsForPhoneNumber();
             });
         }
         retrieveJobs();
