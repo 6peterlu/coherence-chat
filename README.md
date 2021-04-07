@@ -12,4 +12,6 @@ Chatservice for Coherence
 Update twilio URL
 
 ## git
-reset N commits locally: git reset --hard HEAD~40
+reset N commits locally: `git reset --hard HEAD~N`
+
+push a non master branch to heroku master: `git push heroku +HEAD:master`
