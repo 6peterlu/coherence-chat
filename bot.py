@@ -263,14 +263,6 @@ def delete_reminder():
     db.session.commit()
     return jsonify()
 
-@app.route("/event", methods=["DELETE"])
-def delete_even():
-    incoming_data = request.json
-    id_to_delete = incoming_data["id"]
-    Event.query.filter_by(id=int(id_to_delete)).delete()
-    db.session.commit()
-    return jsonify()
-
 @app.route("/everything", methods=["GET"])
 def get_everything():
     all_doses = Dose.query.all()
@@ -291,11 +283,19 @@ def get_events_for_number():
     query_days = int(request.args.get("days"))
     earliest_date = datetime.now() - timedelta(days=query_days)
     matching_events = Event.query.filter(
-            Event.event_time > earliest_date, Event.phone_number == f"+1{query_phone_number}"
+            Event.event_time > earliest_date, Event.phone_number == f"+11{query_phone_number}"
         ).order_by(Event.event_time.desc()).all()
     return jsonify({
         "events": [event.as_dict() for event in matching_events]
     })
+
+@app.route("/events", methods=["DELETE"])
+def delete_even():
+    incoming_data = request.json
+    id_to_delete = incoming_data["id"]
+    Event.query.filter_by(id=int(id_to_delete)).delete()
+    db.session.commit()
+    return jsonify()
 
 @app.route("/messages", methods=["GET"])
 def get_messages_for_number():
