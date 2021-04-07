@@ -10,3 +10,6 @@ Chatservice for Coherence
 `ngrok http 5000`
 
 Update twilio URL
+
+## git
+reset N commits locally: git reset --hard HEAD~40
