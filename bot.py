@@ -52,7 +52,8 @@ TOKENS_TO_RECOGNIZE = [
     "tennis",
     "swimming",
     "basketball",
-    "watching tv"
+    "watching tv",
+    "shower"
 ]
 
 # load on server start
@@ -362,35 +363,37 @@ def activity_detection(message_str):
     # if any(map(str.isdigit, message_str)) or any(map(lambda x: x in message_str, time_strings)):
     #     return None
     computing_prefix = "Computing ideal reminder time...done."
-    time_delay = timedelta(minutes=random.randint(30,60))
+    time_delay_long = timedelta(minutes=random.randint(30,60))
+    time_delay_short = timedelta(minutes=random.randint(10,30))
     direct_time_mapped_strings = {
-        "brunch": (time_delay, f"{computing_prefix} Have a great brunch! We'll check in later."),
-        "out to brunch": (time_delay, f"{computing_prefix} Have a great brunch! We'll check in later."),
-        "dinner": (time_delay, f"{computing_prefix} Have a great dinner! We'll check in later."),
-        "out to dinner": (time_delay, f"{computing_prefix} Have a great dinner! We'll check in later."),
-        "lunch": (time_delay, f"{computing_prefix} Have a great lunch! We'll check in later."),
-        "out to lunch": (time_delay, f"{computing_prefix} Have a great lunch! We'll check in later."),
-        "breakfast": (time_delay, f"{computing_prefix} Have a great breakfast! We'll check in later."),
-        "out to breakfast": (time_delay, f"{computing_prefix} Have a great breakfast! We'll check in later."),
-        "walking": (time_delay, f"{computing_prefix} Enjoy your walk! We'll check in later."),
-        "going for a walk": (time_delay, f"{computing_prefix} Enjoy your walk! We'll check in later."),
-        "eating": (time_delay, f"{computing_prefix} Enjoy your meal! We'll check in later."),
-        "meeting": (time_delay, f"{computing_prefix} Have a productive meeting! We'll check in later."),
-        "call": (time_delay, f"{computing_prefix} Have a great call! We'll check in later."),
-        "on a call": (time_delay, f"{computing_prefix} Have a great call! We'll check in later."),
-        "out": (time_delay, f"{computing_prefix} No problem, we'll check in later."),
-        "busy": (time_delay, f"{computing_prefix} No problem, we'll check in later."),
-        "later": (time_delay, f"{computing_prefix} No problem, we'll check in later."),
-        "bathroom": (time_delay, f"{computing_prefix} No problem, we'll check in in a bit."),
-        "reading": (time_delay, f"{computing_prefix} Enjoy your book, we'll check in later."),
-        "run": (time_delay, f"{computing_prefix} Have a great run! We'll see you later."),
-        "running": (time_delay, f"{computing_prefix} Have a great run! We'll see you later."),
-        "sleeping": (time_delay, f"{computing_prefix} Sleep well! We'll see you later."),
-        "golf": (time_delay, f"{computing_prefix} Have fun out there! We'll see you later."),
-        "tennis": (time_delay, f"{computing_prefix} Have fun out there! We'll see you later."),
-        "swimming": (time_delay, f"{computing_prefix} Have fun out there! We'll see you later."),
-        "basketball": (time_delay, f"{computing_prefix} Have fun out there! We'll see you later."),
-        "watching tv": (time_delay, f"{computing_prefix} Have fun, we'll check in later."),
+        "brunch": (time_delay_long, f"{computing_prefix} Have a great brunch! We'll check in later."),
+        "out to brunch": (time_delay_long, f"{computing_prefix} Have a great brunch! We'll check in later."),
+        "dinner": (time_delay_long, f"{computing_prefix} Have a great dinner! We'll check in later."),
+        "out to dinner": (time_delay_long, f"{computing_prefix} Have a great dinner! We'll check in later."),
+        "lunch": (time_delay_long, f"{computing_prefix} Have a great lunch! We'll check in later."),
+        "out to lunch": (time_delay_long, f"{computing_prefix} Have a great lunch! We'll check in later."),
+        "breakfast": (time_delay_long, f"{computing_prefix} Have a great breakfast! We'll check in later."),
+        "out to breakfast": (time_delay_long, f"{computing_prefix} Have a great breakfast! We'll check in later."),
+        "walking": (time_delay_short, f"{computing_prefix} Enjoy your walk! We'll check in later."),
+        "going for a walk": (time_delay_short, f"{computing_prefix} Enjoy your walk! We'll check in later."),
+        "eating": (time_delay_long, f"{computing_prefix} Enjoy your meal! We'll check in later."),
+        "meeting": (time_delay_long, f"{computing_prefix} Have a productive meeting! We'll check in later."),
+        "call": (time_delay_long, f"{computing_prefix} Have a great call! We'll check in later."),
+        "on a call": (time_delay_long, f"{computing_prefix} Have a great call! We'll check in later."),
+        "out": (time_delay_long, f"{computing_prefix} No problem, we'll check in later."),
+        "busy": (time_delay_long, f"{computing_prefix} No problem, we'll check in later."),
+        "later": (time_delay_long, f"{computing_prefix} No problem, we'll check in later."),
+        "bathroom": (time_delay_short, f"{computing_prefix} No problem, we'll check in in a bit."),
+        "reading": (time_delay_long, f"{computing_prefix} Enjoy your book, we'll check in later."),
+        "run": (time_delay_short, f"{computing_prefix} Have a great run! We'll see you later."),
+        "running": (time_delay_short, f"{computing_prefix} Have a great run! We'll see you later."),
+        "sleeping": (time_delay_long, f"{computing_prefix} Sleep well! We'll see you later."),
+        "golf": (time_delay_long, f"{computing_prefix} Have fun out there! We'll see you later."),
+        "tennis": (time_delay_long, f"{computing_prefix} Have fun out there! We'll see you later."),
+        "swimming": (time_delay_long, f"{computing_prefix} Have fun out there! We'll see you later."),
+        "basketball": (time_delay_short, f"{computing_prefix} Have fun out there! We'll see you later."),
+        "watching tv": (time_delay_long, f"{computing_prefix} Have fun, we'll check in later."),
+        "shower": (time_delay_short, f"{computing_prefix} Have a good shower, we'll check in later."),
     }
     best_match_score = 0.0
     best_match_concept = None
@@ -447,13 +450,17 @@ def incoming_message_processing(incoming_msg):
     processed_msg_tokens = processed_msg.split()
     take_list = list(filter(lambda x: x == "t", processed_msg_tokens))
     skip_list = list(filter(lambda x: x == "s", processed_msg_tokens))
-    everything_else = list(filter(lambda x: x != "t" and x != "s", processed_msg_tokens))
+    thanks_list = list(filter(lambda x: x == "thanks", processed_msg_tokens))
+    filler_words = ["taking", "going", "to", "a"]
+    everything_else = list(filter(lambda x: x != "t" and x != "s" and x not in filler_words, processed_msg_tokens))
     final_message_list = []
     if len(take_list) > 0:
         final_message_list.append("t")
     elif len(skip_list) > 0:
         final_message_list.append("s")
-    if len(everything_else) > 0:
+    if len(thanks_list) > 0:
+        final_message_list.append("thanks")
+    elif len(everything_else) > 0:
         final_message_list.append(" ".join(everything_else))
     return final_message_list
 
