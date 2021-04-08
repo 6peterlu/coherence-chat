@@ -27,10 +27,9 @@ TOKENS_TO_RECOGNIZE = [
     "eating",
     "out",
     "call",
-    "on a call",
     "meeting",
     "walking",
-    "going for a walk",
+    "walk",
     "busy",
     "thanks",
     "help",
@@ -42,10 +41,6 @@ TOKENS_TO_RECOGNIZE = [
     "run",
     "running",
     "sleeping",
-    "out to dinner",
-    "out to lunch",
-    "out to breakfast",
-    "out to brunch",
     "brunch",
     "later",
     "golf",
@@ -367,19 +362,14 @@ def activity_detection(message_str):
     time_delay_short = timedelta(minutes=random.randint(10,30))
     direct_time_mapped_strings = {
         "brunch": (time_delay_long, f"{computing_prefix} Have a great brunch! We'll check in later."),
-        "out to brunch": (time_delay_long, f"{computing_prefix} Have a great brunch! We'll check in later."),
         "dinner": (time_delay_long, f"{computing_prefix} Have a great dinner! We'll check in later."),
-        "out to dinner": (time_delay_long, f"{computing_prefix} Have a great dinner! We'll check in later."),
         "lunch": (time_delay_long, f"{computing_prefix} Have a great lunch! We'll check in later."),
-        "out to lunch": (time_delay_long, f"{computing_prefix} Have a great lunch! We'll check in later."),
         "breakfast": (time_delay_long, f"{computing_prefix} Have a great breakfast! We'll check in later."),
-        "out to breakfast": (time_delay_long, f"{computing_prefix} Have a great breakfast! We'll check in later."),
         "walking": (time_delay_short, f"{computing_prefix} Enjoy your walk! We'll check in later."),
-        "going for a walk": (time_delay_short, f"{computing_prefix} Enjoy your walk! We'll check in later."),
+        "walk": (time_delay_short, f"{computing_prefix} Enjoy your walk! We'll check in later."),
         "eating": (time_delay_long, f"{computing_prefix} Enjoy your meal! We'll check in later."),
         "meeting": (time_delay_long, f"{computing_prefix} Have a productive meeting! We'll check in later."),
         "call": (time_delay_long, f"{computing_prefix} Have a great call! We'll check in later."),
-        "on a call": (time_delay_long, f"{computing_prefix} Have a great call! We'll check in later."),
         "out": (time_delay_long, f"{computing_prefix} No problem, we'll check in later."),
         "busy": (time_delay_long, f"{computing_prefix} No problem, we'll check in later."),
         "later": (time_delay_long, f"{computing_prefix} No problem, we'll check in later."),
@@ -451,7 +441,7 @@ def incoming_message_processing(incoming_msg):
     take_list = list(filter(lambda x: x == "t", processed_msg_tokens))
     skip_list = list(filter(lambda x: x == "s", processed_msg_tokens))
     thanks_list = list(filter(lambda x: x == "thanks", processed_msg_tokens))
-    filler_words = ["taking", "going", "to", "a"]
+    filler_words = ["taking", "going", "to", "a", "for", "on"]
     everything_else = list(filter(lambda x: x != "t" and x != "s" and x not in filler_words, processed_msg_tokens))
     final_message_list = []
     if len(take_list) > 0:
@@ -568,9 +558,9 @@ def bot():
                         "s": SKIP_MSG
                     }
                     if incoming_msg == "t":
-                        log_event("take", f"+1{incoming_phone_number[1:]}")
+                        log_event("take", f"+1{incoming_phone_number[1:]}", description=latest_dose_id)
                     if incoming_msg == "s":
-                        log_event("skip", f"+1{incoming_phone_number[1:]}")
+                        log_event("skip", f"+1{incoming_phone_number[1:]}", description=latest_dose_id)
                     client.messages.create(
                         body=message_copy[incoming_msg],
                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
@@ -717,7 +707,7 @@ def send_followup_text(dose_id):
     # remove absent jobs, if exist
     remove_jobs_helper(dose_id, ["absent", "followup"])
     maybe_schedule_absent(dose_id)
-    log_event("followup", dose_obj.phone_number)
+    log_event("followup", dose_obj.phone_number, description=dose_id)
 
 def send_absent_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
@@ -730,7 +720,7 @@ def send_absent_text(dose_id):
     db.session.add(reminder_record)
     db.session.commit()
     remove_jobs_helper(dose_id, ["absent", "followup"])
-    log_event("absent", dose_obj.phone_number)  # need this bc the function is cached during scheduling
+    log_event("absent", dose_obj.phone_number, description=dose_id)
     maybe_schedule_absent(dose_id)
 
 def send_boundary_text(dose_id):
@@ -745,7 +735,7 @@ def send_boundary_text(dose_id):
     db.session.commit()
     # this shouldn't be needed, but followups sent manually leave absent artifacts
     remove_jobs_helper(dose_id, ["absent", "followup"])
-    log_event("boundary", dose_obj.phone_number)
+    log_event("boundary", dose_obj.phone_number, description=dose_id)
 
 def send_intro_text(dose_id, manual=False):
     dose_obj = Dose.query.get(dose_id)
@@ -763,7 +753,7 @@ def send_intro_text(dose_id, manual=False):
         run_date=dose_obj.next_end_date if manual else dose_obj.next_end_date - timedelta(days=1)  # HACK, assumes this executes after start_date
     )
     maybe_schedule_absent(dose_id)
-    log_event("initial", dose_obj.phone_number)
+    log_event("initial", dose_obj.phone_number, description=dose_id)
 
 
 if __name__ == '__main__':
