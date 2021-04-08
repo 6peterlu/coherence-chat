@@ -437,6 +437,7 @@ def extract_integer(message):
 def incoming_message_processing(incoming_msg):
     processed_msg = incoming_msg.lower().strip()
     processed_msg = processed_msg.translate(str.maketrans("", "", string.punctuation))
+    processed_msg = processed_msg.replace("[", "").replace("]", "")
     processed_msg_tokens = processed_msg.split()
     take_list = list(filter(lambda x: x == "t", processed_msg_tokens))
     skip_list = list(filter(lambda x: x == "s", processed_msg_tokens))
