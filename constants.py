@@ -69,3 +69,7 @@ ACTION_MENU = """I can understand the following commands:
 [3] to check in in an hour
 a specific amount of time such as "2 hours", "20 minutes"
 activities such as "eating dinner", "on a walk", etc."""
+
+USER_ERROR_REPORT = Template("""$phone_number has reported an error.""")
+
+USER_ERROR_RESPONSE = """Thanks for reporting. We've noted the error and are working on it."""

@@ -70,7 +70,9 @@ from constants import (
     SKIP_MSG,
     TAKE_MSG,
     UNKNOWN_MSG,
-    ACTION_MENU
+    ACTION_MENU,
+    USER_ERROR_REPORT,
+    USER_ERROR_RESPONSE
 )
 
 # allow no reminders to be set within 10 mins of boundary
@@ -397,11 +399,12 @@ def activity_detection(message_str):
     return None
 
 def canned_responses(message_str):
-    hardcoded_responses = {
-        "x": "Thanks for reporting. We've noted the error and are working on it."
-    }
-    if message_str in hardcoded_responses:
-        return hardcoded_responses[message_str]
+    # use this code block for any hardcoded canned responses we need
+    # hardcoded_responses = {
+    #     "x": "Thanks for reporting. We've noted the error and are working on it."
+    # }
+    # if message_str in hardcoded_responses:
+    #     return hardcoded_responses[message_str]
     responses = {
         "thanks": "No problem, glad to help.",
         "help": UNKNOWN_MSG,
@@ -434,6 +437,8 @@ def extract_integer(message):
     except ValueError:
         return None
 
+# this function returns a list of tokens which get processed in order through chat pipeline
+# note that there's no guarantee of text sending order
 def incoming_message_processing(incoming_msg):
     processed_msg = incoming_msg.lower().strip()
     processed_msg = processed_msg.translate(str.maketrans("", "", string.punctuation))
@@ -441,10 +446,13 @@ def incoming_message_processing(incoming_msg):
     processed_msg_tokens = processed_msg.split()
     take_list = list(filter(lambda x: x == "t", processed_msg_tokens))
     skip_list = list(filter(lambda x: x == "s", processed_msg_tokens))
+    error_list = list(filter(lambda x: x == "x", processed_msg_tokens))
     thanks_list = list(filter(lambda x: x == "thanks", processed_msg_tokens))
     filler_words = ["taking", "going", "to", "a", "for", "on"]
     everything_else = list(filter(lambda x: x != "t" and x != "s" and x not in filler_words, processed_msg_tokens))
     final_message_list = []
+    if len(error_list) > 0:
+        return ["x"]  # no more message processing
     if len(take_list) > 0:
         final_message_list.append("t")
     elif len(skip_list) > 0:
@@ -474,11 +482,25 @@ def bot():
         extracted_integer = extract_integer(incoming_msg)
         # canned response
         if not should_force_manual(incoming_phone_number) and (
-                incoming_msg in ['1', '2', '3', 't', 's']
+                incoming_msg in ['1', '2', '3', 't', 's', 'x']
                 or parse_status != 0
                 or activity_detection_time is not None
                 or extracted_integer is not None
             ):
+            # handle error report
+            if incoming_msg == 'x':
+                client.messages.create(
+                    body=USER_ERROR_REPORT.substitute(phone_number=incoming_phone_number),
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                    to="+13604508655"
+                )
+                client.messages.create(
+                    body=USER_ERROR_RESPONSE,
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                    to=incoming_phone_number
+                )
+                log_event("user_reported_error", f"+1{incoming_phone_number[1:]}")
+                return jsonify()
             doses = Dose.query.filter_by(phone_number=f"+1{incoming_phone_number[1:]}").all()  # +113604508655
             dose_ids = [dose.id for dose in doses]
             latest_reminder_record = Reminder.query \
