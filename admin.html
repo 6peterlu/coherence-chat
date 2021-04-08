@@ -2,6 +2,7 @@
 </head>
 <body>
     <h1 id="header"></h1>
+    <input id="password" placeholder="admin password"/>
     <button id="switchEnv" onclick="switchEnv()">Switch environment</button>
     <div>
         <h2 id="onlineStatus" style="display:inline"></h2>
@@ -63,12 +64,28 @@
         var manualTakeoverList = [];  // list of numbers that are taken over
         headerText.innerHTML = `current env: ${runningLocally ? "local" : "PRODUCTION"}`;
         var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
+        const initDetails = {
+            method: 'get',
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow_Methods": "GET",
+                "Access-Control_Allow_Headers": "*",
+                "Cache-Control": "no-cache"
+            },
+            mode: "cors"
+        };
 
-        function sendCustomText() {
-            const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
-            const text = document.getElementById("customTextMessage").value;
-            const body = { phoneNumber, text };
-            const uri = `${apiURL}/manual/text`;
+        // HTTP helpers
+        async function get(route, queryArgs) {
+            const queryArgsList = [];
+            for (const arg in queryArgs) {
+                queryArgsList.push(`${arg}=${queryArgs[arg]}`);
+            }
+            const queryString = queryArgsList.length > 0 ? `?${queryArgsList.join("&")}` : "";
+            return await fetch(`${apiURL}/${route}${queryString}`, initDetails);
+        }
+
+        async function post(route, body) {
             const initDetails = {
                 method: 'post',
                 headers: {
@@ -81,7 +98,31 @@
                 mode: "cors",
                 body: JSON.stringify(body)
             };
-            fetch(uri, initDetails);
+            return await fetch(`${apiURL}/${route}`, initDetails);
+        }
+
+        // we can't use delete, its reserved.
+        async function httpDelete(route, body) {
+            const initDetails = {
+                method: 'delete',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "DELETE",
+                    "Access-Control_Allow_Headers": "*",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors",
+                body: JSON.stringify(body)
+            };
+            return await fetch(`${apiURL}/${route}`, initDetails);
+        }
+
+        function sendCustomText() {
+            const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
+            const text = document.getElementById("customTextMessage").value;
+            const body = { phoneNumber, text };
+            post("manual/text", body);
         }
         async function manualTakeover() {
             await retrieveJobs();
@@ -90,51 +131,19 @@
             const body = { phoneNumber };
             var initDetails = {};
             if (manualTakeoverList.includes(`+11${phoneNumber}`)) {
-                initDetails = {
-                    method: 'delete',
-                    headers: {
-                        "Access-Control-Allow-Origin": "*",
-                        "Access-Control-Allow_Methods": "DELETE",
-                        "Access-Control_Allow_Headers": "*",
-                        "Content-Type": "application/json; charset=utf-8",
-                        "Cache-Control": "no-cache"
-                    },
-                    mode: "cors",
-                    body: JSON.stringify(body)
-                };
+                httpDelete("manual/takeover", { phoneNumber }).then(response => response.json()).then(result => {
+                    retrieveJobs();
+                });
             } else {
-                initDetails = {
-                    method: 'post',
-                    headers: {
-                        "Access-Control-Allow-Origin": "*",
-                        "Access-Control-Allow_Methods": "POST",
-                        "Access-Control_Allow_Headers": "*",
-                        "Content-Type": "application/json; charset=utf-8",
-                        "Cache-Control": "no-cache"
-                    },
-                    mode: "cors",
-                    body: JSON.stringify(body)
-                };
+                post("manual/takeover", { phoneNumber }).then(response => response.json()).then(result => {
+                    retrieveJobs();
+                });
             }
-            await fetch(uri, initDetails).then(response => response.json()).then(result => {
-                retrieveJobs();
-            });
         }
         function searchForConversation() {
             const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
             const days = document.getElementById("daysToPull").value;
-            const uri = `${apiURL}/messages?phoneNumber=${phoneNumber}&days=${days}`;
-            const initDetails = {
-                method: 'get',
-                headers: {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow_Methods": "GET",
-                    "Access-Control_Allow_Headers": "*",
-                    "Cache-Control": "no-cache"
-                },
-                mode: "cors"
-            };
-            fetch(uri, initDetails).then(response => response.json()).then(result => {
+            get("messages", { phoneNumber, days }).then(response => response.json()).then(result => {
                 renderMessages(result);
             });
         }
@@ -238,19 +247,7 @@
             messageListDiv.innerHTML = html;
         }
         function getBasicInfo() {
-            const uri = `${apiURL}/scheduler`;
-            const initDetails = {
-                method: 'get',
-                headers: {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow_Methods": "GET",
-                    "Access-Control_Allow_Headers": "*",
-                    "Content-Type": "application/json; charset=utf-8",
-                    "Cache-Control": "no-cache"
-                },
-                mode: "cors"
-            };
-            fetch(uri, initDetails).then(response => response.json()).then(result => {
+            get("scheduler", {}).then(result => {
                 console.log("getting basic info");
                 console.log(result);
             });
@@ -270,65 +267,26 @@
 
         }
         function onlineToggle() {
-            const uri = `${apiURL}/online`;
-            const initDetails = {
-                method: 'post',
-                headers: {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow_Methods": "POST",
-                    "Access-Control_Allow_Headers": "*",
-                    "Content-Type": "application/json; charset=utf-8",
-                    "Cache-Control": "no-cache"
-                },
-                mode: "cors",
-                body: JSON.stringify({})
-            };
-            fetch(uri, initDetails).then(
+            post("online", {}).then(
                 response => response.json()).then(result => {
                     retrieveJobs();
                 }
             );
         }
         function addEvent() {
-            const uri = `${apiURL}/events`
             const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
             const eventType = document.getElementById("eventType").value;
-            const initDetails = {
-                method: 'post',
-                headers: {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow_Methods": "POST",
-                    "Access-Control_Allow_Headers": "*",
-                    "Content-Type": "application/json; charset=utf-8",
-                    "Cache-Control": "no-cache"
-                },
-                mode: "cors",
-                body: JSON.stringify({ phoneNumber, eventType })
-            };
-            fetch(uri, initDetails).then(
+            post("events", { phoneNumber, eventType }).then(
                 response => response.json()).then(result => {
                     getEventsForPhoneNumber();
                 }
             );
         }
         async function retrieveJobs() {
-            const uri = `${apiURL}/scheduler/jobs`;
-            const everythingUri = `${apiURL}/everything`;
-            const initDetails = {
-                method: 'get',
-                headers: {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow_Methods": "GET",
-                    "Access-Control_Allow_Headers": "*",
-                    "Content-Type": "application/json; charset=utf-8",
-                    "Cache-Control": "no-cache"
-                },
-                mode: "cors"
-            };
-            await fetch(uri, initDetails).then(response => response.json()).then(result => {
+            await get("scheduler/jobs", {}).then(response => response.json()).then(result => {
                 renderJobs(result);
             })
-            await fetch(everythingUri, initDetails).then(response => response.json()).then(result => {
+            await get("everything", {}).then(response => response.json()).then(result => {
                 renderDoses(result.doses);
                 renderReminders(result.reminders);
                 renderOnlineStatus(result.onlineStatus, result.manualTakeover);
@@ -338,19 +296,7 @@
         function getEventsForPhoneNumber() {
             const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
             const days = document.getElementById("daysToPull").value;
-            const uri = `${apiURL}/events?phoneNumber=${phoneNumber}&days=${days}`;
-            const initDetails = {
-                method: 'get',
-                headers: {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow_Methods": "GET",
-                    "Access-Control_Allow_Headers": "*",
-                    "Content-Type": "application/json; charset=utf-8",
-                    "Cache-Control": "no-cache"
-                },
-                mode: "cors"
-            };
-            fetch(uri, initDetails).then(response => response.json()).then(result => {
+            get("events", { phoneNumber, days }).then(response => response.json()).then(result => {
                 renderEvents(result);
             });
         }
@@ -373,20 +319,7 @@
             const reminderType = document.getElementById("reminderType").value;
             const doseId = document.getElementById("doseId").value;
             const body = { reminderType, doseId }
-            const uri = `${apiURL}/manual`
-            const initDetails = {
-                method: 'post',
-                headers: {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow_Methods": "POST",
-                    "Access-Control_Allow_Headers": "*",
-                    "Content-Type": "application/json; charset=utf-8",
-                    "Cache-Control": "no-cache"
-                },
-                mode: "cors",
-                body: JSON.stringify(body)
-            };
-            fetch(uri, initDetails).then(
+            post("manual", { reminderType, doseId }).then(
                 response => response.json()).then(result => {
                     retrieveJobs();
                 }
@@ -415,94 +348,29 @@
                 medicationName,
                 patientName
             };
-            const initDetails = {
-                method: 'post',
-                headers: {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow_Methods": "POST",
-                    "Access-Control_Allow_Headers": "*",
-                    "Content-Type": "application/json; charset=utf-8",
-                    "Cache-Control": "no-cache"
-                },
-                mode: "cors",
-                body: JSON.stringify(body)
-            };
-            fetch(uri, initDetails).then(
+            post("dose", body).then(
                 response => response.json()).then(result => {
                     retrieveJobs();
                 }
             );
         }
         function deleteJob(id) {
-            const uri = `${apiURL}/scheduler/jobs/${id}`;
-            const initDetails = {
-                method: 'delete',
-                headers: {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow_Methods": "DELETE",
-                    "Access-Control_Allow_Headers": "*",
-                    "Cache-Control": "no-cache"
-                },
-                mode: "cors",
-            };
-            fetch(uri, initDetails).then(() => {
+            httpDelete(`scheduler/jobs/${id}`, {}).then(() => {
                 retrieveJobs();
             })
         }
         function deleteDose(id) {
-            const uri = `${apiURL}/dose`;
-            const body = { id };
-            const initDetails = {
-                method: 'delete',
-                headers: {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow_Methods": "DELETE",
-                    "Access-Control_Allow_Headers": "*",
-                    "Content-Type": "application/json; charset=utf-8",
-                    "Cache-Control": "no-cache"
-                },
-                mode: "cors",
-                body: JSON.stringify(body)
-            };
-            fetch(uri, initDetails).then(() => {
+            httpDelete("dose", { id }).then(() => {
                 retrieveJobs();
             });
         }
         function deleteReminder(id) {
-            const uri = `${apiURL}/reminder`;
-            const body = { id };
-            const initDetails = {
-                method: 'delete',
-                headers: {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow_Methods": "DELETE",
-                    "Access-Control_Allow_Headers": "*",
-                    "Content-Type": "application/json; charset=utf-8",
-                    "Cache-Control": "no-cache"
-                },
-                mode: "cors",
-                body: JSON.stringify(body)
-            };
-            fetch(uri, initDetails).then(() => {
+            httpDelete("reminder", { id }).then(() => {
                 retrieveJobs();
             });
         }
         function deleteEvent(id) {
-            const uri = `${apiURL}/events`;
-            const body = { id };
-            const initDetails = {
-                method: 'delete',
-                headers: {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow_Methods": "DELETE",
-                    "Access-Control_Allow_Headers": "*",
-                    "Content-Type": "application/json; charset=utf-8",
-                    "Cache-Control": "no-cache"
-                },
-                mode: "cors",
-                body: JSON.stringify(body)
-            };
-            fetch(uri, initDetails).then(() => {
+            httpDelete("events", { id }).then(() => {
                 getEventsForPhoneNumber();
             });
         }
