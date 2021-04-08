@@ -8,6 +8,7 @@ import os
 # from twilio.twiml.messaging_response import MessagingResponse
 from twilio.rest import Client
 from datetime import datetime, timedelta
+from functools import wraps
 from pytz import timezone, utc as pytzutc
 import parsedatetime
 import random
@@ -224,8 +225,33 @@ def log_event(event_type, phone_number, event_time=None, description=None):
     db.session.add(new_event)
     db.session.commit()
 
+
+def auth_required_get(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if request.args.get("pw") != "couchsurfing":
+            return jsonify(), 401
+        else:
+            return f(*args, **kwargs)
+    return decorated_function
+
+def auth_required_post_delete(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if request.json.get("pw") != "couchsurfing":
+            return jsonify(), 401
+        else:
+            return f(*args, **kwargs)
+    return decorated_function
+
+
+@app.route("/admin", methods=["GET"])
+def admin():
+
+
 # add a dose
 @app.route("/dose", methods=["POST"])
+@auth_required_post_delete
 def add_dose():
     incoming_data = request.json
     start_hour = incoming_data["startHour"]
@@ -257,6 +283,7 @@ def add_dose():
     return jsonify()
 
 @app.route("/dose", methods=["DELETE"])
+@auth_required_post_delete
 def delete_dose():
     incoming_data = request.json
     id_to_delete = int(incoming_data["id"])
@@ -266,6 +293,7 @@ def delete_dose():
     return jsonify()
 
 @app.route("/reminder", methods=["DELETE"])
+@auth_required_post_delete
 def delete_reminder():
     incoming_data = request.json
     id_to_delete = incoming_data["id"]
@@ -274,6 +302,7 @@ def delete_reminder():
     return jsonify()
 
 @app.route("/everything", methods=["GET"])
+@auth_required_get
 def get_everything():
     all_doses = Dose.query.all()
     all_reminders = Reminder.query.order_by(Reminder.send_time.desc()).all()
@@ -288,6 +317,7 @@ def get_everything():
     })
 
 @app.route("/events", methods=["GET"])
+@auth_required_get
 def get_events_for_number():
     query_phone_number = request.args.get("phoneNumber")
     query_days = int(request.args.get("days"))
@@ -300,6 +330,7 @@ def get_events_for_number():
     })
 
 @app.route("/events", methods=["DELETE"])
+@auth_required_post_delete
 def delete_event():
     incoming_data = request.json
     id_to_delete = incoming_data["id"]
@@ -308,6 +339,7 @@ def delete_event():
     return jsonify()
 
 @app.route("/events", methods=["POST"])
+@auth_required_post_delete
 def post_event():
     incoming_data = request.json
     phone_number = f"+11{incoming_data['phoneNumber']}"
@@ -316,6 +348,7 @@ def post_event():
     return jsonify()
 
 @app.route("/messages", methods=["GET"])
+@auth_required_get
 def get_messages_for_number():
     # only get messages in the past week.
     query_phone_number = request.args.get("phoneNumber")
@@ -344,6 +377,7 @@ def get_messages_for_number():
     return jsonify(json_blob)
 
 @app.route("/online", methods=["POST"])
+@auth_required_post_delete
 def online_toggle():
     online_status = get_online_status()
     if online_status:  # is online, we need to clear manual takeover on going offline
@@ -631,6 +665,7 @@ def text_fallback(phone_number):
         )
 
 @app.route("/manual", methods=["POST"])
+@auth_required_post_delete
 def manual_send():
     incoming_data = request.json
     dose_id = int(incoming_data["doseId"])
@@ -644,6 +679,7 @@ def manual_send():
     return jsonify()
 
 @app.route("/manual/takeover", methods=["POST"])
+@auth_required_post_delete
 def manual_takeover():
     incoming_data = request.json
     target_phone_number = incoming_data["phoneNumber"]
@@ -655,6 +691,7 @@ def manual_takeover():
     return jsonify()
 
 @app.route("/manual/takeover", methods=["DELETE"])
+@auth_required_post_delete
 def end_manual_takeover():
     incoming_data = request.json
     target_phone_number = incoming_data["phoneNumber"]
@@ -666,6 +703,7 @@ def end_manual_takeover():
 
 
 @app.route("/manual/text", methods=["POST"])
+@auth_required_post_delete
 def manual_send_text():
     incoming_data = request.json
     target_phone_number = incoming_data["phoneNumber"]
