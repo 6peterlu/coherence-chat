@@ -461,7 +461,12 @@ def incoming_message_processing(incoming_msg):
     if len(thanks_list) > 0:
         final_message_list.append("thanks")
     elif len(everything_else) > 0:
-        final_message_list.append(" ".join(everything_else))
+        coalesce_words = ["dinner", "breakfast", "lunch", "brunch", "sleeping", "bathroom", "shower"]
+        intersection = list(filter(lambda x: x in coalesce_words, everything_else))
+        if len(intersection) > 0:
+            final_message_list.append(intersection[0])  # just append matched concept if any
+        else:
+            final_message_list.append(" ".join(everything_else))
     return final_message_list
 
 @app.route('/bot', methods=['POST'])
