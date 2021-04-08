@@ -160,7 +160,17 @@
             return new Date((typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: tzString}));
         }
         function renderJobs(jobList) {
-            const rows = jobList.map(job => {
+            const jobComparator = (job1, job2) => {
+                if (job1.name > job2.name) {
+                    return 1;
+                }
+                if (job2.name > job1.name) {
+                    return -1;
+                }
+                return 0;
+            }
+            const sortedJobList = jobList.sort(jobComparator);
+            const rows = sortedJobList.map(job => {
                 if (job.trigger === "interval") {
                     return `
                         <li>
