@@ -244,10 +244,9 @@ def auth_required_post_delete(f):
             return f(*args, **kwargs)
     return decorated_function
 
-
 @app.route("/admin", methods=["GET"])
-def admin():
-
+def admin_page():
+    return app.send_static_file('admin.html')
 
 # add a dose
 @app.route("/dose", methods=["POST"])
