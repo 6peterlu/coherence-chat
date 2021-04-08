@@ -77,15 +77,19 @@
 
         // HTTP helpers
         async function get(route, queryArgs) {
+            const password = document.getElementById("password").value;
             const queryArgsList = [];
-            for (const arg in queryArgs) {
-                queryArgsList.push(`${arg}=${queryArgs[arg]}`);
+            const updatedQueryArgs = {...queryArgs, pw: password};
+            for (const arg in updatedQueryArgs) {
+                queryArgsList.push(`${arg}=${updatedQueryArgs[arg]}`);
             }
             const queryString = queryArgsList.length > 0 ? `?${queryArgsList.join("&")}` : "";
             return await fetch(`${apiURL}/${route}${queryString}`, initDetails);
         }
 
         async function post(route, body) {
+            const password = document.getElementById("password").value;
+            const bodyWithPassword = {...body, pw: password};
             const initDetails = {
                 method: 'post',
                 headers: {
@@ -96,13 +100,15 @@
                     "Cache-Control": "no-cache"
                 },
                 mode: "cors",
-                body: JSON.stringify(body)
+                body: JSON.stringify(bodyWithPassword)
             };
             return await fetch(`${apiURL}/${route}`, initDetails);
         }
 
         // we can't use delete, its reserved.
         async function httpDelete(route, body) {
+            const password = document.getElementById("password").value;
+            const bodyWithPassword = {...queryArgs, pw: password};
             const initDetails = {
                 method: 'delete',
                 headers: {
@@ -113,7 +119,7 @@
                     "Cache-Control": "no-cache"
                 },
                 mode: "cors",
-                body: JSON.stringify(body)
+                body: JSON.stringify(bodyWithPassword)
             };
             return await fetch(`${apiURL}/${route}`, initDetails);
         }
@@ -129,7 +135,6 @@
             const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
             const uri = `${apiURL}/manual/takeover`;
             const body = { phoneNumber };
-            var initDetails = {};
             if (manualTakeoverList.includes(`+11${phoneNumber}`)) {
                 httpDelete("manual/takeover", { phoneNumber }).then(response => response.json()).then(result => {
                     retrieveJobs();
