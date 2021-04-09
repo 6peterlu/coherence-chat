@@ -280,7 +280,7 @@ def patient_data():
     event_data_by_time = {}
     for time in patient_dose_times:
         event_data_by_time[time] = {"events": []}
-        event_data_by_time[time] = []
+        # event_data_by_time[time] = []
         dose_ids = patient_dose_times[time]
         for event in relevant_events:
             # print(event.description)
