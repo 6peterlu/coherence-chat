@@ -108,7 +108,7 @@
         // we can't use delete, its reserved.
         async function httpDelete(route, body) {
             const password = document.getElementById("password").value;
-            const bodyWithPassword = {...queryArgs, pw: password};
+            const bodyWithPassword = {...body, pw: password};
             const initDetails = {
                 method: 'delete',
                 headers: {

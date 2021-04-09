@@ -1,15 +1,28 @@
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body>
     <input id="phoneNumberEntry" placeholder="Phone number"/>
     <button id="login" onclick="login()" style="display:none">Login</button>
-    <p id="phoneNumberDisplay"></p>
+    <div id="trackingDisplay">
+        <h2 id="welcomeHeader">Welcome!</h2>
+        <h3>Today's doses</h3>
+        <h4 id="takeNow">Take now</h4>
+        <div id="takeNowBody"></div>
+        <h4 id="takeLater">Take later</h4>
+        <div id="takeLaterBody"></div>
+        <h3>Dose history</h3>
+        <div id="calendar"></div>
+    </div>
     <script defer>
-        var runningLocally = false;  // if this is false, you're editing PROD.
+        var runningLocally = true;  // if this is false, you're editing PROD.
         var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
-        const phoneNumberDisplay = document.getElementById("phoneNumberDisplay");
+        const tracking = document.getElementById("trackingDisplay");
         const phoneNumberEntry = document.getElementById("phoneNumberEntry");
         const loginButton = document.getElementById("login");
+        const welcomeHeader = document.getElementById("welcomeHeader");
+        const takeNowBody = document.getElementById("takeNowBody");
+        const takeLaterBody = document.getElementById("takeLaterBody");
         const getInitDetails = {
             method: 'get',
             headers: {
@@ -40,7 +53,8 @@
                     loginButton.style.display = "block";
 
                 } else {
-                    phoneNumberDisplay.innerHTML = result.phoneNumber;
+                    welcomeHeader.innerHTML = `Welcome, ${result.phoneNumber}!`;
+
                     phoneNumberEntry.style.display = "none";
                     loginButton.style.display = "none";
                 }
