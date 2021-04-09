@@ -278,7 +278,7 @@ def patient_data():
         event_data_by_time[time] = []
         dose_ids = patient_dose_times[time]
         for event in relevant_events:
-            if str(event.description) in dose_ids:
+            if int(event.description) in dose_ids:
                 event_data_by_time[time].append(event.as_dict())
 
     return jsonify({"phoneNumber": recovered_cookie, "eventData": event_data_by_time})
