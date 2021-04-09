@@ -50,7 +50,8 @@ TOKENS_TO_RECOGNIZE = [
     "swimming",
     "basketball",
     "watching tv",
-    "shower"
+    "shower",
+    "working"
 ]
 
 # load on server start
@@ -472,6 +473,7 @@ def activity_detection(message_str):
         "basketball": (time_delay_short, f"{computing_prefix} Have fun out there! We'll see you later."),
         "watching tv": (time_delay_long, f"{computing_prefix} Have fun, we'll check in later."),
         "shower": (time_delay_short, f"{computing_prefix} Have a good shower, we'll check in later."),
+        "working": (time_delay_long, f"{computing_prefix} No problem, we'll check in later."),
     }
     best_match_score = 0.0
     best_match_concept = None
