@@ -244,6 +244,22 @@ def auth_required_post_delete(f):
             return f(*args, **kwargs)
     return decorated_function
 
+@app.route("/", methods=["GET"])
+def patient_page():
+    return app.send_static_file('index.html')
+
+@app.route("/patientData", methods=["GET"])
+def patient_data():
+    recovered_cookie = request.cookies.get("phoneNumber")
+    return jsonify({"phoneNumber": recovered_cookie})
+
+@app.route("/login", methods=["POST"])
+def save_phone_number():
+    phone_number = request.json["phoneNumber"]
+    out = jsonify()
+    out.set_cookie("phoneNumber", phone_number)
+    return out
+
 @app.route("/admin", methods=["GET"])
 def admin_page():
     return app.send_static_file('admin.html')

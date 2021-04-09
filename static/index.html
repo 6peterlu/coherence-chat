@@ -1,0 +1,54 @@
+<head>
+</head>
+<body>
+    <input id="phoneNumberEntry" placeholder="Phone number" style="display:;"/>
+    <button id="login" onclick="login()" style="display:none">Login</button>
+    <p id="phoneNumberDisplay"></p>
+    <script defer>
+        var runningLocally = true;  // if this is false, you're editing PROD.
+        var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
+        const phoneNumberDisplay = document.getElementById("phoneNumberDisplay");
+        const phoneNumberEntry = document.getElementById("phoneNumberEntry");
+        const loginButton = document.getElementById("login");
+        const getInitDetails = {
+            method: 'get',
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow_Methods": "GET",
+                "Access-Control_Allow_Headers": "*",
+                "Cache-Control": "no-cache"
+            },
+            mode: "cors"
+        };
+        const postInitDetails = {
+            method: 'post',
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow_Methods": "POST",
+                "Access-Control_Allow_Headers": "*",
+                "Content-Type": "application/json; charset=utf-8",
+                "Cache-Control": "no-cache"
+            },
+            mode: "cors",
+        };
+        function requestData() {
+            fetch(`${apiURL}/patientData`, getInitDetails).then(response => response.json()).then(result => {
+                if (result.phoneNumber === null) {
+                    phoneNumberDisplay.innerHTML = "you need to login";
+                    phoneNumberEntry.style.display = "block";
+                    loginButton.style.display = "block";
+
+                } else {
+                    phoneNumberDisplay.innerHTML = result.phoneNumber;
+                    phoneNumberEntry.style.display = "none";
+                    loginButton.style.display = "none";
+                }
+            });
+        }
+        function login() {
+            const initDetails = {...postInitDetails, body: JSON.stringify({phoneNumber: phoneNumberEntry.value})}
+            fetch(`${apiURL}/login`, initDetails).then(() => {requestData()});
+        }
+        requestData();
+    </script>
+</body>
