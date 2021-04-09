@@ -273,20 +273,17 @@ def patient_data():
     if phone_number not in PATIENT_DOSE_MAP:
         return jsonify({"error": "We couldn't find your phone number in our records. Please double-check that you've entered it correctly."})
     patient_dose_times = PATIENT_DOSE_MAP[phone_number]
-    relevant_dose_ids = chain.from_iterable(patient_dose_times.values())
+    relevant_dose_ids = list(chain.from_iterable(patient_dose_times.values()))
     relevant_dose_ids_as_str = [str(x) for x in relevant_dose_ids]
     relevant_doses = Dose.query.filter(Dose.id.in_(relevant_dose_ids)).all()
     relevant_events = Event.query.filter(Event.event_type.in_(["take", "skip"]), Event.description.in_(relevant_dose_ids_as_str)).all()
+    # relevant_events = Event.query.filter(Event.event_type.in_(["take", "skip"]), Event.description == "112").all() #).all()
     event_data_by_time = {}
     for time in patient_dose_times:
         event_data_by_time[time] = {"events": []}
-        # event_data_by_time[time] = []
         dose_ids = patient_dose_times[time]
         for event in relevant_events:
-            # print(event.description)
-            # print(dose_ids)
             if int(event.description) in dose_ids:
-                # print("appending")
                 event_data_by_time[time]["events"].append(event.as_dict())
         for dose in relevant_doses:
             if dose.id in dose_ids:
