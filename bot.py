@@ -279,7 +279,7 @@ def patient_data():
     relevant_events = Event.query.filter(Event.event_type.in_(["take", "skip"]), Event.description.in_(relevant_dose_ids_as_str)).all()
     event_data_by_time = {}
     for time in patient_dose_times:
-        # event_data_by_time[time] = {"events": []}
+        event_data_by_time[time] = {"events": []}
         event_data_by_time[time] = []
         dose_ids = patient_dose_times[time]
         for event in relevant_events:
@@ -287,7 +287,7 @@ def patient_data():
             # print(dose_ids)
             if int(event.description) in dose_ids:
                 # print("appending")
-                event_data_by_time[time].append(event.as_dict())
+                event_data_by_time[time]["events"].append(event.as_dict())
         # for dose in relevant_doses:
         #     if dose.id in dose_ids:
         #         event_data_by_time[time]["dose"] = dose.as_dict()
