@@ -5,7 +5,7 @@
     <button id="login" onclick="login()" style="display:none">Login</button>
     <p id="phoneNumberDisplay"></p>
     <script defer>
-        var runningLocally = true;  // if this is false, you're editing PROD.
+        var runningLocally = false;  // if this is false, you're editing PROD.
         var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
         const phoneNumberDisplay = document.getElementById("phoneNumberDisplay");
         const phoneNumberEntry = document.getElementById("phoneNumberEntry");
