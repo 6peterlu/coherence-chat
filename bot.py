@@ -13,6 +13,7 @@ from pytz import timezone, utc as pytzutc
 import parsedatetime
 import random
 import string
+from itertools import chain
 
 # fuzzy nlp handling
 import spacy
@@ -243,6 +244,58 @@ def auth_required_post_delete(f):
         else:
             return f(*args, **kwargs)
     return decorated_function
+
+@app.route("/", methods=["GET"])
+def patient_page():
+    return app.send_static_file('index.html')
+
+@app.route("/patientData", methods=["GET"])
+def patient_data():
+    recovered_cookie = request.cookies.get("phoneNumber")
+    if recovered_cookie is None:
+        return jsonify()  # empty response if no cookie
+    phone_number = f"+11{recovered_cookie}"
+    PATIENT_DOSE_MAP = {
+        "+113609042210": {"morning": [15], "evening": [25]},
+        "+113609049085": {"evening": [16]},
+        "+114152142478": {"morning": [26]},
+        "+116502690598": {"evening": [27]},
+        "+118587761377": {"morning": [29]},
+        "+113607738908": {"morning": [68], "evening": [69]},
+        "+115038871884": {"morning": [70], "afternoon": [71], "evening": [72]},
+        "+113605214193": {"morning": [72], "evening": [74]},
+        "+113605131225": {"morning": [75], "afternoon": [76], "evening": [77]},
+        "+113606064445": {"afternoon": [78]}
+    }
+    # PATIENT_DOSE_MAP = {
+    #     "+113604508655": {"morning": [112]}
+    # }
+    if phone_number not in PATIENT_DOSE_MAP:
+        return jsonify({"error": "We couldn't find your phone number in our records. Please double-check that you've entered it correctly."})
+    patient_dose_times = PATIENT_DOSE_MAP[phone_number]
+    relevant_dose_ids = list(chain.from_iterable(patient_dose_times.values()))
+    relevant_dose_ids_as_str = [str(x) for x in relevant_dose_ids]
+    relevant_doses = Dose.query.filter(Dose.id.in_(relevant_dose_ids)).all()
+    relevant_events = Event.query.filter(Event.event_type.in_(["take", "skip"]), Event.description.in_(relevant_dose_ids_as_str)).all()
+    event_data_by_time = {}
+    for time in patient_dose_times:
+        event_data_by_time[time] = {"events": []}
+        dose_ids = patient_dose_times[time]
+        for event in relevant_events:
+            if int(event.description) in dose_ids:
+                event_data_by_time[time]["events"].append(event.as_dict())
+        for dose in relevant_doses:
+            if dose.id in dose_ids:
+                event_data_by_time[time]["dose"] = dose.as_dict()
+                break
+    return jsonify({"phoneNumber": recovered_cookie, "eventData": event_data_by_time})
+
+@app.route("/login", methods=["POST"])
+def save_phone_number():
+    phone_number = request.json["phoneNumber"]
+    out = jsonify()
+    out.set_cookie("phoneNumber", phone_number)
+    return out
 
 @app.route("/admin", methods=["GET"])
 def admin_page():
