@@ -277,7 +277,6 @@ def patient_data():
     relevant_dose_ids_as_str = [str(x) for x in relevant_dose_ids]
     relevant_doses = Dose.query.filter(Dose.id.in_(relevant_dose_ids)).all()
     relevant_events = Event.query.filter(Event.event_type.in_(["take", "skip"]), Event.description.in_(relevant_dose_ids_as_str)).all()
-    # relevant_events = Event.query.filter(Event.event_type.in_(["take", "skip"]), Event.description == "112").all() #).all()
     event_data_by_time = {}
     for time in patient_dose_times:
         event_data_by_time[time] = {"events": []}
