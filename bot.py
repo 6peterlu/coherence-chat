@@ -288,10 +288,10 @@ def patient_data():
             if int(event.description) in dose_ids:
                 # print("appending")
                 event_data_by_time[time]["events"].append(event.as_dict())
-        # for dose in relevant_doses:
-        #     if dose.id in dose_ids:
-        #         event_data_by_time[time]["dose"] = dose.as_dict()
-        #         break
+        for dose in relevant_doses:
+            if dose.id in dose_ids:
+                event_data_by_time[time]["dose"] = dose.as_dict()
+                break
     return jsonify({"phoneNumber": recovered_cookie, "eventData": event_data_by_time})
 
 @app.route("/login", methods=["POST"])
