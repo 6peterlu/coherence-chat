@@ -271,6 +271,7 @@ def patient_data():
         return jsonify({"error": "We couldn't find your phone number in our records. Please double-check that you've entered it correctly."})
     patient_dose_times = PATIENT_DOSE_MAP[phone_number]
     relevant_dose_ids = chain.from_iterable(patient_dose_times.values())
+    relevant_doses = Dose.query.filter(Dose.id.in_(relevant_dose_ids))
     relevant_dose_ids_as_str = [str(x) for x in relevant_dose_ids]
     relevant_events = Event.query.filter(Event.event_type.in_(["take", "skip"]), Event.description.in_(relevant_dose_ids_as_str)).all()
     event_data_by_time = {}
@@ -280,6 +281,7 @@ def patient_data():
         for event in relevant_events:
             if int(event.description) in dose_ids:
                 event_data_by_time[time].append(event.as_dict())
+
 
     return jsonify({"phoneNumber": recovered_cookie, "eventData": event_data_by_time})
 
