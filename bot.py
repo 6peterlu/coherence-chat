@@ -13,6 +13,7 @@ from pytz import timezone, utc as pytzutc
 import parsedatetime
 import random
 import string
+from itertools import chain
 
 # fuzzy nlp handling
 import spacy
@@ -251,6 +252,35 @@ def patient_page():
 @app.route("/patientData", methods=["GET"])
 def patient_data():
     recovered_cookie = request.cookies.get("phoneNumber")
+    if recovered_cookie is None:
+        return jsonify()  # empty response if no cookie
+    phone_number = f"+11{recovered_cookie}"
+    PATIENT_DOSE_MAP = {
+        "+113609042210": {"morning": [15], "evening": [25]},
+        "+113609049085": {"evening": [16]},
+        "+114152142478": {"morning": [26]},
+        "+116502690598": {"evening": [27]},
+        "+118587761377": {"morning": [29]},
+        "+113607738908": {"morning": [68], "evening": [69]},
+        "+115038871884": {"morning": [70], "afternoon": [71], "evening": [72]},
+        "+113605214193": {"morning": [72], "evening": [74]},
+        "+113605131225": {"morning": [75], "afternoon": [76], "evening": [77]},
+        "+113606064445": {"afternoon": [78]}
+    }
+    if phone_number not in PATIENT_DOSE_MAP:
+        return jsonify({"error": "We couldn't find your phone number in our records. Please double-check that you've entered it correctly."})
+    patient_dose_times = PATIENT_DOSE_MAP[phone_number]
+    print(list(patient_dose_times.values()))
+    relevant_dose_ids = chain.from_iterable(patient_dose_times.values())
+    relevant_dose_ids_as_str = [str(x) for x in relevant_dose_ids]
+    print(relevant_dose_ids_as_str)
+    relevant_events = Event.query.filter(Event.event_type.in_(["take", "skip"])).all()  # , Event.description.in_(relevant_dose_ids_as_str)
+    print([event.as_dict() for event in relevant_events])
+    # for time, dose_id_list in patient_dose_times.items():
+
+    #     for dose_id in dose_id_list:
+
+
     return jsonify({"phoneNumber": recovered_cookie})
 
 @app.route("/login", methods=["POST"])
