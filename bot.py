@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 # import Flask-APScheduler
@@ -252,6 +252,10 @@ def auth_required_post_delete(f):
 @app.route("/", methods=["GET"])
 def patient_page():
     return app.send_static_file('index.html')
+
+@app.route("/css/<path:path>", methods=["GET"])
+def serve_css(path):
+    return send_from_directory('css', path)
 
 @app.route("/patientData", methods=["GET"])
 def patient_data():

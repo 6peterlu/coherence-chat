@@ -1,5 +1,6 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="static/css/styles.css">
 </head>
 <body>
     <input id="phoneNumberEntry" placeholder="Phone number"/>
@@ -12,7 +13,32 @@
         <h4 id="takeLater">Take later</h4>
         <div id="takeLaterBody"></div>
         <h3>Dose history</h3>
-        <div id="calendar"></div>
+        <div>
+            <table class="blueTable" id="calendar">
+                <!-- <thead>
+                <tr>
+                    <th>Sun</th>
+                    <th>Mon</th>
+                    <th>Tues</th>
+                    <th>Wed</th>
+                    <th>Thurs</th>
+                    <th>Fri</th>
+                    <th>Sat</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td></td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td></tr>
+                <tr>
+                <td>7</td><td>8</td><td>9</td><td>10</td><td>11</td><td>cell6_2</td><td>cell7_2</td></tr>
+                <tr>
+                <td>cell1_3</td><td>cell2_3</td><td>cell3_3</td><td>cell4_3</td><td>cell5_3</td><td>cell6_3</td><td>cell7_3</td></tr>
+                <tr>
+                <td>cell1_4</td><td>cell2_4</td><td>cell3_4</td><td>cell4_4</td><td>cell5_4</td><td>cell6_4</td><td>cell7_4</td></tr>
+                </tbody>
+                </tr> -->
+            </table>
+        </div>
     </div>
     <script defer>
         var runningLocally = true;  // if this is false, you're editing PROD.
@@ -23,6 +49,7 @@
         const welcomeHeader = document.getElementById("welcomeHeader");
         const takeNowBody = document.getElementById("takeNowBody");
         const takeLaterBody = document.getElementById("takeLaterBody");
+        const calendar = document.getElementById("calendar");
         const getInitDetails = {
             method: 'get',
             headers: {
@@ -60,10 +87,53 @@
                 }
             });
         }
+        function generateCalendar() {
+            var htmlBlob = `
+            <thead>
+                <tr>
+                    <th>Sun</th>
+                    <th>Mon</th>
+                    <th>Tues</th>
+                    <th>Wed</th>
+                    <th>Thurs</th>
+                    <th>Fri</th>
+                    <th>Sat</th>
+                </tr>
+                </thead>
+                <tbody>
+            `;
+            const dates = [
+                ["*28", "*29", "*30", "*31", "1", "2", "3"],
+                ["4", "5", "6", "7", "8", "9", "10"],
+                ["11", "12", "13", "14", "15", "16", "17"],
+                ["18", "19", "20", "21", "22", "23", "24"],
+                ["25", "26", "27", "28", "29", "30", "*1"],
+            ]
+            for (const dateRow of dates) {
+                htmlBlob += "<tr>";
+                for (const date of dateRow) {
+                    var faded = false;
+                    var processedDate = date;
+                    if (date.includes("*")) {
+                        faded = true;
+                        processedDate = date.slice(1);
+                    }
+                    htmlBlob += `<td class=${faded ? "fadedDate" : ""}>${processedDate}</td>`;
+                }
+                htmlBlob += "</tr>";
+            }
+            htmlBlob += `
+                </tbody>
+                </tr>
+            `;
+            calendar.innerHTML = htmlBlob;
+
+        }
         function login() {
             const initDetails = {...postInitDetails, body: JSON.stringify({phoneNumber: phoneNumberEntry.value})}
             fetch(`${apiURL}/login`, initDetails).then(() => {requestData()});
         }
         requestData();
+        generateCalendar();
     </script>
 </body>
