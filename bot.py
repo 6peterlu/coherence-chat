@@ -275,13 +275,7 @@ def patient_data():
     relevant_dose_ids_as_str = [str(x) for x in relevant_dose_ids]
     print(relevant_dose_ids_as_str)
     relevant_events = Event.query.filter(Event.event_type.in_(["take", "skip"])).all()  # , Event.description.in_(relevant_dose_ids_as_str)
-    print([event.as_dict() for event in relevant_events])
-    # for time, dose_id_list in patient_dose_times.items():
-
-    #     for dose_id in dose_id_list:
-
-
-    return jsonify({"phoneNumber": recovered_cookie})
+    return jsonify({"phoneNumber": recovered_cookie, "eventData": [event.as_dict() for event in relevant_events]})
 
 @app.route("/login", methods=["POST"])
 def save_phone_number():
