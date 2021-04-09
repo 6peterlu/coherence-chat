@@ -270,12 +270,18 @@ def patient_data():
     if phone_number not in PATIENT_DOSE_MAP:
         return jsonify({"error": "We couldn't find your phone number in our records. Please double-check that you've entered it correctly."})
     patient_dose_times = PATIENT_DOSE_MAP[phone_number]
-    print(list(patient_dose_times.values()))
     relevant_dose_ids = chain.from_iterable(patient_dose_times.values())
     relevant_dose_ids_as_str = [str(x) for x in relevant_dose_ids]
-    print(relevant_dose_ids_as_str)
     relevant_events = Event.query.filter(Event.event_type.in_(["take", "skip"]), Event.description.in_(relevant_dose_ids_as_str)).all()
-    return jsonify({"phoneNumber": recovered_cookie, "eventData": [event.as_dict() for event in relevant_events]})
+    event_data_by_time = {}
+    for time in patient_dose_times:
+        event_data_by_time[time] = []
+        dose_ids = patient_dose_times[time]
+        for event in relevant_events:
+            if str(event.description) in dose_ids:
+                event_data_by_time[time].append(event.as_dict())
+
+    return jsonify({"phoneNumber": recovered_cookie, "eventData": event_data_by_time})
 
 @app.route("/login", methods=["POST"])
 def save_phone_number():
