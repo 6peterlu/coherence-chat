@@ -47,3 +47,12 @@ table.blueTable tfoot .links a{
   color: #09ad56;
   font-weight: bold;
 }
+
+.nonadherent {
+  color: #f54242;
+  font-weight: bold;
+}
+.adherentWithSkip {
+  color: #faa228;
+  font-weight: bold;
+}

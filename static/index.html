@@ -60,6 +60,7 @@
                     loginButton.style.display = "block";
                     tracking.style.display = "none";
                 } else {
+                    instructions.style.display = "none";
                     welcomeHeader.innerHTML = `Welcome, ${result.phoneNumber}!`;
                     phoneNumberEntry.style.display = "none";
                     loginButton.style.display = "none";
@@ -135,11 +136,20 @@
                 for (const date of dateRow) {
                     var faded = false;
                     var processedDate = date;
+                    var adherenceClass = "noAdherenceData";
+                    const dayOfMonth = parseInt(processedDate);
+                    if (adherenceHistory.adherentDays.includes(dayOfMonth)) {
+                        adherenceClass = "adherent";
+                    } else if (adherenceHistory.missedDays.includes(dayOfMonth)) {
+                        adherenceClass = "nonadherent";
+                    } else if (adherenceHistory.adherentWithSkipDays.includes(dayOfMonth)) {
+                        adherenceClass = "adherentWithSkip";
+                    }
                     if (date.includes("*")) {
                         faded = true;
                         processedDate = date.slice(1);
                     }
-                    htmlBlob += `<td class='${faded ? "fadedDate " : ""}${adherenceHistory.adherentDays.includes(parseInt(processedDate)) ? "adherent" : "nonadherent"}'>${processedDate}</td>`;
+                    htmlBlob += `<td class='${faded ? "fadedDate " : ""}${adherenceClass}'>${processedDate}</td>`;
                 }
                 htmlBlob += "</tr>";
             }
