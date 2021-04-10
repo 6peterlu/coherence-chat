@@ -50,6 +50,7 @@
         const takeNowBody = document.getElementById("takeNowBody");
         const takeLaterBody = document.getElementById("takeLaterBody");
         const calendar = document.getElementById("calendar");
+        var adherentDays = [];
         const getInitDetails = {
             method: 'get',
             headers: {
@@ -73,7 +74,7 @@
         };
         function requestData() {
             fetch(`${apiURL}/patientData`, getInitDetails).then(response => response.json()).then(result => {
-                console.log(result);
+
                 if (!result.phoneNumber) {
                     phoneNumberDisplay.innerHTML = "you need to login";
                     phoneNumberEntry.style.display = "block";
@@ -81,11 +82,34 @@
 
                 } else {
                     welcomeHeader.innerHTML = `Welcome, ${result.phoneNumber}!`;
-
                     phoneNumberEntry.style.display = "none";
                     loginButton.style.display = "none";
+                    adherentDays = getAdherentDaysInApril(result.eventData);
+                    generateCalendar();
                 }
             });
+        }
+        function getAdherentDaysInApril(eventData) {
+            const fieldsToSatisfy = Object.keys(eventData);
+            let adherentDays = [];
+            for (let dayOfMonth = 1; dayOfMonth <= 30; dayOfMonth++) {
+                const startDate = new Date(2021, 3, dayOfMonth, 7, 0, 0, 0); // start time in GMT
+                const endDate = new Date(2021, 3, dayOfMonth + 1, 7, 0, 0, 0); // end time in GMT
+                const satisfiedFields = [];
+                for (const field of fieldsToSatisfy) {
+                    const eventDataForField = eventData[field];
+                    for (const event of eventDataForField.events) {
+                        const eventTimeObj = new Date(event.event_time);
+                        if (eventTimeObj > startDate && eventTimeObj < endDate) {
+                            satisfiedFields.push(event);
+                        }
+                    }
+                }
+                if (satisfiedFields.length == fieldsToSatisfy.length) {
+                    adherentDays.push(dayOfMonth);
+                }
+            }
+            return adherentDays;
         }
         function generateCalendar() {
             var htmlBlob = `
@@ -118,7 +142,8 @@
                         faded = true;
                         processedDate = date.slice(1);
                     }
-                    htmlBlob += `<td class=${faded ? "fadedDate" : ""}>${processedDate}</td>`;
+                    console.log(adherentDays.includes(parseInt(processedDate)));
+                    htmlBlob += `<td class='${faded ? "fadedDate " : ""}${adherentDays.includes(parseInt(processedDate)) ? "adherent" : "nonadherent"}'>${processedDate}</td>`;
                 }
                 htmlBlob += "</tr>";
             }

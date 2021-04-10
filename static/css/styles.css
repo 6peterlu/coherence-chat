@@ -40,5 +40,10 @@ table.blueTable tfoot .links a{
 }
 
 .fadedDate {
-  color: #AAAAAA
+  color: #AAAAAA;
+}
+
+.adherent {
+  color: #09ad56;
+  font-weight: bold;
 }
