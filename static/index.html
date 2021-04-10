@@ -5,6 +5,7 @@
 <body>
     <input id="phoneNumberEntry" placeholder="Phone number"/>
     <button id="login" onclick="login()" style="display:none">Login</button>
+    <h2 id="instructions"></h2>
     <div id="trackingDisplay">
         <h2 id="welcomeHeader">Welcome!</h2>
         <h3>Today's doses</h3>
@@ -15,33 +16,11 @@
         <h3>Dose history</h3>
         <div>
             <table class="blueTable" id="calendar">
-                <!-- <thead>
-                <tr>
-                    <th>Sun</th>
-                    <th>Mon</th>
-                    <th>Tues</th>
-                    <th>Wed</th>
-                    <th>Thurs</th>
-                    <th>Fri</th>
-                    <th>Sat</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                <td></td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td></tr>
-                <tr>
-                <td>7</td><td>8</td><td>9</td><td>10</td><td>11</td><td>cell6_2</td><td>cell7_2</td></tr>
-                <tr>
-                <td>cell1_3</td><td>cell2_3</td><td>cell3_3</td><td>cell4_3</td><td>cell5_3</td><td>cell6_3</td><td>cell7_3</td></tr>
-                <tr>
-                <td>cell1_4</td><td>cell2_4</td><td>cell3_4</td><td>cell4_4</td><td>cell5_4</td><td>cell6_4</td><td>cell7_4</td></tr>
-                </tbody>
-                </tr> -->
             </table>
         </div>
     </div>
     <script defer>
-        var runningLocally = true;  // if this is false, you're editing PROD.
+        var runningLocally = false;  // if this is false, you're editing PROD.
         var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
         const tracking = document.getElementById("trackingDisplay");
         const phoneNumberEntry = document.getElementById("phoneNumberEntry");
@@ -50,7 +29,8 @@
         const takeNowBody = document.getElementById("takeNowBody");
         const takeLaterBody = document.getElementById("takeLaterBody");
         const calendar = document.getElementById("calendar");
-        var adherentDays = [];
+        const instructions = document.getElementById("instructions");
+        var adherenceHistory = {};
         const getInitDetails = {
             method: 'get',
             headers: {
@@ -74,17 +54,17 @@
         };
         function requestData() {
             fetch(`${apiURL}/patientData`, getInitDetails).then(response => response.json()).then(result => {
-
                 if (!result.phoneNumber) {
-                    phoneNumberDisplay.innerHTML = "you need to login";
+                    instructions.innerHTML = "you need to login";
                     phoneNumberEntry.style.display = "block";
                     loginButton.style.display = "block";
-
+                    tracking.style.display = "none";
                 } else {
                     welcomeHeader.innerHTML = `Welcome, ${result.phoneNumber}!`;
                     phoneNumberEntry.style.display = "none";
                     loginButton.style.display = "none";
-                    adherentDays = getAdherentDaysInApril(result.eventData);
+                    tracking.style.display = "block";
+                    adherenceHistory = getAdherentDaysInApril(result.eventData);
                     generateCalendar();
                 }
             });
@@ -92,24 +72,41 @@
         function getAdherentDaysInApril(eventData) {
             const fieldsToSatisfy = Object.keys(eventData);
             let adherentDays = [];
+            let adherentWithSkipDays = [];
+            let missedDays = [];
+            let insufficientDataDays = [];
             for (let dayOfMonth = 1; dayOfMonth <= 30; dayOfMonth++) {
                 const startDate = new Date(2021, 3, dayOfMonth, 7, 0, 0, 0); // start time in GMT
                 const endDate = new Date(2021, 3, dayOfMonth + 1, 7, 0, 0, 0); // end time in GMT
                 const satisfiedFields = [];
+                const skippedFields = [];
+                const missedFields = [];
                 for (const field of fieldsToSatisfy) {
                     const eventDataForField = eventData[field];
                     for (const event of eventDataForField.events) {
                         const eventTimeObj = new Date(event.event_time);
                         if (eventTimeObj > startDate && eventTimeObj < endDate) {
-                            satisfiedFields.push(event);
+                            if (event.event_type === "take") {
+                                satisfiedFields.push(event);
+                            } else if (event.event_type === "skip") {
+                                skippedFields.push(event);
+                            } else if (event.event_type === "boundary") {
+                                missedFields.push(event);
+                            }
                         }
                     }
                 }
                 if (satisfiedFields.length == fieldsToSatisfy.length) {
                     adherentDays.push(dayOfMonth);
+                } else if (satisfiedFields.length + skippedFields.length == fieldsToSatisfy.length) {
+                    adherentWithSkipDays.push(dayOfMonth);
+                } else if (satisfiedFields.length + skippedFields.length + missedFields.length == fieldsToSatisfy.length) {
+                    missedDays.push(dayOfMonth);
+                } else {
+                    insufficientDataDays.push(dayOfMonth);
                 }
             }
-            return adherentDays;
+            return { adherentDays, adherentWithSkipDays, missedDays, insufficientDataDays };
         }
         function generateCalendar() {
             var htmlBlob = `
@@ -142,8 +139,7 @@
                         faded = true;
                         processedDate = date.slice(1);
                     }
-                    console.log(adherentDays.includes(parseInt(processedDate)));
-                    htmlBlob += `<td class='${faded ? "fadedDate " : ""}${adherentDays.includes(parseInt(processedDate)) ? "adherent" : "nonadherent"}'>${processedDate}</td>`;
+                    htmlBlob += `<td class='${faded ? "fadedDate " : ""}${adherenceHistory.adherentDays.includes(parseInt(processedDate)) ? "adherent" : "nonadherent"}'>${processedDate}</td>`;
                 }
                 htmlBlob += "</tr>";
             }
@@ -159,6 +155,5 @@
             fetch(`${apiURL}/login`, initDetails).then(() => {requestData()});
         }
         requestData();
-        generateCalendar();
     </script>
 </body>

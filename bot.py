@@ -263,20 +263,17 @@ def patient_data():
     if recovered_cookie is None:
         return jsonify()  # empty response if no cookie
     phone_number = f"+11{recovered_cookie}"
-    # PATIENT_DOSE_MAP = {
-    #     "+113609042210": {"morning": [15], "evening": [25]},
-    #     "+113609049085": {"evening": [16]},
-    #     "+114152142478": {"morning": [26]},
-    #     "+116502690598": {"evening": [27]},
-    #     "+118587761377": {"morning": [29]},
-    #     "+113607738908": {"morning": [68], "evening": [69]},
-    #     "+115038871884": {"morning": [70], "afternoon": [71], "evening": [72]},
-    #     "+113605214193": {"morning": [72], "evening": [74]},
-    #     "+113605131225": {"morning": [75], "afternoon": [76], "evening": [77]},
-    #     "+113606064445": {"afternoon": [78]}
-    # }
-    PATIENT_DOSE_MAP = {
-        "+113604508655": {"morning": [112]}
+    PATIENT_DOSE_MAP = { "+113604508655": {"morning": [112]}} if os.environ["FLASK_ENV"] == "local" else {
+        "+113609042210": {"morning": [15], "evening": [25]},
+        "+113609049085": {"evening": [16]},
+        "+114152142478": {"morning": [26]},
+        "+116502690598": {"evening": [27]},
+        "+118587761377": {"morning": [29]},
+        "+113607738908": {"morning": [68], "evening": [69, 81]},
+        "+115038871884": {"morning": [70], "afternoon": [71], "evening": [72]},
+        "+113605214193": {"morning": [72], "evening": [74]},
+        "+113605131225": {"morning": [75], "afternoon": [76], "evening": [77]},
+        "+113606064445": {"afternoon": [78]}
     }
     if phone_number not in PATIENT_DOSE_MAP:
         return jsonify({"error": "We couldn't find your phone number in our records. Please double-check that you've entered it correctly."})
@@ -284,7 +281,7 @@ def patient_data():
     relevant_dose_ids = list(chain.from_iterable(patient_dose_times.values()))
     relevant_dose_ids_as_str = [str(x) for x in relevant_dose_ids]
     relevant_doses = Dose.query.filter(Dose.id.in_(relevant_dose_ids)).all()
-    relevant_events = Event.query.filter(Event.event_type.in_(["take", "skip"]), Event.description.in_(relevant_dose_ids_as_str)).all()
+    relevant_events = Event.query.filter(Event.event_type.in_(["take", "skip", "boundary"]), Event.description.in_(relevant_dose_ids_as_str)).all()
     event_data_by_time = {}
     for time in patient_dose_times:
         event_data_by_time[time] = {"events": []}
