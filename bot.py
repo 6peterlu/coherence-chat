@@ -547,7 +547,7 @@ def incoming_message_processing(incoming_msg):
     processed_msg = processed_msg.translate(str.maketrans("", "", string.punctuation))
     processed_msg = processed_msg.replace("[", "").replace("]", "")
     processed_msg_tokens = processed_msg.split()
-    take_list = list(filter(lambda x: x == "t", processed_msg_tokens))
+    take_list = list(filter(lambda x: x == "t" || x == "taken", processed_msg_tokens))
     skip_list = list(filter(lambda x: x == "s", processed_msg_tokens))
     error_list = list(filter(lambda x: x == "x", processed_msg_tokens))
     thanks_list = list(filter(lambda x: x == "thanks", processed_msg_tokens))
