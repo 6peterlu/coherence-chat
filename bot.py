@@ -355,6 +355,8 @@ def toggle_dose_activate():
             days=1,
             args=[relevant_dose.id]
         )
+    else:
+        remove_jobs_helper(relevant_dose.id, ["boundary", "initial", "followup", "absent"])
     return jsonify()
 
 @app.route("/dose", methods=["DELETE"])
