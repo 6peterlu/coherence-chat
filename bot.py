@@ -49,9 +49,9 @@ TOKENS_TO_RECOGNIZE = [
     "tennis",
     "swimming",
     "basketball",
-    "watching tv",
     "shower",
     "working"
+    "tv",
 ]
 
 # load on server start
@@ -125,6 +125,7 @@ class Dose(db.Model):
     patient_name = db.Column(db.String(80), nullable=False)
     phone_number = db.Column(db.String(13), nullable=False)  # +11234567890
     medication_name = db.Column(db.String(80), nullable=True)
+    active = db.Column(db.Boolean)
 
     # TODO: extend this repr to include all fields
     def __repr__(self):
@@ -326,7 +327,8 @@ def add_dose():
         end_minute=end_minute,
         phone_number=phone_number,
         patient_name=patient_name,
-        medication_name=medication_name
+        medication_name=medication_name,
+        active=True
     )
     db.session.add(new_dose_record)
     db.session.commit()
@@ -336,7 +338,16 @@ def add_dose():
         days=1,
         args=[new_dose_record.id]
     )
+    return jsonify()
 
+@app.route("/dose/toggleActivate", methods=["POST"])
+@auth_required_post_delete
+def toggle_dose_activate():
+    incoming_data = request.json
+    dose_id = incoming_data["doseId"]
+    relevant_dose = Dose.query.get(dose_id)
+    relevant_dose.active = not relevant_dose.active
+    db.session.commit()
     return jsonify()
 
 @app.route("/dose", methods=["DELETE"])
@@ -475,7 +486,7 @@ def activity_detection(message_str):
         "tennis": (time_delay_long, f"{computing_prefix} Have fun out there! We'll see you later."),
         "swimming": (time_delay_long, f"{computing_prefix} Have fun out there! We'll see you later."),
         "basketball": (time_delay_short, f"{computing_prefix} Have fun out there! We'll see you later."),
-        "watching tv": (time_delay_long, f"{computing_prefix} Have fun, we'll check in later."),
+        "tv": (time_delay_long, f"{computing_prefix} Have fun, we'll check in later."),
         "shower": (time_delay_short, f"{computing_prefix} Have a good shower, we'll check in later."),
         "working": (time_delay_long, f"{computing_prefix} No problem, we'll check in later."),
     }
@@ -536,12 +547,12 @@ def incoming_message_processing(incoming_msg):
     processed_msg = processed_msg.translate(str.maketrans("", "", string.punctuation))
     processed_msg = processed_msg.replace("[", "").replace("]", "")
     processed_msg_tokens = processed_msg.split()
-    take_list = list(filter(lambda x: x == "t", processed_msg_tokens))
+    take_list = list(filter(lambda x: x == "t" or x == "taken", processed_msg_tokens))
     skip_list = list(filter(lambda x: x == "s", processed_msg_tokens))
     error_list = list(filter(lambda x: x == "x", processed_msg_tokens))
     thanks_list = list(filter(lambda x: x == "thanks", processed_msg_tokens))
     filler_words = ["taking", "going", "to", "a", "for", "on"]
-    everything_else = list(filter(lambda x: x != "t" and x != "s" and x not in filler_words, processed_msg_tokens))
+    everything_else = list(filter(lambda x: x != "t" and x != "s" and x != "taken" and x not in filler_words, processed_msg_tokens))
     final_message_list = []
     if len(error_list) > 0:
         return ["x"]  # no more message processing
@@ -552,7 +563,7 @@ def incoming_message_processing(incoming_msg):
     if len(thanks_list) > 0:
         final_message_list.append("thanks")
     elif len(everything_else) > 0:
-        coalesce_words = ["dinner", "breakfast", "lunch", "brunch", "sleeping", "bathroom", "shower"]
+        coalesce_words = ["dinner", "breakfast", "lunch", "brunch", "sleeping", "bathroom", "shower", "tv"]
         intersection = list(filter(lambda x: x in coalesce_words, everything_else))
         if len(intersection) > 0:
             final_message_list.append(intersection[0])  # just append matched concept if any
