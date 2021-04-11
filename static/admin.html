@@ -219,7 +219,8 @@
                 const startHour = dose.start_hour;
                 return `
                     <li>
-                        <p style="display:inline">${dose.id}-${dose.medication_name}, ${dose.patient_name}/${dose.phone_number}, ${convertToPT(dose.start_hour)}:${dose.start_minute}->${convertToPT(dose.end_hour)}:${dose.end_minute}</p>
+                        <p style="display:inline; color:${dose.active ? '#000' : '#AAA'}">${dose.id}-${dose.medication_name}, ${dose.patient_name}/${dose.phone_number}, ${convertToPT(dose.start_hour)}:${dose.start_minute}->${convertToPT(dose.end_hour)}:${dose.end_minute}</p>
+                        <button onclick="toggleActivateDose(\'${dose.id}\')">activate/deactivate dose</button>
                         <button onclick="deleteDose(\'${dose.id}\')">delete dose</button>
                     </li>
                 `
@@ -277,6 +278,11 @@
                     retrieveJobs();
                 }
             );
+        }
+        function toggleActivateDose(doseId) {
+            post("dose/toggleActivate", { doseId }).then(() => {
+                retrieveJobs();
+            });
         }
         function addEvent() {
             const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;

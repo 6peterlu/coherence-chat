@@ -125,6 +125,7 @@ class Dose(db.Model):
     patient_name = db.Column(db.String(80), nullable=False)
     phone_number = db.Column(db.String(13), nullable=False)  # +11234567890
     medication_name = db.Column(db.String(80), nullable=True)
+    active = db.Column(db.Boolean)
 
     # TODO: extend this repr to include all fields
     def __repr__(self):
@@ -326,7 +327,8 @@ def add_dose():
         end_minute=end_minute,
         phone_number=phone_number,
         patient_name=patient_name,
-        medication_name=medication_name
+        medication_name=medication_name,
+        active=True
     )
     db.session.add(new_dose_record)
     db.session.commit()
@@ -336,7 +338,16 @@ def add_dose():
         days=1,
         args=[new_dose_record.id]
     )
+    return jsonify()
 
+@app.route("/dose/toggleActivate", methods=["POST"])
+@auth_required_post_delete
+def toggle_dose_activate():
+    incoming_data = request.json
+    dose_id = incoming_data["doseId"]
+    relevant_dose = Dose.query.get(dose_id)
+    relevant_dose.active = not relevant_dose.active
+    db.session.commit()
     return jsonify()
 
 @app.route("/dose", methods=["DELETE"])
