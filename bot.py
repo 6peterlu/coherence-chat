@@ -348,6 +348,13 @@ def toggle_dose_activate():
     relevant_dose = Dose.query.get(dose_id)
     relevant_dose.active = not relevant_dose.active
     db.session.commit()
+    if relevant_dose.active:
+        scheduler.add_job(f"{relevant_dose.id}-initial", send_intro_text,
+            trigger="interval",
+            start_date=relevant_dose.next_start_date,
+            days=1,
+            args=[relevant_dose.id]
+        )
     return jsonify()
 
 @app.route("/dose", methods=["DELETE"])
