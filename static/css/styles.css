@@ -1,0 +1,58 @@
+table.blueTable {
+  font-family: Georgia, serif;
+  width: 100%;
+  height: 200px;
+  text-align: center;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+table.blueTable td, table.blueTable th {
+  padding: 3px 3px;
+}
+table.blueTable tbody td {
+  font-size: 14px;
+}
+table.blueTable thead {
+    border-bottom: 2px solid #444444;
+}
+table.blueTable thead th {
+  font-size: 18px;
+  font-weight: normal;
+  color: #000000;
+  text-align: center;
+}
+table.blueTable thead th:first-child {
+  border-left: none;
+}
+
+table.blueTable tfoot td {
+  font-size: 14px;
+}
+table.blueTable tfoot .links {
+  text-align: right;
+}
+table.blueTable tfoot .links a{
+  display: inline-block;
+  background: #1C6EA4;
+  color: #FFFFFF;
+  padding: 2px 8px;
+  border-radius: 5px;
+}
+
+.fadedDate {
+  color: #AAAAAA;
+}
+
+.adherent {
+  color: #09ad56;
+  font-weight: bold;
+}
+
+.nonadherent {
+  color: #f54242;
+  font-weight: bold;
+}
+.adherentWithSkip {
+  color: #faa228;
+  font-weight: bold;
+}
