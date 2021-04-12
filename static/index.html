@@ -61,7 +61,7 @@
                     tracking.style.display = "none";
                 } else {
                     instructions.style.display = "none";
-                    welcomeHeader.innerHTML = `Welcome, ${result.phoneNumber}!`;
+                    welcomeHeader.innerHTML = `Welcome, ${result.patientName}.`;
                     phoneNumberEntry.style.display = "none";
                     loginButton.style.display = "none";
                     tracking.style.display = "block";
@@ -77,8 +77,9 @@
             let missedDays = [];
             let insufficientDataDays = [];
             for (let dayOfMonth = 1; dayOfMonth <= 30; dayOfMonth++) {
-                const startDate = new Date(2021, 3, dayOfMonth, 7, 0, 0, 0); // start time in GMT
-                const endDate = new Date(2021, 3, dayOfMonth + 1, 7, 0, 0, 0); // end time in GMT
+                // 2AM - 2AM to account for night doses
+                const startDate = new Date(2021, 3, dayOfMonth, 2, 0, 0, 0); // start time in GMT
+                const endDate = new Date(2021, 3, dayOfMonth + 1, 2, 0, 0, 0); // end time in GMT
                 const satisfiedFields = [];
                 const skippedFields = [];
                 const missedFields = [];

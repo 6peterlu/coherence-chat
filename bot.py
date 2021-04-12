@@ -278,10 +278,22 @@ def patient_data():
     }
     if phone_number not in PATIENT_DOSE_MAP:
         return jsonify({"error": "We couldn't find your phone number in our records. Please double-check that you've entered it correctly."})
+    PATIENT_NAME_MAP = { "+113604508655": "Peter" } if os.environ["FLASK_ENV"] == "local" else {
+        "+113606064445": "Cheryl",
+        "+113609042210": "Steven",
+        "+113609049085": "Tao",
+        "+114152142478": "Miki",
+        "+116502690598": "Caroline",
+        "+118587761377": "Hadara",
+        "+113607738908": "Karrie",
+        "+115038871884": "Charles",
+        "+113605214193": "Leann",
+        "+113605131225": "Jeanette"
+    }
     patient_dose_times = PATIENT_DOSE_MAP[phone_number]
     relevant_dose_ids = list(chain.from_iterable(patient_dose_times.values()))
     relevant_dose_ids_as_str = [str(x) for x in relevant_dose_ids]
-    relevant_doses = Dose.query.filter(Dose.id.in_(relevant_dose_ids)).all()
+    relevant_doses = Dose.query.filter(Dose.id.in_(relevant_dose_ids), Dose.active.is_(True)).all()
     relevant_events = Event.query.filter(Event.event_type.in_(["take", "skip", "boundary"]), Event.description.in_(relevant_dose_ids_as_str)).all()
     event_data_by_time = {}
     for time in patient_dose_times:
@@ -294,7 +306,7 @@ def patient_data():
             if dose.id in dose_ids:
                 event_data_by_time[time]["dose"] = dose.as_dict()
                 break
-    return jsonify({"phoneNumber": recovered_cookie, "eventData": event_data_by_time})
+    return jsonify({"phoneNumber": recovered_cookie, "eventData": event_data_by_time, "patientName": PATIENT_NAME_MAP[phone_number]})
 
 @app.route("/login", methods=["POST"])
 def save_phone_number():
