@@ -72,6 +72,7 @@ from constants import (
     REMINDER_TOO_LATE_MSG,
     SKIP_MSG,
     TAKE_MSG,
+    TAKE_MSG_EXCITED,
     UNKNOWN_MSG,
     ACTION_MENU,
     USER_ERROR_REPORT,
@@ -216,9 +217,9 @@ def get_followup_message():
 def get_initial_message():
     return random.choice(INITIAL_MSGS)  # returns a template
 
-def get_take_message():
+def get_take_message(excited):
     datestring = get_time_now().astimezone(timezone(USER_TIMEZONE)).strftime('%b %d, %I:%M %p')
-    return TAKE_MSG.substitute(time=datestring)
+    return TAKE_MSG_EXCITED.substitute(time=datestring) if excited else TAKE_MSG.substitute(time=datestring)
 
 def get_absent_message():
     return random.choice(ABSENT_MSGS)
@@ -577,6 +578,7 @@ def extract_integer(message):
 # note that there's no guarantee of text sending order
 def incoming_message_processing(incoming_msg):
     processed_msg = incoming_msg.lower().strip()
+    excited = "!" in processed_msg
     processed_msg = processed_msg.translate(str.maketrans("", "", string.punctuation))
     processed_msg = processed_msg.replace("[", "").replace("]", "")
     processed_msg_tokens = processed_msg.split()
@@ -602,11 +604,11 @@ def incoming_message_processing(incoming_msg):
             final_message_list.append(intersection[0])  # just append matched concept if any
         else:
             final_message_list.append(" ".join(everything_else))
-    return final_message_list
+    return final_message_list, excited
 
 @app.route('/bot', methods=['POST'])
 def bot():
-    incoming_msg_list = incoming_message_processing(request.values.get('Body', ''))
+    incoming_msg_list, excited = incoming_message_processing(request.values.get('Body', ''))
     incoming_phone_number = request.values.get('From', None)
     for incoming_msg in incoming_msg_list:
         # attempt to parse time from incoming msg
@@ -713,7 +715,7 @@ def bot():
                             )
                 elif incoming_msg in ["t", "s"]:
                     message_copy = {
-                        "t": get_take_message(),
+                        "t": get_take_message(excited),
                         "s": SKIP_MSG
                     }
                     if incoming_msg == "t":

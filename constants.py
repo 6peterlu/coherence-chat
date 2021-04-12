@@ -37,6 +37,8 @@ CONFIRMATION_MSG = Template("""Great, I'll text again at $time. See you then!"""
 
 TAKE_MSG = Template("""🕒 $time\nDose recorded.\n💊💊💊💊""")
 
+TAKE_MSG_EXCITED = Template("""🕒 $time\nDose recorded! (:\n💊💊💊💊""")
+
 SKIP_MSG = """Dose skipped. I won't send you any more reminders for this dose today."""
 
 UNKNOWN_MSG = """I can understand the following commands:
