@@ -50,7 +50,7 @@ TOKENS_TO_RECOGNIZE = [
     "swimming",
     "basketball",
     "shower",
-    "working"
+    "working",
     "tv",
 ]
 
@@ -264,20 +264,22 @@ def patient_data():
     if recovered_cookie is None:
         return jsonify()  # empty response if no cookie
     phone_number = f"+11{recovered_cookie}"
-    PATIENT_DOSE_MAP = { "+113604508655": {"morning": [112]}} if os.environ["FLASK_ENV"] == "local" else {
-        "+113609042210": {"morning": [15], "evening": [25]},
+    PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113], "afternoon": [114]}} if os.environ["FLASK_ENV"] == "local" else {
+        "+113609042210": {"afternoon": [25], "evening": [15]},
         "+113609049085": {"evening": [16]},
         "+114152142478": {"morning": [26, 82]},
         "+116502690598": {"evening": [27]},
         "+118587761377": {"morning": [29]},
         "+113607738908": {"morning": [68], "evening": [69, 81]},
-        "+115038871884": {"morning": [70], "afternoon": [71], "evening": [72]},
+        "+115038871884": {"morning": [70], "afternoon": [71]},
         "+113605214193": {"morning": [72], "evening": [74]},
         "+113605131225": {"morning": [75], "afternoon": [76], "evening": [77]},
         "+113606064445": {"afternoon": [78]}
     }
     if phone_number not in PATIENT_DOSE_MAP:
-        return jsonify({"error": "We couldn't find your phone number in our records. Please double-check that you've entered it correctly."})
+        response = jsonify({"error": "We couldn't find your phone number in our records. Please double-check that you've entered it correctly."})
+        response.set_cookie("phoneNumber", "", expires=0)
+        return response
     PATIENT_NAME_MAP = { "+113604508655": "Peter" } if os.environ["FLASK_ENV"] == "local" else {
         "+113606064445": "Cheryl",
         "+113609042210": "Steven",
@@ -311,6 +313,8 @@ def patient_data():
 @app.route("/login", methods=["POST"])
 def save_phone_number():
     phone_number = request.json["phoneNumber"]
+    numeric_filter = filter(str.isdigit, phone_number)
+    phone_number = "".join(numeric_filter)
     out = jsonify()
     out.set_cookie("phoneNumber", phone_number)
     return out

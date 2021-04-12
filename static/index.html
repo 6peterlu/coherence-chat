@@ -3,24 +3,34 @@
     <link rel="stylesheet" href="static/css/styles.css">
 </head>
 <body>
+    <p id="instructions"></p>
     <input id="phoneNumberEntry" placeholder="Phone number"/>
     <button id="login" onclick="login()" style="display:none">Login</button>
-    <h2 id="instructions"></h2>
     <div id="trackingDisplay">
         <h2 id="welcomeHeader">Welcome!</h2>
-        <h3>Today's doses</h3>
-        <h4 id="takeNow">Take now</h4>
-        <div id="takeNowBody"></div>
-        <h4 id="takeLater">Take later</h4>
-        <div id="takeLaterBody"></div>
         <h3>Dose history</h3>
+        <p>Click on a day to see more details.</p>
         <div>
             <table class="blueTable" id="calendar">
             </table>
+            <div>
+                <h4>Key</h4>
+                <div class="currentDate" style="padding:10px"><p>Current day</p></div>
+                <p>🟩 All doses taken</p>
+                <p>🟧 Skipped some doses</p>
+                <p>🟥 Missed some doses</p>
+            </div>
+        </div>
+        <div class="modal" id="detailView">
+            <div class="modal-content">
+                <span class="close" id="closeButton">&times;</span>
+                <h2 id="modalTitle"></h2>
+                <div id="modalBody"></div>
+            </div>
         </div>
     </div>
     <script defer>
-        var runningLocally = false;  // if this is false, you're editing PROD.
+        var runningLocally = false;
         var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
         const tracking = document.getElementById("trackingDisplay");
         const phoneNumberEntry = document.getElementById("phoneNumberEntry");
@@ -30,6 +40,19 @@
         const takeLaterBody = document.getElementById("takeLaterBody");
         const calendar = document.getElementById("calendar");
         const instructions = document.getElementById("instructions");
+        const modalCloseButton = document.getElementById("closeButton");
+        const modal = document.getElementById("detailView");
+        // modal controls
+        // When the user clicks on <span> (x), close the modal
+        modalCloseButton.onclick = function() {
+            modal.style.display = "none";
+        }
+        // When the user clicks anywhere outside of the modal, close it
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
         var adherenceHistory = {};
         const getInitDetails = {
             method: 'get',
@@ -55,7 +78,11 @@
         function requestData() {
             fetch(`${apiURL}/patientData`, getInitDetails).then(response => response.json()).then(result => {
                 if (!result.phoneNumber) {
-                    instructions.innerHTML = "you need to login";
+                    if (result.error) {
+                        instructions.innerHTML = result.error;
+                    } else {
+                        instructions.innerHTML = "Login with your phone number (ex: 1234567890)";
+                    }
                     phoneNumberEntry.style.display = "block";
                     loginButton.style.display = "block";
                     tracking.style.display = "none";
@@ -65,17 +92,19 @@
                     phoneNumberEntry.style.display = "none";
                     loginButton.style.display = "none";
                     tracking.style.display = "block";
-                    adherenceHistory = getAdherentDaysInApril(result.eventData);
+                    adherenceHistory = processEventData(result.eventData);
                     generateCalendar();
                 }
             });
         }
-        function getAdherentDaysInApril(eventData) {
+        // TODO: move this processing to the backend
+        function processEventData(eventData) {
             const fieldsToSatisfy = Object.keys(eventData);
             let adherentDays = [];
             let adherentWithSkipDays = [];
             let missedDays = [];
             let insufficientDataDays = [];
+            const takeHistoryByDay = {};
             for (let dayOfMonth = 1; dayOfMonth <= 30; dayOfMonth++) {
                 // 2AM - 2AM to account for night doses
                 const startDate = new Date(2021, 3, dayOfMonth, 2, 0, 0, 0); // start time in GMT
@@ -83,6 +112,7 @@
                 const satisfiedFields = [];
                 const skippedFields = [];
                 const missedFields = [];
+                takeHistoryByDay[dayOfMonth] = {}
                 for (const field of fieldsToSatisfy) {
                     const eventDataForField = eventData[field];
                     for (const event of eventDataForField.events) {
@@ -95,6 +125,7 @@
                             } else if (event.event_type === "boundary") {
                                 missedFields.push(event);
                             }
+                            takeHistoryByDay[dayOfMonth][field] = {"eventType": event.event_type, "eventTime": event.event_time};
                         }
                     }
                 }
@@ -108,7 +139,50 @@
                     insufficientDataDays.push(dayOfMonth);
                 }
             }
-            return { adherentDays, adherentWithSkipDays, missedDays, insufficientDataDays };
+            return { adherentDays, adherentWithSkipDays, missedDays, insufficientDataDays, takeHistoryByDay};
+        }
+        function convertTZ(date, tzString) {
+            return (typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: tzString, hour: 'numeric', minute: 'numeric', hour12: true});
+        }
+        function getEventHTML(timeOfDayData) {
+            const eventType = timeOfDayData.eventType;
+            const eventTime = timeOfDayData.eventTime;
+            if (eventType === "boundary") {
+                return "<p class=missedDose>🛑 Missed</p>";
+            } else if (eventType === "take") {
+                const eventTimeString = convertTZ(eventTime, "US/Pacific");
+                return `<p class=takenDose>✅ Taken at ${eventTimeString}</p>`;
+            } else if (eventType === "skip") {
+                return "<p class=skippedDose>🟠 Skipped</p>";
+            }
+            return "";
+        }
+        function openTableDetails(dayOfMonth) {
+            const dayOfMonthData = adherenceHistory.takeHistoryByDay[dayOfMonth];
+            const modalTitle = document.getElementById("modalTitle");
+            const modalBody = document.getElementById("modalBody");
+            const timeOfDayCopyMap = {
+                morning: "Morning dose",
+                afternoon: "Afternoon dose",
+                evening: "Evening dose"
+            }
+            modalTitle.innerHTML = `April ${dayOfMonth}`;
+            modalBodyHTML = "";
+            if (Object.keys(dayOfMonthData).length !== 0) {
+                const timeOfDayOrder = ["morning", "afternoon", "evening"];
+                for (let timeOfDay of timeOfDayOrder) {
+                    if (timeOfDay in dayOfMonthData) {
+                        const timeOfDayHTML = `<h3>${timeOfDayCopyMap[timeOfDay]}</h3>${getEventHTML(dayOfMonthData[timeOfDay])}`;
+                        modalBodyHTML += timeOfDayHTML;
+                    }
+                }
+                modalBody.innerHTML = modalBodyHTML;
+            } else {
+                modalBody.innerHTML = "<p>No dose data for this day.</p>";
+            }
+            modal.style.display = "block";
+            modal.style.display = "block";
+
         }
         function generateCalendar() {
             var htmlBlob = `
@@ -132,6 +206,8 @@
                 ["18", "19", "20", "21", "22", "23", "24"],
                 ["25", "26", "27", "28", "29", "30", "*1"],
             ]
+            const currentDate = new Date();
+            const currentDayOfMonth = currentDate.getDate();
             for (const dateRow of dates) {
                 htmlBlob += "<tr>";
                 for (const date of dateRow) {
@@ -146,11 +222,15 @@
                     } else if (adherenceHistory.adherentWithSkipDays.includes(dayOfMonth)) {
                         adherenceClass = "adherentWithSkip";
                     }
+                    if (dayOfMonth === currentDayOfMonth) {
+                        adherenceClass += " currentDate";
+                    }
                     if (date.includes("*")) {
                         faded = true;
                         processedDate = date.slice(1);
                     }
-                    htmlBlob += `<td class='${faded ? "fadedDate " : ""}${adherenceClass}'>${processedDate}</td>`;
+                    const onClickCall = faded ? "" : ` onclick=openTableDetails(${processedDate})`;
+                    htmlBlob += `<td class='${faded ? "fadedDate " : ""}${adherenceClass}'${onClickCall}>${processedDate}</td>`;
                 }
                 htmlBlob += "</tr>";
             }
@@ -159,7 +239,6 @@
                 </tr>
             `;
             calendar.innerHTML = htmlBlob;
-
         }
         function login() {
             const initDetails = {...postInitDetails, body: JSON.stringify({phoneNumber: phoneNumberEntry.value})}
