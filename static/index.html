@@ -95,6 +95,7 @@
         }
         // TODO: move this processing to the backend
         function processEventData(eventData) {
+            console.log(eventData)
             const fieldsToSatisfy = Object.keys(eventData);
             let adherentDays = [];
             let adherentWithSkipDays = [];
@@ -108,8 +109,9 @@
                 const satisfiedFields = [];
                 const skippedFields = [];
                 const missedFields = [];
+                takeHistoryByDay[dayOfMonth] = {}
                 for (const field of fieldsToSatisfy) {
-                    takeHistoryByDay[dayOfMonth] = {}
+                    console.log(`searching for field ${field}`)
                     const eventDataForField = eventData[field];
                     for (const event of eventDataForField.events) {
                         const eventTimeObj = new Date(event.event_time);
@@ -134,7 +136,12 @@
                 } else {
                     insufficientDataDays.push(dayOfMonth);
                 }
+                console.log(dayOfMonth)
+                console.log(satisfiedFields)
+                console.log(skippedFields)
+                console.log(missedFields)
             }
+            console.log(takeHistoryByDay)
             return { adherentDays, adherentWithSkipDays, missedDays, insufficientDataDays, takeHistoryByDay};
         }
         function getEventHTML(timeOfDayData) {
@@ -144,7 +151,7 @@
                 return "<p class=missedDose>🛑 Missed</p>";
             } else if (eventType === "take") {
                 return `<p class=takenDose>✅ Taken at ${eventTime}</p>`;
-            } else if (eventType === "skipped") {
+            } else if (eventType === "skip") {
                 return "<p class=skippedDose>🟠 Skipped</p>";
             }
             return "";
