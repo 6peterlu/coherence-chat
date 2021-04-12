@@ -10,6 +10,7 @@
     <button id="login" onclick="login()" style="display:none">Login</button>
     <div id="trackingDisplay">
         <h2 id="welcomeHeader">Welcome!</h2>
+        <h4 id="takeNow" style="text-align: center; border:1px; border-style:solid; padding:5px"></h4>
         <h3>Dose history</h3>
         <p>Click on a day to see more details.</p>
         <div>
@@ -44,6 +45,7 @@
         const instructions = document.getElementById("instructions");
         const modalCloseButton = document.getElementById("closeButton");
         const modal = document.getElementById("detailView");
+        const takeNow = document.getElementById("takeNow");
         // modal controls
         // When the user clicks on <span> (x), close the modal
         modalCloseButton.onclick = function() {
@@ -94,6 +96,13 @@
                     phoneNumberEntry.style.display = "none";
                     loginButton.style.display = "none";
                     tracking.style.display = "block";
+                    if (result.takeNow) {
+                        takeNow.innerHTML = "You have a dose to take now. 💊"
+                        takeNow.style.color = "#f54242";
+                    } else {
+                        takeNow.innerHTML = "Nothing to take at the moment, you're all clear. 👍"
+                        takeNow.style.color = "#09ad56";
+                    }
                     adherenceHistory = processEventData(result.eventData);
                     generateCalendar();
                 }

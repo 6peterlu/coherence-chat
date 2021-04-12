@@ -266,7 +266,7 @@ def patient_data():
     if recovered_cookie is None:
         return jsonify()  # empty response if no cookie
     phone_number = f"+11{recovered_cookie}"
-    PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113], "afternoon": [114]}} if os.environ["FLASK_ENV"] == "local" else {
+    PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113, 115], "afternoon": [114]}} if os.environ["FLASK_ENV"] == "local" else {
         "+113609042210": {"afternoon": [25], "evening": [15]},
         "+113609049085": {"evening": [16]},
         "+114152142478": {"morning": [26, 82]},
@@ -310,7 +310,16 @@ def patient_data():
             if dose.id in dose_ids:
                 event_data_by_time[time]["dose"] = dose.as_dict()
                 break
-    return jsonify({"phoneNumber": recovered_cookie, "eventData": event_data_by_time, "patientName": PATIENT_NAME_MAP[phone_number]})
+    dose_to_take_now = False
+    for dose in relevant_doses:
+        if exists_remaining_reminder_job(dose.id, ["boundary"]):
+            dose_to_take_now = True
+    return jsonify({
+        "phoneNumber": recovered_cookie,
+        "eventData": event_data_by_time,
+        "patientName": PATIENT_NAME_MAP[phone_number],
+        "takeNow": dose_to_take_now
+    })
 
 @app.route("/login", methods=["POST"])
 def save_phone_number():
