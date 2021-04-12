@@ -252,6 +252,12 @@ def auth_required_post_delete(f):
             return f(*args, **kwargs)
     return decorated_function
 
+
+@app.after_request
+def add_header(response):
+    response.cache_control.max_age = 0
+    return response
+
 @app.route("/", methods=["GET"])
 def patient_page():
     return app.send_static_file('index.html')
