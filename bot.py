@@ -50,7 +50,7 @@ TOKENS_TO_RECOGNIZE = [
     "swimming",
     "basketball",
     "shower",
-    "working"
+    "working",
     "tv",
 ]
 
