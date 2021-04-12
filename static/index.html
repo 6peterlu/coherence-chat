@@ -99,7 +99,6 @@
         }
         // TODO: move this processing to the backend
         function processEventData(eventData) {
-            console.log(eventData)
             const fieldsToSatisfy = Object.keys(eventData);
             let adherentDays = [];
             let adherentWithSkipDays = [];
@@ -115,7 +114,6 @@
                 const missedFields = [];
                 takeHistoryByDay[dayOfMonth] = {}
                 for (const field of fieldsToSatisfy) {
-                    console.log(`searching for field ${field}`)
                     const eventDataForField = eventData[field];
                     for (const event of eventDataForField.events) {
                         const eventTimeObj = new Date(event.event_time);
@@ -140,12 +138,7 @@
                 } else {
                     insufficientDataDays.push(dayOfMonth);
                 }
-                console.log(dayOfMonth)
-                console.log(satisfiedFields)
-                console.log(skippedFields)
-                console.log(missedFields)
             }
-            console.log(takeHistoryByDay)
             return { adherentDays, adherentWithSkipDays, missedDays, insufficientDataDays, takeHistoryByDay};
         }
         function convertTZ(date, tzString) {
@@ -158,7 +151,6 @@
                 return "<p class=missedDose>🛑 Missed</p>";
             } else if (eventType === "take") {
                 const eventTimeString = convertTZ(eventTime, "US/Pacific");
-                console.log(eventTimeString)
                 return `<p class=takenDose>✅ Taken at ${eventTimeString}</p>`;
             } else if (eventType === "skip") {
                 return "<p class=skippedDose>🟠 Skipped</p>";
@@ -189,7 +181,6 @@
                 modalBody.innerHTML = "<p>No dose data for this day.</p>";
             }
             modal.style.display = "block";
-            console.log(dayOfMonthData);
             modal.style.display = "block";
 
         }
