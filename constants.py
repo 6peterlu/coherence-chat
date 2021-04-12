@@ -37,6 +37,8 @@ CONFIRMATION_MSG = Template("""Great, I'll text again at $time. See you then!"""
 
 TAKE_MSG = Template("""🕒 $time\nDose recorded.\n💊💊💊💊""")
 
+TAKE_MSG_EXCITED = Template("""🕒 $time\nDose recorded! (:\n💊💊💊💊""")
+
 SKIP_MSG = """Dose skipped. I won't send you any more reminders for this dose today."""
 
 UNKNOWN_MSG = """I can understand the following commands:
@@ -53,7 +55,9 @@ activities such as "eating dinner", "on a walk", etc.
 
 ERROR_MSG = """Something went wrong. Please text 'x' and I'll be notified."""
 
-NO_DOSE_MSG = """There's no dose to be taken right now. If you've received this message in error, please text 'x' and I'll be notified."""
+REMINDER_OUT_OF_RANGE_MSG = """I can tell you're trying to set a reminder, but there's no dose to be reminded about right now. You're good to go!"""
+
+ACTION_OUT_OF_RANGE_MSG = """Thanks for letting me know. I don't have an active dose for you right now, but I'll look into it and make sure to record your doses correctly."""
 
 REMINDER_TOO_LATE_MSG = Template("""Sorry, I can't schedule a reminder after your latest dose time, which is $time.""")
 

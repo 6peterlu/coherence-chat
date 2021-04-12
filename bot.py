@@ -60,6 +60,7 @@ SPACY_EMBED_MAP = {token: nlp(token) for token in TOKENS_TO_RECOGNIZE}
 import logging
 from constants import (
     ABSENT_MSGS,
+    ACTION_OUT_OF_RANGE_MSG,
     BOUNDARY_MSG,
     CLINICAL_BOUNDARY_MSG,
     CONFIRMATION_MSG,
@@ -67,11 +68,12 @@ from constants import (
     ERROR_MSG,
     FOLLOWUP_MSGS,
     MANUAL_TEXT_NEEDED_MSG,
-    NO_DOSE_MSG,
+    REMINDER_OUT_OF_RANGE_MSG,
     REMINDER_TOO_CLOSE_MSG,
     REMINDER_TOO_LATE_MSG,
     SKIP_MSG,
     TAKE_MSG,
+    TAKE_MSG_EXCITED,
     UNKNOWN_MSG,
     ACTION_MENU,
     USER_ERROR_REPORT,
@@ -216,9 +218,9 @@ def get_followup_message():
 def get_initial_message():
     return random.choice(INITIAL_MSGS)  # returns a template
 
-def get_take_message():
+def get_take_message(excited):
     datestring = get_time_now().astimezone(timezone(USER_TIMEZONE)).strftime('%b %d, %I:%M %p')
-    return TAKE_MSG.substitute(time=datestring)
+    return TAKE_MSG_EXCITED.substitute(time=datestring) if excited else TAKE_MSG.substitute(time=datestring)
 
 def get_absent_message():
     return random.choice(ABSENT_MSGS)
@@ -264,7 +266,7 @@ def patient_data():
     if recovered_cookie is None:
         return jsonify()  # empty response if no cookie
     phone_number = f"+11{recovered_cookie}"
-    PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113], "afternoon": [114]}} if os.environ["FLASK_ENV"] == "local" else {
+    PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113, 115], "afternoon": [114]}} if os.environ["FLASK_ENV"] == "local" else {
         "+113609042210": {"afternoon": [25], "evening": [15]},
         "+113609049085": {"evening": [16]},
         "+114152142478": {"morning": [26, 82]},
@@ -308,7 +310,16 @@ def patient_data():
             if dose.id in dose_ids:
                 event_data_by_time[time]["dose"] = dose.as_dict()
                 break
-    return jsonify({"phoneNumber": recovered_cookie, "eventData": event_data_by_time, "patientName": PATIENT_NAME_MAP[phone_number]})
+    dose_to_take_now = False
+    for dose in relevant_doses:
+        if exists_remaining_reminder_job(dose.id, ["boundary"]):
+            dose_to_take_now = True
+    return jsonify({
+        "phoneNumber": recovered_cookie,
+        "eventData": event_data_by_time,
+        "patientName": PATIENT_NAME_MAP[phone_number],
+        "takeNow": dose_to_take_now
+    })
 
 @app.route("/login", methods=["POST"])
 def save_phone_number():
@@ -577,6 +588,7 @@ def extract_integer(message):
 # note that there's no guarantee of text sending order
 def incoming_message_processing(incoming_msg):
     processed_msg = incoming_msg.lower().strip()
+    excited = "!" in processed_msg
     processed_msg = processed_msg.translate(str.maketrans("", "", string.punctuation))
     processed_msg = processed_msg.replace("[", "").replace("]", "")
     processed_msg_tokens = processed_msg.split()
@@ -602,11 +614,11 @@ def incoming_message_processing(incoming_msg):
             final_message_list.append(intersection[0])  # just append matched concept if any
         else:
             final_message_list.append(" ".join(everything_else))
-    return final_message_list
+    return final_message_list, excited
 
 @app.route('/bot', methods=['POST'])
 def bot():
-    incoming_msg_list = incoming_message_processing(request.values.get('Body', ''))
+    incoming_msg_list, excited = incoming_message_processing(request.values.get('Body', ''))
     incoming_phone_number = request.values.get('From', None)
     for incoming_msg in incoming_msg_list:
         # attempt to parse time from incoming msg
@@ -713,7 +725,7 @@ def bot():
                             )
                 elif incoming_msg in ["t", "s"]:
                     message_copy = {
-                        "t": get_take_message(),
+                        "t": get_take_message(excited),
                         "s": SKIP_MSG
                     }
                     if incoming_msg == "t":
@@ -735,7 +747,7 @@ def bot():
             else:
                 log_event("out_of_range", incoming_phone_number, description=incoming_msg)
                 client.messages.create(
-                    body=NO_DOSE_MSG,
+                    body=ACTION_OUT_OF_RANGE_MSG if incoming_msg in ["t", "s"] else REMINDER_OUT_OF_RANGE_MSG,
                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                     to=incoming_phone_number
                 )

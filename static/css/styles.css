@@ -114,3 +114,36 @@ table.blueTable tfoot .links a{
 .skippedDose {
   color: #faa228;
 }
+
+.box {
+  float: left;
+  height: 15px;
+  width: 15px;
+  margin-right: 5px;
+  /* height: 20px;
+  width: 20px;
+  margin-bottom: 15px;
+  border: 1px solid black; */
+}
+
+.red {
+  background-color: #f54242;
+}
+
+.green {
+  background-color: #09ad56;
+}
+
+.orange {
+  background-color: #faa228;
+}
+
+.legendContainer {
+  align-items: center;
+  flex: 1;
+  flex-direction: row-reverse;
+}
+
+body {
+  font-family: 'Lora', serif;
+}
