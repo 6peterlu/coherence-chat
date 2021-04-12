@@ -421,7 +421,15 @@ def post_event():
     incoming_data = request.json
     phone_number = f"+11{incoming_data['phoneNumber']}"
     event_type = incoming_data["eventType"]
-    log_event(event_type=event_type, phone_number=phone_number)
+    dose_id = incoming_data["doseId"]
+    event_time_raw = incoming_data["eventTime"]
+    if not event_time_raw:
+        log_event(event_type=event_type, phone_number=phone_number, description=dose_id)
+    else:
+        event_time_obj = datetime.strptime(event_time_raw, "%Y-%m-%dT%H:%M")
+        if os.environ["FLASK_ENV"] != "local":
+            event_time_obj += timedelta(hours=7)  # HACK to transform to UTC
+        log_event(event_type=event_type, phone_number=phone_number, description=dose_id, event_time=event_time_obj)
     return jsonify()
 
 @app.route("/messages", methods=["GET"])

@@ -46,6 +46,8 @@
             <button id="searchForConversation" onclick="sendCustomText()">Send custom text</button>
         </div>
         <div id="addEventDiv">
+            <input id="eventDoseId" type="number" placeholder="dose id"/>
+            <input id="eventTime" type="datetime-local" />
             <select name="eventType" id="eventType">
                 <option value="take">take</option>
                 <option value="skip">skip</option>
@@ -270,7 +272,6 @@
             const manualTakeoverList = document.getElementById("takeoverList");
             manualTakeoverList.style.visibility = onlineStatus ? "visible" : "hidden";
             manualTakeoverList.innerHTML = manualTakeoverData;
-
         }
         function onlineToggle() {
             post("online", {}).then(
@@ -287,7 +288,9 @@
         function addEvent() {
             const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
             const eventType = document.getElementById("eventType").value;
-            post("events", { phoneNumber, eventType }).then(
+            const doseId = document.getElementById("eventDoseId").value;
+            const eventTime = document.getElementById("eventTime").value;
+            post("events", { phoneNumber, eventType, doseId, eventTime }).then(
                 response => response.json()).then(result => {
                     getEventsForPhoneNumber();
                 }
