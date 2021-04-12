@@ -168,9 +168,12 @@
             modalTitle.innerHTML = `April ${dayOfMonth}`;
             modalBodyHTML = "";
             if (Object.keys(dayOfMonthData).length !== 0) {
-                for (let timeOfDay in dayOfMonthData) {
-                    const timeOfDayHTML = `<h3>${timeOfDayCopyMap[timeOfDay]}</h3>${getEventHTML(dayOfMonthData[timeOfDay])}`;
-                    modalBodyHTML += timeOfDayHTML;
+                const timeOfDayOrder = ["morning", "afternoon", "evening"];
+                for (let timeOfDay in timeOfDayOrder) {
+                    if (timeOfDay in dayOfMonthData) {
+                        const timeOfDayHTML = `<h3>${timeOfDayCopyMap[timeOfDay]}</h3>${getEventHTML(dayOfMonthData[timeOfDay])}`;
+                        modalBodyHTML += timeOfDayHTML;
+                    }
                 }
                 modalBody.innerHTML = modalBodyHTML;
             } else {

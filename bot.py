@@ -271,7 +271,7 @@ def patient_data():
         "+116502690598": {"evening": [27]},
         "+118587761377": {"morning": [29]},
         "+113607738908": {"morning": [68], "evening": [69, 81]},
-        "+115038871884": {"morning": [70], "afternoon": [71], "evening": [72]},
+        "+115038871884": {"morning": [70], "afternoon": [71]},
         "+113605214193": {"morning": [72], "evening": [74]},
         "+113605131225": {"morning": [75], "afternoon": [76], "evening": [77]},
         "+113606064445": {"afternoon": [78]}
