@@ -144,13 +144,18 @@
             console.log(takeHistoryByDay)
             return { adherentDays, adherentWithSkipDays, missedDays, insufficientDataDays, takeHistoryByDay};
         }
+        function convertTZ(date, tzString) {
+            return (typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: tzString, hour: 'numeric', minute: 'numeric', hour12: true});
+        }
         function getEventHTML(timeOfDayData) {
             const eventType = timeOfDayData.eventType;
             const eventTime = timeOfDayData.eventTime;
             if (eventType === "missed") {
                 return "<p class=missedDose>🛑 Missed</p>";
             } else if (eventType === "take") {
-                return `<p class=takenDose>✅ Taken at ${eventTime}</p>`;
+                const eventTimeString = convertTZ(eventTime, "US/Pacific");
+                console.log(eventTimeString)
+                return `<p class=takenDose>✅ Taken at ${eventTimeString}</p>`;
             } else if (eventType === "skip") {
                 return "<p class=skippedDose>🟠 Skipped</p>";
             }
@@ -169,7 +174,7 @@
             modalBodyHTML = "";
             if (Object.keys(dayOfMonthData).length !== 0) {
                 const timeOfDayOrder = ["morning", "afternoon", "evening"];
-                for (let timeOfDay in timeOfDayOrder) {
+                for (let timeOfDay of timeOfDayOrder) {
                     if (timeOfDay in dayOfMonthData) {
                         const timeOfDayHTML = `<h3>${timeOfDayCopyMap[timeOfDay]}</h3>${getEventHTML(dayOfMonthData[timeOfDay])}`;
                         modalBodyHTML += timeOfDayHTML;
