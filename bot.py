@@ -267,7 +267,7 @@ def patient_data():
     PATIENT_DOSE_MAP = { "+113604508655": {"morning": [112]}} if os.environ["FLASK_ENV"] == "local" else {
         "+113609042210": {"morning": [15], "evening": [25]},
         "+113609049085": {"evening": [16]},
-        "+114152142478": {"morning": [26]},
+        "+114152142478": {"morning": [26, 82]},
         "+116502690598": {"evening": [27]},
         "+118587761377": {"morning": [29]},
         "+113607738908": {"morning": [68], "evening": [69, 81]},
