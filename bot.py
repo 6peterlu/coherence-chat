@@ -267,7 +267,7 @@ def patient_data():
     PATIENT_DOSE_MAP = { "+113604508655": {"morning": [112]}} if os.environ["FLASK_ENV"] == "local" else {
         "+113609042210": {"morning": [15], "evening": [25]},
         "+113609049085": {"evening": [16]},
-        "+114152142478": {"morning": [26]},
+        "+114152142478": {"morning": [26, 82]},
         "+116502690598": {"evening": [27]},
         "+118587761377": {"morning": [29]},
         "+113607738908": {"morning": [68], "evening": [69, 81]},
@@ -421,7 +421,15 @@ def post_event():
     incoming_data = request.json
     phone_number = f"+11{incoming_data['phoneNumber']}"
     event_type = incoming_data["eventType"]
-    log_event(event_type=event_type, phone_number=phone_number)
+    dose_id = incoming_data["doseId"]
+    event_time_raw = incoming_data["eventTime"]
+    if not event_time_raw:
+        log_event(event_type=event_type, phone_number=phone_number, description=dose_id)
+    else:
+        event_time_obj = datetime.strptime(event_time_raw, "%Y-%m-%dT%H:%M")
+        if os.environ["FLASK_ENV"] != "local":
+            event_time_obj += timedelta(hours=7)  # HACK to transform to UTC
+        log_event(event_type=event_type, phone_number=phone_number, description=dose_id, event_time=event_time_obj)
     return jsonify()
 
 @app.route("/messages", methods=["GET"])
