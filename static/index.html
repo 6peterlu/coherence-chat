@@ -54,6 +54,7 @@
         };
         function requestData() {
             fetch(`${apiURL}/patientData`, getInitDetails).then(response => response.json()).then(result => {
+                console.log(result);
                 if (!result.phoneNumber) {
                     instructions.innerHTML = "you need to login";
                     phoneNumberEntry.style.display = "block";
@@ -97,6 +98,9 @@
                         }
                     }
                 }
+                console.log(satisfiedFields);
+                console.log(skippedFields);
+                console.log(missedFields);
                 if (satisfiedFields.length == fieldsToSatisfy.length) {
                     adherentDays.push(dayOfMonth);
                 } else if (satisfiedFields.length + skippedFields.length == fieldsToSatisfy.length) {
@@ -107,6 +111,7 @@
                     insufficientDataDays.push(dayOfMonth);
                 }
             }
+            console.log({ adherentDays, adherentWithSkipDays, missedDays, insufficientDataDays });
             return { adherentDays, adherentWithSkipDays, missedDays, insufficientDataDays };
         }
         function generateCalendar() {
