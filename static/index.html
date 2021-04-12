@@ -150,7 +150,7 @@
         function getEventHTML(timeOfDayData) {
             const eventType = timeOfDayData.eventType;
             const eventTime = timeOfDayData.eventTime;
-            if (eventType === "missed") {
+            if (eventType === "boundary") {
                 return "<p class=missedDose>🛑 Missed</p>";
             } else if (eventType === "take") {
                 const eventTimeString = convertTZ(eventTime, "US/Pacific");
