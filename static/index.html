@@ -16,9 +16,9 @@
             <div>
                 <h4>Key</h4>
                 <div class="currentDate" style="padding:10px"><p>Current day</p></div>
-                <p>🟩 All doses taken</p>
-                <p>🟧 Skipped some doses</p>
-                <p>🟥 Missed some doses</p>
+                <div class="legendContainer"><div class='box green'></div> <p>All doses taken</p></div>
+                <div class="legendContainer"><div class='box orange'></div><p>Skipped some doses</p></div>
+                <div class="legendContainer"><div class='box red'></div><p></p>Missed some doses</p></div>
             </div>
         </div>
         <div class="modal" id="detailView">
@@ -81,7 +81,7 @@
                     if (result.error) {
                         instructions.innerHTML = result.error;
                     } else {
-                        instructions.innerHTML = "Login with your phone number (ex: 1234567890)";
+                        instructions.innerHTML = "Login with your phone number (ex: 9876543210)";
                     }
                     phoneNumberEntry.style.display = "block";
                     loginButton.style.display = "block";
@@ -190,9 +190,9 @@
                 <tr>
                     <th>Sun</th>
                     <th>Mon</th>
-                    <th>Tues</th>
+                    <th>Tue</th>
                     <th>Wed</th>
-                    <th>Thurs</th>
+                    <th>Thu</th>
                     <th>Fri</th>
                     <th>Sat</th>
                 </tr>
