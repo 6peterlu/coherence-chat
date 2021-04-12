@@ -56,3 +56,15 @@ table.blueTable tfoot .links a{
   color: #faa228;
   font-weight: bold;
 }
+
+.currentDate {
+  height: 30px;
+  width: 50px;
+  display: table-cell;
+  text-align: center;
+  vertical-align: middle;
+  /* background: yellow; */
+  border-color: black;
+  border-width: 1px;
+  border-style: solid;
+}
