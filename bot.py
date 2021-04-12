@@ -60,6 +60,7 @@ SPACY_EMBED_MAP = {token: nlp(token) for token in TOKENS_TO_RECOGNIZE}
 import logging
 from constants import (
     ABSENT_MSGS,
+    ACTION_OUT_OF_RANGE_MSG,
     BOUNDARY_MSG,
     CLINICAL_BOUNDARY_MSG,
     CONFIRMATION_MSG,
@@ -67,7 +68,7 @@ from constants import (
     ERROR_MSG,
     FOLLOWUP_MSGS,
     MANUAL_TEXT_NEEDED_MSG,
-    NO_DOSE_MSG,
+    REMINDER_OUT_OF_RANGE_MSG,
     REMINDER_TOO_CLOSE_MSG,
     REMINDER_TOO_LATE_MSG,
     SKIP_MSG,
@@ -737,7 +738,7 @@ def bot():
             else:
                 log_event("out_of_range", incoming_phone_number, description=incoming_msg)
                 client.messages.create(
-                    body=NO_DOSE_MSG,
+                    body=ACTION_OUT_OF_RANGE_MSG if incoming_msg in ["t", "s"] else REMINDER_OUT_OF_RANGE_MSG,
                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                     to=incoming_phone_number
                 )
