@@ -266,7 +266,7 @@ def patient_data():
     if recovered_cookie is None:
         return jsonify()  # empty response if no cookie
     phone_number = f"+11{recovered_cookie}"
-    PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113, 115], "afternoon": [114]}} if os.environ["FLASK_ENV"] == "local" else {
+    PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113, 115, 116], "afternoon": [114]}} if os.environ["FLASK_ENV"] == "local" else {
         "+113609042210": {"afternoon": [25], "evening": [15]},
         "+113609049085": {"evening": [16]},
         "+114152142478": {"morning": [26, 82]},

@@ -11,7 +11,7 @@
     <button id="login" onclick="login()" style="display:none">Login</button>
     <div id="trackingDisplay">
         <h2 id="welcomeHeader">Welcome!</h2>
-        <h4 id="takeNow" style="text-align: center; border:1px; border-style:solid; padding:5px"></h4>
+        <h4 id="takeNow" style="text-align: center; padding:10px; border-radius: 10px;"></h4>
         <h3>Dose history</h3>
         <p>Click on a day to see more details.</p>
         <div>
@@ -99,10 +99,12 @@
                     tracking.style.display = "block";
                     if (result.takeNow) {
                         takeNow.innerHTML = "You have a dose to take now. 💊"
-                        takeNow.style.color = "#f54242";
+                        takeNow.style.backgroundColor = "#f54242";
+                        takeNow.style.color= "#FFF";
                     } else {
                         takeNow.innerHTML = "Nothing to take at the moment, you're all clear. 👍"
-                        takeNow.style.color = "#09ad56";
+                        takeNow.style.backgroundColor = "#09ad56";
+                        takeNow.style.color = "#FFF";
                     }
                     adherenceHistory = processEventData(result.eventData);
                     generateCalendar();
