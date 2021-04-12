@@ -277,7 +277,9 @@ def patient_data():
         "+113606064445": {"afternoon": [78]}
     }
     if phone_number not in PATIENT_DOSE_MAP:
-        return jsonify({"error": "We couldn't find your phone number in our records. Please double-check that you've entered it correctly."})
+        response = jsonify({"error": "We couldn't find your phone number in our records. Please double-check that you've entered it correctly."})
+        response.set_cookie("phoneNumber", "", expires=0)
+        return response
     PATIENT_NAME_MAP = { "+113604508655": "Peter" } if os.environ["FLASK_ENV"] == "local" else {
         "+113606064445": "Cheryl",
         "+113609042210": "Steven",
@@ -311,6 +313,8 @@ def patient_data():
 @app.route("/login", methods=["POST"])
 def save_phone_number():
     phone_number = request.json["phoneNumber"]
+    numeric_filter = filter(str.isdigit, phone_number)
+    phone_number = "".join(numeric_filter)
     out = jsonify()
     out.set_cookie("phoneNumber", phone_number)
     return out
