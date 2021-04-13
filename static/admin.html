@@ -335,10 +335,10 @@
             );
         }
         async function retrieveJobs() {
-            await get("scheduler/jobs", {}).then(response => response.json()).then(result => {
-                adminData.jobs = result;
-                renderJobs();
-            })
+            // await get("scheduler/jobs", {}).then(response => response.json()).then(result => {
+            //     adminData.jobs = result;
+            //     renderJobs();
+            // })
             await get("everything", {}).then(response => response.json()).then(result => {
                 adminData = {...adminData, ...result}
                 doseList = result.doses;
