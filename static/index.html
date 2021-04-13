@@ -126,6 +126,7 @@
             let missedDays = [];
             let insufficientDataDays = [];
             const takeHistoryByDay = {};
+            const doseDataByTime = {}
             for (let dayOfMonth = 1; dayOfMonth <= 30; dayOfMonth++) {
                 // 2AM - 2AM to account for night doses
                 const startDate = new Date(2021, 3, dayOfMonth, 2, 0, 0, 0); // start time in GMT
@@ -149,6 +150,9 @@
                             takeHistoryByDay[dayOfMonth][field] = {"eventType": event.event_type, "eventTime": event.event_time};
                         }
                     }
+                    if (!(field in doseDataByTime)) {
+                        doseDataByTime[field] = eventData[field].dose;
+                    }
                 }
                 if (satisfiedFields.length == fieldsToSatisfy.length) {
                     adherentDays.push(dayOfMonth);
@@ -160,7 +164,7 @@
                     insufficientDataDays.push(dayOfMonth);
                 }
             }
-            return { adherentDays, adherentWithSkipDays, missedDays, insufficientDataDays, takeHistoryByDay};
+            return { adherentDays, adherentWithSkipDays, missedDays, insufficientDataDays, takeHistoryByDay, doseDataByTime};
         }
         function convertTZ(date, tzString) {
             return (typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: tzString, hour: 'numeric', minute: 'numeric', hour12: true});
@@ -193,7 +197,7 @@
                 const timeOfDayOrder = ["morning", "afternoon", "evening"];
                 for (let timeOfDay of timeOfDayOrder) {
                     if (timeOfDay in dayOfMonthData) {
-                        const timeOfDayHTML = `<h3>${timeOfDayCopyMap[timeOfDay]}</h3>${getEventHTML(dayOfMonthData[timeOfDay])}`;
+                        const timeOfDayHTML = `<h3>${timeOfDayCopyMap[timeOfDay]}</h3>${adherenceHistory.doseDataByTime[timeOfDay].medication_name ? `<p>💊<span style="font-size:15px">${adherenceHistory.doseDataByTime[timeOfDay].medication_name}</span></p>` : ""}${getEventHTML(dayOfMonthData[timeOfDay])}`;
                         modalBodyHTML += timeOfDayHTML;
                     }
                 }

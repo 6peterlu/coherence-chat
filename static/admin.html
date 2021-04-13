@@ -62,8 +62,9 @@
         const reminderListDiv = document.querySelector('.reminderList');
         const messageListDiv = document.querySelector('.messageList');
         const headerText = document.getElementById("header");
+        var editingDoses = [];
         var runningLocally = true;  // if this is false, you're editing PROD.
-        var manualTakeoverList = [];  // list of numbers that are taken over
+        var adminData = {};  // all data being rendered in admin panel
         headerText.innerHTML = `current env: ${runningLocally ? "local" : "PRODUCTION"}`;
         var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
         const initDetails = {
@@ -107,6 +108,27 @@
             return await fetch(`${apiURL}/${route}`, initDetails);
         }
 
+
+        // patch causes 400 on heroku for now, and I don't think it's that important yet
+        // just use post
+        // async function patch(route, body) {
+        //     const password = document.getElementById("password").value;
+        //     const bodyWithPassword = {...body, pw: password};
+        //     const initDetails = {
+        //         method: 'patch',
+        //         headers: {
+        //             "Access-Control-Allow-Origin": "*",
+        //             "Access-Control-Allow_Methods": "PATCH",
+        //             "Access-Control_Allow_Headers": "*",
+        //             "Content-Type": "application/json; charset=utf-8",
+        //             "Cache-Control": "no-cache"
+        //         },
+        //         mode: "cors",
+        //         body: JSON.stringify(bodyWithPassword)
+        //     };
+        //     return await fetch(`${apiURL}/${route}`, initDetails);
+        // }
+
         // we can't use delete, its reserved.
         async function httpDelete(route, body) {
             const password = document.getElementById("password").value;
@@ -137,7 +159,7 @@
             const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
             const uri = `${apiURL}/manual/takeover`;
             const body = { phoneNumber };
-            if (manualTakeoverList.includes(`+11${phoneNumber}`)) {
+            if (adminData.manualTakeover.includes(`+11${phoneNumber}`)) {
                 httpDelete("manual/takeover", { phoneNumber }).then(response => response.json()).then(result => {
                     retrieveJobs();
                 });
@@ -175,7 +197,7 @@
         function convertTZ(date, tzString) {
             return new Date((typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: tzString}));
         }
-        function renderJobs(jobList) {
+        function renderJobs() {
             const jobComparator = (job1, job2) => {
                 if (job1.name > job2.name) {
                     return 1;
@@ -185,7 +207,7 @@
                 }
                 return 0;
             }
-            const sortedJobList = jobList.sort(jobComparator);
+            const sortedJobList = adminData.jobs.sort(jobComparator);
             const rows = sortedJobList.map(job => {
                 if (job.trigger === "interval") {
                     return `
@@ -216,13 +238,14 @@
         function convertToUTC(hour) {
             return (hour + 7) % 24;
         }
-        function renderDoses(doseList) {
-            const rows = doseList.map(dose => {
+        function renderDoses() {
+            const rows = adminData.doses.map(dose => {
                 const startHour = dose.start_hour;
                 return `
                     <li>
-                        <p style="display:inline; color:${dose.active ? '#000' : '#AAA'}">${dose.id}-${dose.medication_name}, ${dose.patient_name}/${dose.phone_number}, ${convertToPT(dose.start_hour)}:${dose.start_minute}->${convertToPT(dose.end_hour)}:${dose.end_minute}</p>
-                        <button onclick="toggleActivateDose(\'${dose.id}\')">activate/deactivate dose</button>
+                        <p style="display:inline; color:${dose.active ? '#000' : '#AAA'}">${dose.id}-${dose.medication_name ? dose.medication_name : "No name provided"}, ${dose.patient_name}/${dose.phone_number}, ${convertToPT(dose.start_hour)}:${dose.start_minute}->${convertToPT(dose.end_hour)}:${dose.end_minute}</p>
+                        ${editingDoses.includes(dose.id) ? `<input id="dosename-${dose.id}" placeholder='medication name' value='${dose.medication_name}'/><button onclick=saveDoseEdits(\'${dose.id}\')>Save edits</button><button onclick=toggleDoseEditing(${dose.id})>Stop editing</button>`: `<button onclick="toggleDoseEditing(${dose.id})">edit dose</button>`}
+                        <button onclick="toggleActivateDose(\'${dose.id}\'')">activate/deactivate dose</button>
                         <button onclick="deleteDose(\'${dose.id}\')">delete dose</button>
                     </li>
                 `
@@ -230,8 +253,8 @@
             const html = `<ul>${rows.join("")}</ul>`;
             doseListDiv.innerHTML = html;
         }
-        function renderReminders(reminderList) {
-            const rows = reminderList.map(reminder => {
+        function renderReminders() {
+            const rows = adminData.reminders.map(reminder => {
                 return `
                     <li>
                         <p style="display:inline">${reminder.reminder_type}-${reminder.dose_id}-${convertTZ(reminder.send_time, "US/Pacific")}</p>
@@ -260,18 +283,18 @@
                 console.log(result);
             });
         }
-        function renderOnlineStatus(onlineStatus, manualTakeoverData) {
+        function renderOnlineStatus() {
             const onlineStatusText = document.getElementById("onlineStatus");
             const onlineButtonToggle = document.getElementById("onlineToggle");
-            onlineStatusText.innerHTML = `You're currently ${onlineStatus ? "online" : "offline"}.`;
-            onlineButtonToggle.innerHTML = `Go ${onlineStatus ? "offline" : "online"}`;
+            onlineStatusText.innerHTML = `You're currently ${adminData.onlineStatus ? "online" : "offline"}.`;
+            onlineButtonToggle.innerHTML = `Go ${adminData.onlineStatus ? "offline" : "online"}`;
             const customChat = document.getElementById("customChat");
-            customChat.style.visibility = onlineStatus ? "visible" : "hidden";
+            customChat.style.visibility = adminData.onlineStatus ? "visible" : "hidden";
             const manualTakeover = document.getElementById("manuallyTakeover");
-            manualTakeover.style.visibility = onlineStatus ? "visible" : "hidden";
+            manualTakeover.style.visibility = adminData.onlineStatus ? "visible" : "hidden";
             const manualTakeoverList = document.getElementById("takeoverList");
-            manualTakeoverList.style.visibility = onlineStatus ? "visible" : "hidden";
-            manualTakeoverList.innerHTML = manualTakeoverData;
+            manualTakeoverList.style.visibility = adminData.onlineStatus ? "visible" : "hidden";
+            manualTakeoverList.innerHTML = adminData.manualTakeover;
         }
         function onlineToggle() {
             post("online", {}).then(
@@ -284,6 +307,21 @@
             post("dose/toggleActivate", { doseId }).then(() => {
                 retrieveJobs();
             });
+        }
+
+        function toggleDoseEditing(doseId) {
+            if (editingDoses.includes(doseId)) {
+                editingDoses = editingDoses.filter((dose) => {return dose !== doseId});
+            } else {
+                editingDoses.push(doseId);
+            }
+            renderDoses();
+        }
+        function saveDoseEdits(doseId) {
+            const updatedName = document.getElementById(`dosename-${doseId}`).value;
+            post("dose/editName", {doseName: updatedName, doseId})
+            toggleDoseEditing(parseInt(doseId));
+            retrieveJobs();
         }
         function addEvent() {
             const phoneNumber = document.getElementById("messageSearchPhoneNumber").value;
@@ -298,13 +336,15 @@
         }
         async function retrieveJobs() {
             await get("scheduler/jobs", {}).then(response => response.json()).then(result => {
-                renderJobs(result);
+                adminData.jobs = result;
+                renderJobs();
             })
             await get("everything", {}).then(response => response.json()).then(result => {
-                renderDoses(result.doses);
-                renderReminders(result.reminders);
-                renderOnlineStatus(result.onlineStatus, result.manualTakeover);
-                manualTakeoverList = result.manualTakeover;
+                adminData = {...adminData, ...result}
+                doseList = result.doses;
+                renderDoses();
+                renderReminders();
+                renderOnlineStatus();
             })
         }
         function getEventsForPhoneNumber() {
