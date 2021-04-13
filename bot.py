@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, url_for
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 # import Flask-APScheduler
@@ -134,6 +134,7 @@ class Config(object):
     }
     SQLALCHEMY_DATABASE_URI = os.environ['SQLALCHEMY_DATABASE_URI']
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SEND_FILE_MAX_AGE_DEFAULT = 0
 
 # create app
 app = Flask(__name__)
@@ -619,7 +620,7 @@ def incoming_message_processing(incoming_msg):
     skip_list = list(filter(lambda x: x == "s", processed_msg_tokens))
     error_list = list(filter(lambda x: x == "x", processed_msg_tokens))
     thanks_list = list(filter(lambda x: x == "thanks", processed_msg_tokens))
-    filler_words = ["taking", "going", "to", "a", "for", "on"]
+    filler_words = ["taking", "going", "to", "a", "for", "on", "still"]
     everything_else = list(filter(lambda x: x != "t" and x != "s" and x != "taken" and x not in filler_words, processed_msg_tokens))
     final_message_list = []
     if len(error_list) > 0:
