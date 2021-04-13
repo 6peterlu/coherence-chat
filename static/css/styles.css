@@ -140,8 +140,11 @@ table.blueTable tfoot .links a{
 
 .legendContainer {
   align-items: center;
-  flex: 1;
-  flex-direction: row-reverse;
+  display: flex;
+}
+
+.legendContainer p {
+  margin: 5px;
 }
 
 body {

@@ -25,7 +25,7 @@
                     <div class="currentDate" style="padding:10px"><p>Today</p></div>
                     <div class="legendContainer"><div class='box green'></div> <p>All doses taken</p></div>
                     <div class="legendContainer"><div class='box orange'></div><p>Skipped some doses</p></div>
-                    <div class="legendContainer"><div class='box red'></div><p></p>Missed some doses</p></div>
+                    <div class="legendContainer"><div class='box red'></div><p>Missed some doses</p></div>
                 </div>
             </div>
             <div class="modal" id="detailView">
@@ -38,7 +38,7 @@
         </div>
     </div>
     <script defer>
-        var runningLocally = false;
+        var runningLocally = true;
         var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
         const tracking = document.getElementById("trackingDisplay");
         const phoneNumberEntry = document.getElementById("phoneNumberEntry");
