@@ -395,6 +395,17 @@ def add_dose():
     )
     return jsonify()
 
+@app.route("/dose/editName", methods=["PATCH"])
+@auth_required_post_delete
+def edit_dose_name():
+    incoming_data = request.json
+    new_name = incoming_data["doseName"]
+    dose_id = int(incoming_data["doseId"])
+    dose_to_modify = Dose.query.get(dose_id)
+    dose_to_modify.medication_name = new_name
+    db.session.commit()
+    return jsonify()
+
 @app.route("/dose/toggleActivate", methods=["POST"])
 @auth_required_post_delete
 def toggle_dose_activate():
