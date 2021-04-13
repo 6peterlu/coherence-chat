@@ -395,7 +395,7 @@ def add_dose():
     )
     return jsonify()
 
-@app.route("/dose/editName", methods=["PATCH"])
+@app.route("/dose/editName", methods=["POST"])
 @auth_required_post_delete
 def edit_dose_name():
     incoming_data = request.json

@@ -63,7 +63,7 @@
         const messageListDiv = document.querySelector('.messageList');
         const headerText = document.getElementById("header");
         var editingDoses = [];
-        var runningLocally = false;  // if this is false, you're editing PROD.
+        var runningLocally = true;  // if this is false, you're editing PROD.
         var adminData = {};  // all data being rendered in admin panel
         headerText.innerHTML = `current env: ${runningLocally ? "local" : "PRODUCTION"}`;
         var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
@@ -108,23 +108,26 @@
             return await fetch(`${apiURL}/${route}`, initDetails);
         }
 
-        async function patch(route, body) {
-            const password = document.getElementById("password").value;
-            const bodyWithPassword = {...body, pw: password};
-            const initDetails = {
-                method: 'patch',
-                headers: {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow_Methods": "PATCH",
-                    "Access-Control_Allow_Headers": "*",
-                    "Content-Type": "application/json; charset=utf-8",
-                    "Cache-Control": "no-cache"
-                },
-                mode: "cors",
-                body: JSON.stringify(bodyWithPassword)
-            };
-            return await fetch(`${apiURL}/${route}`, initDetails);
-        }
+
+        // patch causes 400 on heroku for now, and I don't think it's that important yet
+        // just use post
+        // async function patch(route, body) {
+        //     const password = document.getElementById("password").value;
+        //     const bodyWithPassword = {...body, pw: password};
+        //     const initDetails = {
+        //         method: 'patch',
+        //         headers: {
+        //             "Access-Control-Allow-Origin": "*",
+        //             "Access-Control-Allow_Methods": "PATCH",
+        //             "Access-Control_Allow_Headers": "*",
+        //             "Content-Type": "application/json; charset=utf-8",
+        //             "Cache-Control": "no-cache"
+        //         },
+        //         mode: "cors",
+        //         body: JSON.stringify(bodyWithPassword)
+        //     };
+        //     return await fetch(`${apiURL}/${route}`, initDetails);
+        // }
 
         // we can't use delete, its reserved.
         async function httpDelete(route, body) {
@@ -316,7 +319,7 @@
         }
         function saveDoseEdits(doseId) {
             const updatedName = document.getElementById(`dosename-${doseId}`).value;
-            patch("dose/editName", {doseName: updatedName, doseId})
+            post("dose/editName", {doseName: updatedName, doseId})
             toggleDoseEditing(parseInt(doseId));
             retrieveJobs();
         }
