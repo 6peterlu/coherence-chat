@@ -112,7 +112,7 @@ table.blueTable tfoot .links a{
   color: #f54242;
 }
 .skippedDose {
-  color: #faa228;
+  color: #de7331;
 }
 
 .box {
@@ -135,7 +135,7 @@ table.blueTable tfoot .links a{
 }
 
 .orange {
-  background-color: #faa228;
+  background-color: #de7331;
 }
 
 .legendContainer {
@@ -146,4 +146,15 @@ table.blueTable tfoot .links a{
 
 body {
   font-family: 'Lora', serif;
+  margin: 0px;
+}
+
+.topSection {
+  background-color: #002864;
+  padding: 20px;
+}
+
+.bottomSection {
+  background-color: #FBECB7;
+  padding: 10px;
 }
