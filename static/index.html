@@ -54,6 +54,12 @@
         const modalCloseButton = document.getElementById("closeButton");
         const modal = document.getElementById("detailView");
         const takeNow = document.getElementById("takeNow");
+        const allTakenCopy = [
+            "Nothing to take at the moment, you're all clear. 👍",
+            "No dose to take right now. ⭐",
+            "No medications to worry about right now. 🙂",
+            "No medications to take for now. ✅",
+        ]
         // modal controls
         // When the user clicks on <span> (x), close the modal
         modalCloseButton.onclick = function() {
@@ -87,6 +93,9 @@
             },
             mode: "cors",
         };
+        function randomChoice(arr) {
+            return arr[Math.floor(arr.length * Math.random())];
+        }
         function requestData() {
             fetch(`${apiURL}/patientData`, getInitDetails).then(response => response.json()).then(result => {
                 if (!result.phoneNumber) {
@@ -105,11 +114,11 @@
                     loginButton.style.display = "none";
                     tracking.style.display = "block";
                     if (result.takeNow) {
-                        takeNow.innerHTML = "You have a dose to take now. 💊"
+                        takeNow.innerHTML = "You have a dose to take now."
                         takeNow.style.backgroundColor = "#f54242";
                         takeNow.style.color= "#FFF";
                     } else {
-                        takeNow.innerHTML = "Nothing to take at the moment, you're all clear. 👍"
+                        takeNow.innerHTML = randomChoice(allTakenCopy);
                         takeNow.style.backgroundColor = "#09ad56";
                         takeNow.style.color = "#FFF";
                     }
