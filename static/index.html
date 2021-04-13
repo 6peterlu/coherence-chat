@@ -3,32 +3,40 @@
     <link rel="stylesheet" href="static/css/styles.css">
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Lora&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Didact+Gothic&display=swap" rel="stylesheet">
 </head>
 <body>
     <p id="instructions"></p>
     <input id="phoneNumberEntry" placeholder="Phone number"/>
     <button id="login" onclick="login()" style="display:none">Login</button>
     <div id="trackingDisplay">
-        <h2 id="welcomeHeader">Welcome!</h2>
-        <h4 id="takeNow" style="text-align: center; border:1px; border-style:solid; padding:5px"></h4>
-        <h3>Dose history</h3>
-        <p>Click on a day to see more details.</p>
-        <div>
-            <table class="blueTable" id="calendar">
-            </table>
-            <div>
-                <h4>Key</h4>
-                <div class="currentDate" style="padding:10px"><p>Current day</p></div>
-                <div class="legendContainer"><div class='box green'></div> <p>All doses taken</p></div>
-                <div class="legendContainer"><div class='box orange'></div><p>Skipped some doses</p></div>
-                <div class="legendContainer"><div class='box red'></div><p></p>Missed some doses</p></div>
-            </div>
+        <div style="background-color: #002864; padding: 20px">
+            <h2 id="welcomeHeader" style="color:white">Welcome!</h2>
+            <h4 id="takeNow" style="text-align: center; padding:10px; border-radius: 10px;"></h4>
         </div>
-        <div class="modal" id="detailView">
-            <div class="modal-content">
-                <span class="close" id="closeButton">&times;</span>
-                <h2 id="modalTitle"></h2>
-                <div id="modalBody"></div>
+        <div style="background-color: #FBECB7; padding: 10px">
+            <h3>Dose history</h3>
+            <p>Click on a day to see more details.</p>
+            <div>
+                <table class="blueTable" id="calendar">
+                </table>
+                <div style="display:flex; flex-direction: row; justify-content: space-between;">
+                    <div>
+                        <h4>Key</h4>
+                        <div class="currentDate" style="padding:10px"><p>Today</p></div>
+                        <div class="legendContainer"><div class='box green'></div> <p>All doses taken</p></div>
+                        <div class="legendContainer"><div class='box orange'></div><p>Skipped some doses</p></div>
+                        <div class="legendContainer"><div class='box red'></div><p>Missed some doses</p></div>
+                    </div>
+                    <img src="static/svg/Group.svg" style="width:70px; align-self:flex-end; padding: 20px"/>
+                </div>
+            </div>
+            <div class="modal" id="detailView">
+                <div class="modal-content">
+                    <span class="close" id="closeButton">&times;</span>
+                    <h2 id="modalTitle"></h2>
+                    <div id="modalBody"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -98,10 +106,12 @@
                     tracking.style.display = "block";
                     if (result.takeNow) {
                         takeNow.innerHTML = "You have a dose to take now. 💊"
-                        takeNow.style.color = "#f54242";
+                        takeNow.style.backgroundColor = "#f54242";
+                        takeNow.style.color= "#FFF";
                     } else {
                         takeNow.innerHTML = "Nothing to take at the moment, you're all clear. 👍"
-                        takeNow.style.color = "#09ad56";
+                        takeNow.style.backgroundColor = "#09ad56";
+                        takeNow.style.color = "#FFF";
                     }
                     adherenceHistory = processEventData(result.eventData);
                     generateCalendar();

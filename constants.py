@@ -1,5 +1,38 @@
 from string import Template
 
+MORNING_PREFIXES = [
+    "Good morning!",
+    "Hope your day is off to a great start.",
+    "Looking forward to a great day together."
+]
+
+AFTERNOON_PREFIXES = [
+    "Hope your day is going well so far.",
+    "Hope you had a great lunch.",
+    "Good afternoon!"
+]
+
+EVENING_PREFIXES = [
+    "Good evening!",
+    "Hope you got to catch the sunset today!",
+    "Last medication for the day!"
+]
+
+TIME_OF_DAY_PREFIX_MAP = {
+    "morning": MORNING_PREFIXES,
+    "afternoon": AFTERNOON_PREFIXES,
+    "evening": EVENING_PREFIXES
+}
+
+INITIAL_SUFFIXES = [
+    Template("""Here’s your $time reminder.\n"""),
+    Template("""It's $time, which means it's time for your dose!\n"""),
+    Template("""Are you ready for your $time dose?\n"""),
+    Template("""Let me know if you can take your $time dose.\n"""),
+    Template("""Just wanted to let you know it's time for your $time dose.\n"""),
+    Template("""Just wanted to let you know that it's $time and remind you about your dose.\n""")
+]
+
 INITIAL_MSGS = [
     Template("""Here’s your $time reminder.\n"""),
     Template("""It's $time, which means it's time for your dose!\n"""),
@@ -37,7 +70,7 @@ CONFIRMATION_MSG = Template("""Great, I'll text again at $time. See you then!"""
 
 TAKE_MSG = Template("""🕒 $time\nDose recorded.\n💊💊💊💊""")
 
-TAKE_MSG_EXCITED = Template("""🕒 $time\nDose recorded! (:\n💊💊💊💊""")
+TAKE_MSG_EXCITED = Template("""🕒 $time\nDose recorded! 🎉\n💊💊💊💊""")
 
 SKIP_MSG = """Dose skipped. I won't send you any more reminders for this dose today."""
 
