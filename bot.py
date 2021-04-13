@@ -15,6 +15,11 @@ import random
 import string
 from itertools import chain
 
+from apscheduler.events import (
+    EVENT_JOB_ERROR,
+    EVENT_JOB_MISSED
+)
+
 # fuzzy nlp handling
 import spacy
 
@@ -234,8 +239,6 @@ client = Client(account_sid, auth_token)
 
 # initialize scheduler
 scheduler = APScheduler()
-scheduler.init_app(app)
-scheduler.start()
 
 # not calling this with false anywhere
 def get_time_now(tzaware=True):
@@ -392,7 +395,7 @@ def add_dose():
         start_date=new_dose_record.next_start_date,
         days=1,
         args=[new_dose_record.id],
-        misfire_grace_time=5*60
+        misfire_grace_time=1
     )
     return jsonify()
 
@@ -421,7 +424,7 @@ def toggle_dose_activate():
             start_date=relevant_dose.next_start_date,
             days=1,
             args=[relevant_dose.id],
-            misfire_grace_time=5*60
+            misfire_grace_time=1
         )
     else:
         remove_jobs_helper(relevant_dose.id, ["boundary", "initial", "followup", "absent"])
@@ -750,7 +753,7 @@ def bot():
                             args=[latest_dose_id],
                             trigger="date",
                             run_date=next_alarm_time,
-                            misfire_grace_time=5*60
+                            misfire_grace_time=1
                         )
                     else:
                         if obscure_confirmation:
@@ -891,7 +894,7 @@ def maybe_schedule_absent(dose_id):
             args=[dose_id],
             trigger="date",
             run_date=desired_absent_reminder,
-            misfire_grace_time=5*60
+            misfire_grace_time=1
         )
 
 def remove_jobs_helper(dose_id, jobs_list):
@@ -969,11 +972,22 @@ def send_intro_text(dose_id, manual=False):
         args=[dose_id],
         trigger="date",
         run_date=dose_obj.next_end_date if manual else dose_obj.next_end_date - timedelta(days=1),  # HACK, assumes this executes after start_date
-        misfire_grace_time=5*60
+        misfire_grace_time=1
     )
     maybe_schedule_absent(dose_id)
     log_event("initial", dose_obj.phone_number, description=dose_id)
 
+def scheduler_error_alert(event):
+    with scheduler.app.app_context():
+        client.messages.create(
+            body=f"Scheduler reports error: {event}",
+            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+            to="+13604508655"
+        )
+
 
 if __name__ == '__main__':
+    scheduler.init_app(app)
+    scheduler.add_listener(scheduler_error_alert, EVENT_JOB_MISSED | EVENT_JOB_ERROR)
+    scheduler.start()
     app.run(host='0.0.0.0')
