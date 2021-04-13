@@ -293,9 +293,11 @@ def auth_required_post_delete(f):
 
 # makes sure our clients refresh their pages on update
 @app.after_request
-def add_header(response):
-    response.cache_control.max_age = 0
-    return response
+def add_header(resp):
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 @app.route("/", methods=["GET"])
 def patient_page():
