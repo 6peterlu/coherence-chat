@@ -395,7 +395,7 @@ def add_dose():
         start_date=new_dose_record.next_start_date,
         days=1,
         args=[new_dose_record.id],
-        misfire_grace_time=1
+        misfire_grace_time=5*60
     )
     return jsonify()
 
@@ -424,7 +424,7 @@ def toggle_dose_activate():
             start_date=relevant_dose.next_start_date,
             days=1,
             args=[relevant_dose.id],
-            misfire_grace_time=1
+            misfire_grace_time=5*60
         )
     else:
         remove_jobs_helper(relevant_dose.id, ["boundary", "initial", "followup", "absent"])
@@ -753,7 +753,7 @@ def bot():
                             args=[latest_dose_id],
                             trigger="date",
                             run_date=next_alarm_time,
-                            misfire_grace_time=1
+                            misfire_grace_time=5*60
                         )
                     else:
                         if obscure_confirmation:
@@ -894,7 +894,7 @@ def maybe_schedule_absent(dose_id):
             args=[dose_id],
             trigger="date",
             run_date=desired_absent_reminder,
-            misfire_grace_time=1
+            misfire_grace_time=5*60
         )
 
 def remove_jobs_helper(dose_id, jobs_list):
@@ -972,7 +972,7 @@ def send_intro_text(dose_id, manual=False):
         args=[dose_id],
         trigger="date",
         run_date=dose_obj.next_end_date if manual else dose_obj.next_end_date - timedelta(days=1),  # HACK, assumes this executes after start_date
-        misfire_grace_time=1
+        misfire_grace_time=5*60
     )
     maybe_schedule_absent(dose_id)
     log_event("initial", dose_obj.phone_number, description=dose_id)
@@ -980,7 +980,7 @@ def send_intro_text(dose_id, manual=False):
 def scheduler_error_alert(event):
     with scheduler.app.app_context():
         client.messages.create(
-            body=f"Scheduler reports error: {event}",
+            body=f"Scheduler reports job missed for event ID {event.job_id}.",
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
             to="+13604508655"
         )
