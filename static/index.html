@@ -197,7 +197,7 @@
                 const timeOfDayOrder = ["morning", "afternoon", "evening"];
                 for (let timeOfDay of timeOfDayOrder) {
                     if (timeOfDay in dayOfMonthData) {
-                        const timeOfDayHTML = `<h3>${timeOfDayCopyMap[timeOfDay]}</h3><p>💊<span style="font-size:15px">${adherenceHistory.doseDataByTime[timeOfDay].medication_name}</span></p>${getEventHTML(dayOfMonthData[timeOfDay])}`;
+                        const timeOfDayHTML = `<h3>${timeOfDayCopyMap[timeOfDay]}</h3>${adherenceHistory.doseDataByTime[timeOfDay].medication_name ? `<p>💊<span style="font-size:15px">${adherenceHistory.doseDataByTime[timeOfDay].medication_name}</span></p>` : ""}${getEventHTML(dayOfMonthData[timeOfDay])}`;
                         modalBodyHTML += timeOfDayHTML;
                     }
                 }

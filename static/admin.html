@@ -243,7 +243,7 @@
                 const startHour = dose.start_hour;
                 return `
                     <li>
-                        <p style="display:inline; color:${dose.active ? '#000' : '#AAA'}">${dose.id}-${dose.medication_name}, ${dose.patient_name}/${dose.phone_number}, ${convertToPT(dose.start_hour)}:${dose.start_minute}->${convertToPT(dose.end_hour)}:${dose.end_minute}</p>
+                        <p style="display:inline; color:${dose.active ? '#000' : '#AAA'}">${dose.id}-${dose.medication_name ? dose.medication_name : "No name provided"}, ${dose.patient_name}/${dose.phone_number}, ${convertToPT(dose.start_hour)}:${dose.start_minute}->${convertToPT(dose.end_hour)}:${dose.end_minute}</p>
                         ${editingDoses.includes(dose.id) ? `<input id="dosename-${dose.id}" placeholder='medication name' value='${dose.medication_name}'/><button onclick=saveDoseEdits(\'${dose.id}\')>Save edits</button><button onclick=toggleDoseEditing(${dose.id})>Stop editing</button>`: `<button onclick="toggleDoseEditing(${dose.id})">edit dose</button>`}
                         <button onclick="toggleActivateDose(\'${dose.id}\'')">activate/deactivate dose</button>
                         <button onclick="deleteDose(\'${dose.id}\')">delete dose</button>
