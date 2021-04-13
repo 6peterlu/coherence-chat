@@ -391,7 +391,8 @@ def add_dose():
         trigger="interval",
         start_date=new_dose_record.next_start_date,
         days=1,
-        args=[new_dose_record.id]
+        args=[new_dose_record.id],
+        misfire_grace_time=5*60
     )
     return jsonify()
 
@@ -419,7 +420,8 @@ def toggle_dose_activate():
             trigger="interval",
             start_date=relevant_dose.next_start_date,
             days=1,
-            args=[relevant_dose.id]
+            args=[relevant_dose.id],
+            misfire_grace_time=5*60
         )
     else:
         remove_jobs_helper(relevant_dose.id, ["boundary", "initial", "followup", "absent"])
@@ -634,7 +636,7 @@ def incoming_message_processing(incoming_msg):
     take_list = list(filter(lambda x: x == "t" or x == "taken", processed_msg_tokens))
     skip_list = list(filter(lambda x: x == "s", processed_msg_tokens))
     error_list = list(filter(lambda x: x == "x", processed_msg_tokens))
-    thanks_list = list(filter(lambda x: x == "thanks", processed_msg_tokens))
+    thanks_list = list(filter(lambda x: x == "thanks" or x == "thank", processed_msg_tokens))
     filler_words = ["taking", "going", "to", "a", "for", "on", "still"]
     everything_else = list(filter(lambda x: x != "t" and x != "s" and x != "taken" and x not in filler_words, processed_msg_tokens))
     final_message_list = []
@@ -747,7 +749,8 @@ def bot():
                         scheduler.add_job(f"{latest_dose_id}-followup", send_followup_text,
                             args=[latest_dose_id],
                             trigger="date",
-                            run_date=next_alarm_time
+                            run_date=next_alarm_time,
+                            misfire_grace_time=5*60
                         )
                     else:
                         if obscure_confirmation:
@@ -887,7 +890,8 @@ def maybe_schedule_absent(dose_id):
         scheduler.add_job(f"{dose_id}-absent", send_absent_text,
             args=[dose_id],
             trigger="date",
-            run_date=desired_absent_reminder
+            run_date=desired_absent_reminder,
+            misfire_grace_time=5*60
         )
 
 def remove_jobs_helper(dose_id, jobs_list):
@@ -964,7 +968,8 @@ def send_intro_text(dose_id, manual=False):
     scheduler.add_job(f"{dose_id}-boundary", send_boundary_text,
         args=[dose_id],
         trigger="date",
-        run_date=dose_obj.next_end_date if manual else dose_obj.next_end_date - timedelta(days=1)  # HACK, assumes this executes after start_date
+        run_date=dose_obj.next_end_date if manual else dose_obj.next_end_date - timedelta(days=1),  # HACK, assumes this executes after start_date
+        misfire_grace_time=5*60
     )
     maybe_schedule_absent(dose_id)
     log_event("initial", dose_obj.phone_number, description=dose_id)
