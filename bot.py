@@ -67,6 +67,7 @@ from constants import (
     INITIAL_MSGS,
     ERROR_MSG,
     FOLLOWUP_MSGS,
+    INITIAL_SUFFIXES,
     MANUAL_TEXT_NEEDED_MSG,
     REMINDER_OUT_OF_RANGE_MSG,
     REMINDER_TOO_CLOSE_MSG,
@@ -74,6 +75,7 @@ from constants import (
     SKIP_MSG,
     TAKE_MSG,
     TAKE_MSG_EXCITED,
+    TIME_OF_DAY_PREFIX_MAP,
     UNKNOWN_MSG,
     ACTION_MENU,
     USER_ERROR_REPORT,
@@ -90,6 +92,33 @@ TWILIO_PHONE_NUMBERS = {
 
 # numbers for which the person should NOT take it after the dose period.
 CLINICAL_BOUNDARY_PHONE_NUMBERS = ["8587761377"]
+
+
+PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113, 115, 116, 117], "afternoon": [114]}} if os.environ["FLASK_ENV"] == "local" else {
+    "+113609042210": {"afternoon": [25], "evening": [15]},
+    "+113609049085": {"evening": [16]},
+    "+114152142478": {"morning": [26, 82]},
+    "+116502690598": {"evening": [27]},
+    "+118587761377": {"morning": [29]},
+    "+113607738908": {"morning": [68], "evening": [69, 81]},
+    "+115038871884": {"morning": [70], "afternoon": [71]},
+    "+113605214193": {"morning": [72], "evening": [74]},
+    "+113605131225": {"morning": [75], "afternoon": [76], "evening": [77]},
+    "+113606064445": {"afternoon": [78]}
+}
+
+PATIENT_NAME_MAP = { "+113604508655": "Peter" } if os.environ["FLASK_ENV"] == "local" else {
+    "+113606064445": "Cheryl",
+    "+113609042210": "Steven",
+    "+113609049085": "Tao",
+    "+114152142478": "Miki",
+    "+116502690598": "Caroline",
+    "+118587761377": "Hadara",
+    "+113607738908": "Karrie",
+    "+115038871884": "Charles",
+    "+113605214193": "Leann",
+    "+113605131225": "Jeanette"
+}
 
 logging.basicConfig()
 logging.getLogger('apscheduler').setLevel(logging.DEBUG)
@@ -215,8 +244,17 @@ def get_time_now(tzaware=True):
 def get_followup_message():
     return random.choice(FOLLOWUP_MSGS)
 
-def get_initial_message():
-    return random.choice(INITIAL_MSGS)  # returns a template
+def get_initial_message(dose_id, time_string):
+    current_time_of_day = None
+    for phone_number in PATIENT_DOSE_MAP:
+        for time_of_day in PATIENT_DOSE_MAP[phone_number]:
+            if dose_id in PATIENT_DOSE_MAP[phone_number][time_of_day]:
+                current_time_of_day = time_of_day
+    random_choice = random.random()
+    if random_choice < 0.8 or current_time_of_day is None:
+        return random.choice(INITIAL_MSGS).substitute(time=time_string)
+    else:
+        return f"{random.choice(TIME_OF_DAY_PREFIX_MAP[current_time_of_day])} {random.choice(INITIAL_SUFFIXES).substitute(time=time_string)}"
 
 def get_take_message(excited):
     datestring = get_time_now().astimezone(timezone(USER_TIMEZONE)).strftime('%b %d, %I:%M %p')
@@ -253,6 +291,7 @@ def auth_required_post_delete(f):
     return decorated_function
 
 
+# makes sure our clients refresh their pages on update
 @app.after_request
 def add_header(response):
     response.cache_control.max_age = 0
@@ -272,34 +311,10 @@ def patient_data():
     if recovered_cookie is None:
         return jsonify()  # empty response if no cookie
     phone_number = f"+11{recovered_cookie}"
-    PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113, 115, 116], "afternoon": [114]}} if os.environ["FLASK_ENV"] == "local" else {
-        "+113609042210": {"afternoon": [25], "evening": [15]},
-        "+113609049085": {"evening": [16]},
-        "+114152142478": {"morning": [26, 82]},
-        "+116502690598": {"evening": [27]},
-        "+118587761377": {"morning": [29]},
-        "+113607738908": {"morning": [68], "evening": [69, 81]},
-        "+115038871884": {"morning": [70], "afternoon": [71]},
-        "+113605214193": {"morning": [72], "evening": [74]},
-        "+113605131225": {"morning": [75], "afternoon": [76], "evening": [77]},
-        "+113606064445": {"afternoon": [78]}
-    }
     if phone_number not in PATIENT_DOSE_MAP:
         response = jsonify({"error": "We couldn't find your phone number in our records. Please double-check that you've entered it correctly."})
         response.set_cookie("phoneNumber", "", expires=0)
         return response
-    PATIENT_NAME_MAP = { "+113604508655": "Peter" } if os.environ["FLASK_ENV"] == "local" else {
-        "+113606064445": "Cheryl",
-        "+113609042210": "Steven",
-        "+113609049085": "Tao",
-        "+114152142478": "Miki",
-        "+116502690598": "Caroline",
-        "+118587761377": "Hadara",
-        "+113607738908": "Karrie",
-        "+115038871884": "Charles",
-        "+113605214193": "Leann",
-        "+113605131225": "Jeanette"
-    }
     patient_dose_times = PATIENT_DOSE_MAP[phone_number]
     relevant_dose_ids = list(chain.from_iterable(patient_dose_times.values()))
     relevant_dose_ids_as_str = [str(x) for x in relevant_dose_ids]
@@ -921,7 +936,7 @@ def send_boundary_text(dose_id):
 def send_intro_text(dose_id, manual=False):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
-        body=f"{get_initial_message().substitute(time=get_time_now().astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M'))}{ACTION_MENU}",
+        body=f"{get_initial_message(dose_id, get_time_now().astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M'))}{ACTION_MENU}",
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=dose_obj.phone_number
     )
