@@ -308,6 +308,10 @@ def patient_page():
 def serve_css(path):
     return send_from_directory('css', path)
 
+@app.route("/svg/<path:path>", methods=["GET"])
+def serve_svg(path):
+    return send_from_directory('svg', path)
+
 @app.route("/patientData", methods=["GET"])
 def patient_data():
     recovered_cookie = request.cookies.get("phoneNumber")
