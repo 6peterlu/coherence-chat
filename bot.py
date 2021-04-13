@@ -984,10 +984,9 @@ def scheduler_error_alert(event):
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
             to="+13604508655"
         )
-
+scheduler.init_app(app)
+scheduler.start()
 
 if __name__ == '__main__':
-    scheduler.init_app(app)
-    scheduler.add_listener(scheduler_error_alert, EVENT_JOB_MISSED | EVENT_JOB_ERROR)
-    scheduler.start()
+    # scheduler.add_listener(scheduler_error_alert, EVENT_JOB_MISSED | EVENT_JOB_ERROR)
     app.run(host='0.0.0.0')
