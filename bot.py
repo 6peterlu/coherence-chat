@@ -357,6 +357,8 @@ def save_phone_number():
     phone_number = request.json["phoneNumber"]
     numeric_filter = filter(str.isdigit, phone_number)
     phone_number = "".join(numeric_filter)
+    if len(phone_number) == 11 and phone_number[0] == "1":
+        phone_number = phone_number[1:]
     out = jsonify()
     out.set_cookie("phoneNumber", phone_number)
     return out
