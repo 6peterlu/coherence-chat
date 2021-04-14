@@ -109,7 +109,8 @@ PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113, 115, 116, 117], "afterno
     "+115038871884": {"morning": [70], "afternoon": [71]},
     "+113605214193": {"morning": [72], "evening": [74]},
     "+113605131225": {"morning": [75], "afternoon": [76], "evening": [77]},
-    "+113606064445": {"afternoon": [78]}
+    "+113606064445": {"afternoon": [78]},
+    "+113609010956": {"evening": [86]}
 }
 
 PATIENT_NAME_MAP = { "+113604508655": "Peter" } if os.environ["FLASK_ENV"] == "local" else {
@@ -122,7 +123,8 @@ PATIENT_NAME_MAP = { "+113604508655": "Peter" } if os.environ["FLASK_ENV"] == "l
     "+113607738908": "Karrie",
     "+115038871884": "Charles",
     "+113605214193": "Leann",
-    "+113605131225": "Jeanette"
+    "+113605131225": "Jeanette",
+    "+113609010956": "Andie"
 }
 
 logging.basicConfig()
