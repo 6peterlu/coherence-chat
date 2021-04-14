@@ -66,7 +66,7 @@
         var runningLocally = true;  // if this is false, you're editing PROD.
         var adminData = {};  // all data being rendered in admin panel
         headerText.innerHTML = `current env: ${runningLocally ? "local" : "PRODUCTION"}`;
-        var apiURL = runningLocally ? "http://localhost:8000" : "https://coherence-chat.herokuapp.com";
+        var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
         const initDetails = {
             method: 'get',
             headers: {
@@ -190,7 +190,7 @@
         function switchEnv() {
             runningLocally = !runningLocally;
             headerText.innerHTML = `current env: ${runningLocally ? "local" : "PRODUCTION"}`;
-            apiURL = runningLocally ? "http://localhost:8000" : "https://coherence-chat.herokuapp.com";
+            apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
             messageListDiv.innerHTML = "";
             retrieveJobs();
         }
