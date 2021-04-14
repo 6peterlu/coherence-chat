@@ -5,7 +5,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Lora&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Didact+Gothic&display=swap" rel="stylesheet">
 </head>
-<body>
+<body style="background-color: rgb(233, 231, 220);">
     <p id="instructions"></p>
     <input id="phoneNumberEntry" placeholder="Phone number"/>
     <button id="login" onclick="login()" style="display:none">Login</button>
@@ -14,7 +14,7 @@
             <h2 id="welcomeHeader" style="color:white">Welcome!</h2>
             <h4 id="takeNow" style="text-align: center; padding:10px; border-radius: 10px;"></h4>
         </div>
-        <div style="background-color: #FBECB7; padding: 10px">
+        <div style="background-color: rgb(233, 231, 220); padding: 10px">
             <h3>Dose history</h3>
             <p>Click on a day to see more details.</p>
             <div>
@@ -41,7 +41,7 @@
         </div>
     </div>
     <script defer>
-        var runningLocally = false;
+        var runningLocally = true;
         var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
         const tracking = document.getElementById("trackingDisplay");
         const phoneNumberEntry = document.getElementById("phoneNumberEntry");
