@@ -105,6 +105,7 @@ CLINICAL_BOUNDARY_PHONE_NUMBERS = ["8587761377"]
 
 
 PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113, 115, 116, 117], "afternoon": [114]}} if os.environ["FLASK_ENV"] == "local" else {
+    "+113604508655": {"morning": [85]},
     "+113609042210": {"afternoon": [25], "evening": [15]},
     "+113609049085": {"evening": [16]},
     "+114152142478": {"morning": [26, 82]},
@@ -119,6 +120,7 @@ PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113, 115, 116, 117], "afterno
 }
 
 PATIENT_NAME_MAP = { "+113604508655": "Peter" } if os.environ["FLASK_ENV"] == "local" else {
+    "+113604508655": "Peter",
     "+113606064445": "Cheryl",
     "+113609042210": "Steven",
     "+113609049085": "Tao",
@@ -133,6 +135,7 @@ PATIENT_NAME_MAP = { "+113604508655": "Peter" } if os.environ["FLASK_ENV"] == "l
 }
 
 SECRET_CODES = { "+113604508655": 123456 } if os.environ["FLASK_ENV"] == "local" else {
+    "+113604508655": 123456,
     "+113606064445": 110971,
     "+113609042210": 902157,
     "+113609049085": 311373,
