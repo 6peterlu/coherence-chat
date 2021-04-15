@@ -62,11 +62,15 @@
                 </div>
             </div>
         </div>
-        <div id="servicePausedSection" style="display:flex; align-items: center; width: 100%; flex-direction: column; background-color: #002864; box-sizing: border-box; padding: 20px;">
-            <h3 style="color:#FFF">Current status: <span id="statusIndicator">active</span></h2>
-            <p id="statusExplainer" style="color:#FFF; text-align: center; margin-top: 0px;">I'm currently texting you to help you stay on track with your medication!</p>
+        <div id="behaviorAnalysisSection" style="background-color: #002864; padding: 10px;">
+            <h3 style="color: #FFF">Behavior analysis</h3>
+            <p style="color: #FFF">Coming soon! 📈</p>
+        </div>
+        <div id="servicePausedSection" style="display:flex; width: 100%; flex-direction: column; align-items: center; background-color: rgb(233, 231, 220); box-sizing: border-box; padding: 20px;">
+            <h3 style="color:#000; align-self:center;">Current status: <span id="statusIndicator">active</span></h2>
+            <p id="statusExplainer" style="color:#000; align-self:center; text-align: center; margin-top: 0px;">I'm currently texting you to help you stay on track with your medication!</p>
             <button id="pauseButton" onclick="pauseService()" style="background-color: #f54242; color: #FBECB7; border: none; padding-top: 15px; padding-bottom: 15px; margin: 15px; border-radius: 30px; font-family: 'Lora', serif; text-align: center; font-size: 20px;">Pause</button>
-            <p id="buttonActionExplainer" style="color:#FFF; font-size:12px; text-align: center;">Pausing will still allow you to tell us when you've taken or skipped a medication, but we will no longer remind you to take it.</p>
+            <p id="buttonActionExplainer" style="color:#000; font-size:12px; text-align: center;">Pausing will still allow you to tell us when you've taken or skipped a medication, but we will no longer remind you to take it.</p>
         </div>
     </div>
     <script defer>
@@ -309,8 +313,13 @@
             statusIndicator.innerHTML = servicePaused ? "paused 🚫" : "active ✅";
             pauseButton.innerHTML = servicePaused ? "Resume" : "Pause";
             pauseButton.setAttribute("onclick", "pauseService()");
-            pauseButton.style.backgroundColor = servicePaused ? "#09ad56" : "#f54242";
+            pauseButton.style.backgroundColor = servicePaused ? "#09ad56" : "transparent";
+            pauseButton.style.color = servicePaused ? "FFF": "#f54242";
+            pauseButton.style.paddingTop = servicePaused ? "15px" : "0px";
+            pauseButton.style.paddingBottom = servicePaused ? "15px" : "0px";
+            pauseButton.style.fontSize = servicePaused ? "20px": "15px";
             pauseStatusExplainer.innerHTML = servicePaused ? "I'm currently paused and am not texting you about your medication. You can still tell me when you've taken or skipped a dose." : "I'm currently texting you to help you stay on track with your medication.";
+            pauseStatusExplainer.style.color = servicePaused ? "#f54242" : "#OOO";
             buttonActionExplainer.innerHTML = servicePaused ? "Resuming allows me to text you and help you stay on track with your medication." : "Pausing will still allow you to tell us when you've taken or skipped a medication, but we will no longer remind you to take it.";
         }
         function enterPhoneNumber() {
