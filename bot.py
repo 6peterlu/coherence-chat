@@ -74,6 +74,7 @@ from constants import (
     FOLLOWUP_MSGS,
     INITIAL_SUFFIXES,
     MANUAL_TEXT_NEEDED_MSG,
+    PAUSE_MESSAGE,
     REMINDER_OUT_OF_RANGE_MSG,
     REMINDER_TOO_CLOSE_MSG,
     REMINDER_TOO_LATE_MSG,
@@ -81,11 +82,13 @@ from constants import (
     SKIP_MSG,
     TAKE_MSG,
     TAKE_MSG_EXCITED,
+    THANKS_MESSAGES,
     TIME_OF_DAY_PREFIX_MAP,
     UNKNOWN_MSG,
     ACTION_MENU,
     USER_ERROR_REPORT,
-    USER_ERROR_RESPONSE
+    USER_ERROR_RESPONSE,
+    WELCOME_BACK_MESSAGES
 )
 
 # allow no reminders to be set within 10 mins of boundary
@@ -101,12 +104,13 @@ CLINICAL_BOUNDARY_PHONE_NUMBERS = ["8587761377"]
 
 
 PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113, 115, 116, 117], "afternoon": [114]}} if os.environ["FLASK_ENV"] == "local" else {
+    "+113604508655": {"morning": [85]},
     "+113609042210": {"afternoon": [25], "evening": [15]},
     "+113609049085": {"evening": [16]},
     "+114152142478": {"morning": [26, 82]},
     "+116502690598": {"evening": [27]},
     "+118587761377": {"morning": [29]},
-    "+113607738908": {"morning": [68], "evening": [69, 81]},
+    "+113607738908": {"morning": [68, 87], "evening": [69, 81]},
     "+115038871884": {"morning": [70], "afternoon": [71]},
     "+113605214193": {"morning": [72], "evening": [74]},
     "+113605131225": {"morning": [75], "afternoon": [76], "evening": [77]},
@@ -115,6 +119,7 @@ PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113, 115, 116, 117], "afterno
 }
 
 PATIENT_NAME_MAP = { "+113604508655": "Peter" } if os.environ["FLASK_ENV"] == "local" else {
+    "+113604508655": "Peter",
     "+113606064445": "Cheryl",
     "+113609042210": "Steven",
     "+113609049085": "Tao",
@@ -129,6 +134,7 @@ PATIENT_NAME_MAP = { "+113604508655": "Peter" } if os.environ["FLASK_ENV"] == "l
 }
 
 SECRET_CODES = { "+113604508655": 123456 } if os.environ["FLASK_ENV"] == "local" else {
+    "+113604508655": 123456,
     "+113606064445": 110971,
     "+113609042210": 902157,
     "+113609049085": 311373,
@@ -203,6 +209,23 @@ class Dose(db.Model):
             alarm_endtime += timedelta(days=1)
         return alarm_endtime
 
+    def within_dosing_period(self, time=None):
+        time_to_compare = get_time_now() if time is None else time
+        # boundary condition
+        return self.next_end_date - timedelta(days=1) > time_to_compare and self.next_start_date - timedelta(days=1) < time_to_compare
+
+    def already_recorded(self):
+        matching_events = Event.query.filter(
+            Event.description == str(self.id),
+            Event.event_type.in_(["take", "skip"]),
+            Event.event_time > self.next_start_date - timedelta(days=1),
+            Event.event_time < self.next_end_date - timedelta(days=1)
+        ).all()
+        if len(matching_events) > 0:
+            return True
+        return False
+
+
 class Reminder(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     dose_id = db.Column(db.Integer)
@@ -242,7 +265,12 @@ class Event(db.Model):
        return_dict["event_time"] = self.event_time.replace(tzinfo=datetime.now().astimezone().tzinfo)
        return return_dict
 
+# list of users that have all messages manually responded to
 class ManualTakeover(db.Model):
+    phone_number = db.Column(db.String(13), primary_key=True)
+
+# list of users that have paused the reminder service
+class PausedService(db.Model):
     phone_number = db.Column(db.String(13), primary_key=True)
 
 
@@ -265,12 +293,14 @@ def get_time_now(tzaware=True):
 def get_followup_message():
     return random.choice(FOLLOWUP_MSGS)
 
-def get_initial_message(dose_id, time_string):
+def get_initial_message(dose_id, time_string, welcome_back=False):
     current_time_of_day = None
     for phone_number in PATIENT_DOSE_MAP:
         for time_of_day in PATIENT_DOSE_MAP[phone_number]:
             if dose_id in PATIENT_DOSE_MAP[phone_number][time_of_day]:
                 current_time_of_day = time_of_day
+    if welcome_back:
+        return f"{random.choice(WELCOME_BACK_MESSAGES)} {random.choice(INITIAL_SUFFIXES).substitute(time=time_string)}"
     random_choice = random.random()
     if random_choice < 0.8 or current_time_of_day is None:
         return random.choice(INITIAL_MSGS).substitute(time=time_string)
@@ -283,6 +313,9 @@ def get_take_message(excited):
 
 def get_absent_message():
     return random.choice(ABSENT_MSGS)
+
+def get_thanks_message():
+    return random.choice(THANKS_MESSAGES)
 
 
 def log_event(event_type, phone_number, event_time=None, description=None):
@@ -362,12 +395,68 @@ def patient_data():
     for dose in relevant_doses:
         if exists_remaining_reminder_job(dose.id, ["boundary"]):
             dose_to_take_now = True
+    paused_service = PausedService.query.get(phone_number)
     return jsonify({
         "phoneNumber": recovered_cookie,
         "eventData": event_data_by_time,
         "patientName": PATIENT_NAME_MAP[phone_number],
-        "takeNow": dose_to_take_now
+        "takeNow": dose_to_take_now,
+        "pausedService": bool(paused_service)
     })
+
+@app.route("/pauseService", methods=["POST"])
+def pause_service():
+    recovered_cookie = request.cookies.get("phoneNumber")
+    if recovered_cookie is None:
+        return jsonify(), 401  # empty response if no cookie
+    formatted_phone_number = f"+11{recovered_cookie}"
+    relevant_doses = Dose.query.filter(Dose.phone_number == formatted_phone_number, Dose.active.is_(True)).all()
+    relevant_doses = sorted(relevant_doses, key=lambda dose: dose.next_start_date)
+    paused_service = PausedService.query.get(formatted_phone_number)
+    if paused_service is None:
+        paused_service = PausedService(phone_number=formatted_phone_number)
+        db.session.add(paused_service)
+        for dose in relevant_doses:
+            remove_jobs_helper(dose.id, ["initial", "absent", "boundary", "followup"])
+        # send pause message
+        client.messages.create(
+            body=PAUSE_MESSAGE,
+            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+            to=formatted_phone_number
+        )
+        log_event("paused", formatted_phone_number)
+    else:
+        db.session.delete(paused_service)
+        for idx, dose in enumerate(relevant_doses):
+            if idx == 0:
+                resume_dose(dose, next_dose=True)
+            else:
+                resume_dose(dose)
+        log_event("resumed", formatted_phone_number)
+    db.session.commit()
+    return jsonify()
+
+
+def resume_dose(dose_obj, next_dose=False):
+    if dose_obj.within_dosing_period() and not dose_obj.already_recorded():
+        # send initial reminder text immediately
+        send_intro_text(dose_obj.id, welcome_back=True)
+    elif next_dose:
+        # send welcome message immediately, but no reminder
+        client.messages.create(
+            body=f"{random.choice(WELCOME_BACK_MESSAGES)} {random.choice(INITIAL_SUFFIXES).substitute(time=dose_obj.next_start_date.astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M %p'))}",
+            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+            to=dose_obj.phone_number
+        )
+    # set up recurring job
+    scheduler.add_job(f"{dose_obj.id}-initial", send_intro_text,
+        trigger="interval",
+        start_date=dose_obj.next_start_date,
+        days=1,
+        args=[dose_obj.id],
+        misfire_grace_time=5*60
+    )
+
 
 @app.route("/login", methods=["POST"])
 def save_phone_number():
@@ -437,13 +526,16 @@ def add_dose():
     )
     db.session.add(new_dose_record)
     db.session.commit()
-    scheduler.add_job(f"{new_dose_record.id}-initial", send_intro_text,
-        trigger="interval",
-        start_date=new_dose_record.next_start_date,
-        days=1,
-        args=[new_dose_record.id],
-        misfire_grace_time=5*60
-    )
+    pause_record = PausedService.query.get(phone_number)
+    # only add job if service is not paused
+    if pause_record is None:
+        scheduler.add_job(f"{new_dose_record.id}-initial", send_intro_text,
+            trigger="interval",
+            start_date=new_dose_record.next_start_date,
+            days=1,
+            args=[new_dose_record.id],
+            misfire_grace_time=5*60
+        )
     return jsonify()
 
 @app.route("/dose/editName", methods=["POST"])
@@ -496,6 +588,7 @@ def delete_reminder():
     db.session.commit()
     return jsonify()
 
+# TODO: take phone number as arg, and only grab data for that number
 @app.route("/everything", methods=["GET"])
 @auth_required_get
 def get_everything():
@@ -644,7 +737,7 @@ def canned_responses(message_str):
     # if message_str in hardcoded_responses:
     #     return hardcoded_responses[message_str]
     responses = {
-        "thanks": "No problem, glad to help.",
+        "thanks": get_thanks_message(),
         "help": UNKNOWN_MSG,
         "confused": UNKNOWN_MSG,
         "ok": "👍",
@@ -747,7 +840,9 @@ def bot():
                 .order_by(Reminder.send_time.desc()) \
                 .first()
             latest_dose_id = None if latest_reminder_record is None else latest_reminder_record.dose_id
-            if exists_remaining_reminder_job(latest_dose_id, ["boundary"]):
+            matching_dose_list = list(filter(lambda dose: dose.id == latest_dose_id, doses))
+            latest_dose = matching_dose_list[0] if len(matching_dose_list) > 0 else None
+            if latest_dose is not None and latest_dose.within_dosing_period():
                 if incoming_msg in ["1", "2", "3"] \
                     or parse_status != 0 \
                     or activity_detection_time is not None \
@@ -1005,10 +1100,10 @@ def send_boundary_text(dose_id):
     remove_jobs_helper(dose_id, ["absent", "followup"])
     log_event("boundary", dose_obj.phone_number, description=dose_id)
 
-def send_intro_text(dose_id, manual=False):
+def send_intro_text(dose_id, manual=False, welcome_back=False):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
-        body=f"{get_initial_message(dose_id, get_time_now().astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M'))}{ACTION_MENU}",
+        body=f"{get_initial_message(dose_id, get_time_now().astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M'), welcome_back)}{ACTION_MENU}",
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=dose_obj.phone_number
     )
