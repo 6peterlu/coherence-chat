@@ -69,6 +69,7 @@ from constants import (
     BOUNDARY_MSG,
     CLINICAL_BOUNDARY_MSG,
     CONFIRMATION_MSG,
+    FUTURE_MESSAGE_SUFFIXES,
     INITIAL_MSGS,
     ERROR_MSG,
     FOLLOWUP_MSGS,
@@ -103,7 +104,7 @@ TWILIO_PHONE_NUMBERS = {
 CLINICAL_BOUNDARY_PHONE_NUMBERS = ["8587761377"]
 
 
-PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113, 115, 116, 117], "afternoon": [114]}} if os.environ["FLASK_ENV"] == "local" else {
+PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113, 115, 116, 117], "afternoon": [114, 152]}} if os.environ["FLASK_ENV"] == "local" else {
     "+113604508655": {"morning": [85]},
     "+113609042210": {"afternoon": [25], "evening": [15]},
     "+113609049085": {"evening": [16]},
@@ -393,8 +394,9 @@ def patient_data():
                 break
     dose_to_take_now = False
     for dose in relevant_doses:
-        if exists_remaining_reminder_job(dose.id, ["boundary"]):
+        if dose.within_dosing_period() and not dose.already_recorded():
             dose_to_take_now = True
+            break
     paused_service = PausedService.query.get(phone_number)
     return jsonify({
         "phoneNumber": recovered_cookie,
@@ -444,7 +446,7 @@ def resume_dose(dose_obj, next_dose=False):
     elif next_dose:
         # send welcome message immediately, but no reminder
         client.messages.create(
-            body=f"{random.choice(WELCOME_BACK_MESSAGES)} {random.choice(INITIAL_SUFFIXES).substitute(time=dose_obj.next_start_date.astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M %p'))}",
+            body=f"{random.choice(WELCOME_BACK_MESSAGES)} {random.choice(FUTURE_MESSAGE_SUFFIXES).substitute(time=dose_obj.next_start_date.astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M %p'))}",
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
             to=dose_obj.phone_number
         )
