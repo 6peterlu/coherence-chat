@@ -62,9 +62,15 @@
                 </div>
             </div>
         </div>
+        <div id="servicePausedSection" style="display:flex; align-items: center; width: 100%; flex-direction: column; background-color: #002864; box-sizing: border-box; padding: 20px;">
+            <h3 style="color:#FFF">Current status: <span id="statusIndicator">active</span></h2>
+            <p id="statusExplainer" style="color:#FFF; text-align: center; margin-top: 0px;">I'm currently texting you to help you stay on track with your medication!</p>
+            <button id="pauseButton" onclick="pauseService()" style="background-color: #f54242; color: #FBECB7; border: none; padding-top: 15px; padding-bottom: 15px; margin: 15px; border-radius: 30px; font-family: 'Lora', serif; text-align: center; font-size: 20px;">Pause</button>
+            <p id="buttonActionExplainer" style="color:#FFF; font-size:12px; text-align: center;">Pausing will still allow you to tell us when you've taken or skipped a medication, but we will no longer remind you to take it.</p>
+        </div>
     </div>
     <script defer>
-        var runningLocally = false;
+        var runningLocally = true;
         var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
         const tracking = document.getElementById("trackingDisplay");
         const loginScreen = document.getElementById("loginScreen");
@@ -80,6 +86,10 @@
         const modalCloseButton = document.getElementById("closeButton");
         const modal = document.getElementById("detailView");
         const takeNow = document.getElementById("takeNow");
+        const statusIndicator = document.getElementById("statusIndicator");
+        const pauseStatusExplainer = document.getElementById("statusExplainer");
+        const pauseButton = document.getElementById("pauseButton");
+        const buttonActionExplainer = document.getElementById("buttonActionExplainer");
         const allTakenCopy = [
             "Nothing to take at the moment, you're all clear. 👍",
             "No dose to take right now. ⭐",
@@ -98,6 +108,7 @@
             }
         }
         var adherenceHistory = {};
+        var servicePaused = false;
         const getInitDetails = {
             method: 'get',
             headers: {
@@ -138,7 +149,9 @@
                         takeNow.style.color = "#FFF";
                     }
                     adherenceHistory = processEventData(result.eventData);
+                    servicePaused = result.pausedService;
                     generateCalendar();
+                    renderServicePaused();
                 } else {
                     loginScreen.style.display = "flex";
                     tracking.style.display = "none";
@@ -292,6 +305,13 @@
             `;
             calendar.innerHTML = htmlBlob;
         }
+        function renderServicePaused() {
+            statusIndicator.innerHTML = servicePaused ? "paused 🚫" : "active ✅";
+            pauseButton.innerHTML = servicePaused ? "Resume" : "Pause";
+            pauseButton.style.backgroundColor = servicePaused ? "#09ad56" : "#f54242";
+            pauseStatusExplainer.innerHTML = servicePaused ? "I'm currently paused and am not texting you about your medication. You can still tell me when you've taken or skipped a dose." : "I'm currently texting you to help you stay on track with your medication.";
+            buttonActionExplainer.innerHTML = servicePaused ? "Resuming allows me to text you and help you stay on track with your medication." : "Pausing will still allow you to tell us when you've taken or skipped a medication, but we will no longer remind you to take it.";
+        }
         function enterPhoneNumber() {
             const initDetails = {...postInitDetails, body: JSON.stringify({phoneNumber: phoneNumberEntry.value})}
             fetch(`${apiURL}/login/requestCode`, initDetails).then((response) => {
@@ -301,7 +321,7 @@
                     phoneEntryBox.style.display = "none";
                     codeEntryBox.style.display = "flex";
                 } else {
-                    phoneNumberEntryInstructions.innerHTML = "We couldn't find your phone number in our records. Please make sure you've entered it correctly.";
+                    phoneNumberEntryInstructions.innerHTML = "We couldn't find your phone number in our records. Please make sure you've entered it correctly and try again.";
                 }
             });
         }
@@ -321,6 +341,12 @@
             fetch(`${apiURL}/logout`, getInitDetails).then(() => {
                 requestData();
             })
+        }
+        function pauseService() {
+            const initDetails = {...postInitDetails}
+            fetch(`${apiURL}/pauseService`, postInitDetails).then(() => {
+                requestData();
+            });
         }
         requestData();
     </script>

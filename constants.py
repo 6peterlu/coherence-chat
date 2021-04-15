@@ -24,6 +24,19 @@ TIME_OF_DAY_PREFIX_MAP = {
     "evening": EVENING_PREFIXES
 }
 
+WELCOME_BACK_MESSAGES = [
+    "It's great to see you again!",
+    "Welcome back!",
+    "Looking forward to helping you out with your medication.",
+    "Glad to see you again."
+]
+
+WELCOME_BACK_SUFFIXES = [
+    "We'll remind you next at $time.",
+    "We'll check back in at $time for your next dose.",
+    "See you at $time for your next dose!",
+]
+
 INITIAL_SUFFIXES = [
     Template("""Here’s your $time reminder.\n"""),
     Template("""It's $time, which means it's time for your dose!\n"""),
