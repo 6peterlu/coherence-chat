@@ -308,6 +308,7 @@
         function renderServicePaused() {
             statusIndicator.innerHTML = servicePaused ? "paused 🚫" : "active ✅";
             pauseButton.innerHTML = servicePaused ? "Resume" : "Pause";
+            pauseButton.setAttribute("onclick", "pauseService()");
             pauseButton.style.backgroundColor = servicePaused ? "#09ad56" : "#f54242";
             pauseStatusExplainer.innerHTML = servicePaused ? "I'm currently paused and am not texting you about your medication. You can still tell me when you've taken or skipped a dose." : "I'm currently texting you to help you stay on track with your medication.";
             buttonActionExplainer.innerHTML = servicePaused ? "Resuming allows me to text you and help you stay on track with your medication." : "Pausing will still allow you to tell us when you've taken or skipped a medication, but we will no longer remind you to take it.";
@@ -343,6 +344,8 @@
             })
         }
         function pauseService() {
+            pauseButton.innerHTML = "Loading...";
+            pauseButton.onclick = "";
             const initDetails = {...postInitDetails}
             fetch(`${apiURL}/pauseService`, postInitDetails).then(() => {
                 requestData();
