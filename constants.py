@@ -31,10 +31,12 @@ WELCOME_BACK_MESSAGES = [
     "Glad to see you again."
 ]
 
+PAUSE_MESSAGE = "You've paused me, so I won't text you about your medications until I am resumed. You can resume me at https://coherence-chat.herokuapp.com/ at any time. You can still let me know when you've taken or skipped a dose, and I will still record it for you."
+
 WELCOME_BACK_SUFFIXES = [
-    "We'll remind you next at $time.",
-    "We'll check back in at $time for your next dose.",
-    "See you at $time for your next dose!",
+    Template("We'll remind you next at $time."),
+    Template("We'll check back in at $time for your next dose."),
+    Template("See you at $time for your next dose!"),
 ]
 
 INITIAL_SUFFIXES = [
@@ -85,7 +87,7 @@ TAKE_MSG = Template("""🕒 $time\nDose recorded.\n💊💊💊💊""")
 
 TAKE_MSG_EXCITED = Template("""🕒 $time\nDose recorded! 🎉\n💊💊💊💊""")
 
-SKIP_MSG = """Dose skipped. I won't send you any more reminders for this dose today."""
+SKIP_MSG = """Dose skipped."""
 
 UNKNOWN_MSG = """I can understand the following commands:
 [T] mark medication as taken
@@ -125,3 +127,10 @@ USER_ERROR_REPORT = Template("""$phone_number has reported an error.""")
 USER_ERROR_RESPONSE = """Thanks for reporting. I've noted the error and am working on it."""
 
 SECRET_CODE_MESSAGE = Template("""Your secret code for Coherence is $code. Don't share it with anyone!""")
+
+THANKS_MESSAGES = [
+    "No problem, glad to help.",
+    "Happy to help! You're doing great.",
+    "Glad to be helpful!",
+    "Glad I could help out!"
+]
