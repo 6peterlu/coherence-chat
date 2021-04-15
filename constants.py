@@ -110,3 +110,5 @@ activities such as "eating dinner", "on a walk", etc."""
 USER_ERROR_REPORT = Template("""$phone_number has reported an error.""")
 
 USER_ERROR_RESPONSE = """Thanks for reporting. I've noted the error and am working on it."""
+
+SECRET_CODE_MESSAGE = Template("""Your secret code for Coherence is $code. Don't share it with anyone!""")
