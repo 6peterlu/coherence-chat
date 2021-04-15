@@ -77,6 +77,7 @@ from constants import (
     REMINDER_OUT_OF_RANGE_MSG,
     REMINDER_TOO_CLOSE_MSG,
     REMINDER_TOO_LATE_MSG,
+    SECRET_CODE_MESSAGE,
     SKIP_MSG,
     TAKE_MSG,
     TAKE_MSG_EXCITED,
@@ -125,6 +126,20 @@ PATIENT_NAME_MAP = { "+113604508655": "Peter" } if os.environ["FLASK_ENV"] == "l
     "+113605214193": "Leann",
     "+113605131225": "Jeanette",
     "+113609010956": "Andie"
+}
+
+SECRET_CODES = { "+113604508655": 123456 } if os.environ["FLASK_ENV"] == "local" else {
+    "+113606064445": 110971,
+    "+113609042210": 902157,
+    "+113609049085": 311373,
+    "+114152142478": 332274,
+    "+116502690598": 320533,
+    "+118587761377": 548544,
+    "+113607738908": 577505,
+    "+115038871884": 474580,
+    "+113605214193": 402913,
+    "+113605131225": 846939,
+    "+113609010956": 299543
 }
 
 logging.basicConfig()
@@ -324,7 +339,7 @@ def patient_data():
         return jsonify()  # empty response if no cookie
     phone_number = f"+11{recovered_cookie}"
     if phone_number not in PATIENT_DOSE_MAP:
-        response = jsonify({"error": "We couldn't find your phone number in our records. Please double-check that you've entered it correctly."})
+        response = jsonify({"error": "The secret code was incorrect. Please double-check that you've entered it correctly."})
         response.set_cookie("phoneNumber", "", expires=0)
         return response
     patient_dose_times = PATIENT_DOSE_MAP[phone_number]
@@ -356,14 +371,42 @@ def patient_data():
 
 @app.route("/login", methods=["POST"])
 def save_phone_number():
+    secret_code = request.json["code"]
     phone_number = request.json["phoneNumber"]
     numeric_filter = filter(str.isdigit, phone_number)
     phone_number = "".join(numeric_filter)
     if len(phone_number) == 11 and phone_number[0] == "1":
         phone_number = phone_number[1:]
+    phone_number_formatted = f"+11{phone_number}"
+    if secret_code == str(SECRET_CODES[phone_number_formatted]):
+        out = jsonify()
+        out.set_cookie("phoneNumber", phone_number)
+        return out
+    return jsonify(), 401
+
+@app.route("/login/requestCode", methods=["POST"])
+def request_secret_code():
+    phone_number = request.json["phoneNumber"]
+    numeric_filter = filter(str.isdigit, phone_number)
+    phone_number = "".join(numeric_filter)
+    if len(phone_number) == 11 and phone_number[0] == "1":
+        phone_number = phone_number[1:]
+    phone_number_formatted = f"+11{phone_number}"
+    if phone_number_formatted in SECRET_CODES:
+        client.messages.create(
+            body=SECRET_CODE_MESSAGE.substitute(code=SECRET_CODES[phone_number_formatted]),
+            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+            to=phone_number_formatted
+        )
+        return jsonify()
+    return jsonify(), 401
+
+@app.route("/logout", methods=["GET"])
+def logout():
     out = jsonify()
-    out.set_cookie("phoneNumber", phone_number)
+    out.set_cookie("phoneNumber", "", expires=0)
     return out
+
 
 @app.route("/admin", methods=["GET"])
 def admin_page():
