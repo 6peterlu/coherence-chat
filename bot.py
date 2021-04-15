@@ -394,8 +394,9 @@ def patient_data():
                 break
     dose_to_take_now = False
     for dose in relevant_doses:
-        if dose.within_dosing_period():
+        if dose.within_dosing_period() and not dose.already_recorded():
             dose_to_take_now = True
+            break
     paused_service = PausedService.query.get(phone_number)
     return jsonify({
         "phoneNumber": recovered_cookie,
