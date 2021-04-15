@@ -88,8 +88,7 @@ from constants import (
     ACTION_MENU,
     USER_ERROR_REPORT,
     USER_ERROR_RESPONSE,
-    WELCOME_BACK_MESSAGES,
-    WELCOME_BACK_SUFFIXES
+    WELCOME_BACK_MESSAGES
 )
 
 # allow no reminders to be set within 10 mins of boundary
@@ -445,7 +444,7 @@ def resume_dose(dose_obj, next_dose=False):
     elif next_dose:
         # send welcome message immediately, but no reminder
         client.messages.create(
-            body=f"{random.choice(WELCOME_BACK_MESSAGES)} {random.choice(WELCOME_BACK_SUFFIXES).substitute(time=dose_obj.next_start_date.astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M %p'))}",
+            body=f"{random.choice(WELCOME_BACK_MESSAGES)} {random.choice(INITIAL_SUFFIXES).substitute(time=dose_obj.next_start_date.astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M %p'))}",
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
             to=dose_obj.phone_number
         )

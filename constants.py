@@ -33,12 +33,6 @@ WELCOME_BACK_MESSAGES = [
 
 PAUSE_MESSAGE = "You've paused me, so I won't text you about your medications until I am resumed. You can resume me at https://coherence-chat.herokuapp.com/ at any time. You can still let me know when you've taken or skipped a dose, and I will still record it for you."
 
-WELCOME_BACK_SUFFIXES = [
-    Template("We'll remind you next at $time."),
-    Template("We'll check back in at $time for your next dose."),
-    Template("See you at $time for your next dose!"),
-]
-
 INITIAL_SUFFIXES = [
     Template("""Here’s your $time reminder.\n"""),
     Template("""It's $time, which means it's time for your dose!\n"""),
