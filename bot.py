@@ -409,6 +409,8 @@ def generate_activity_analytics(user_events):
             activity_data[bucket_id.isoformat()] = len(collected_data[bucket_id])
         else:
             activity_data[bucket_id.isoformat()] = 0
+    if not activity_data:
+        return {}
     largest_count = max(activity_data.values())
     for bucket in activity_data:
         activity_data[bucket] /= largest_count
