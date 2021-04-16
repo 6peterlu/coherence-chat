@@ -63,8 +63,8 @@
             </div>
         </div>
         <div id="behaviorAnalysisSection" style="background-color: #002864; padding: 10px;">
-            <h3 style="color: #FFF">Behavior analysis</h3>
-            <p style="color: #FFF">Coming soon! 📈</p>
+            <h3 style="color: #FFF">Insights for you</h3>
+            <div id="averageDoseTaken"></div>
         </div>
         <div id="servicePausedSection" style="display:flex; width: 100%; flex-direction: column; align-items: center; background-color: rgb(233, 231, 220); box-sizing: border-box; padding: 20px;">
             <h3 style="color:#000; align-self:center;">Current status: <span id="statusIndicator">active</span></h2>
@@ -112,6 +112,7 @@
             }
         }
         var adherenceHistory = {};
+        var activityAnalytics = {};
         var servicePaused = false;
         const getInitDetails = {
             method: 'get',
@@ -153,14 +154,55 @@
                         takeNow.style.color = "#FFF";
                     }
                     adherenceHistory = processEventData(result.eventData);
+                    analyticsData = result.activityAnalytics;
                     servicePaused = result.pausedService;
+                    console.log(result.activityAnalytics);
                     generateCalendar();
                     renderServicePaused();
+                    renderAnalytics();
                 } else {
                     loginScreen.style.display = "flex";
                     tracking.style.display = "none";
                 }
             });
+        }
+        function renderAnalytics() {
+            const timeOfDayOrder = ["morning", "afternoon", "evening"];
+            let innerHTML = "<p style='color: #FFF'>Average dose time 🕒</p>";
+            for (const field of timeOfDayOrder) {
+                if (field in adherenceHistory.averageDosingTime) {
+                    const { hours, minutes, pm } = adherenceHistory.averageDosingTime[field];
+                    let formattedMinutes = `${minutes}`;
+                    if (formattedMinutes.length === 1) {
+                        formattedMinutes = `0${formattedMinutes}`;
+                    }
+                    innerHTML += `<p style="color: #FFF; font-size: 15px;">${field} - ${hours}:${formattedMinutes} ${pm ? 'pm' : 'am'}</p>`;
+                }
+            }
+            const analyticsDiv = document.getElementById("averageDoseTaken");
+            analyticsDiv.innerHTML = innerHTML;
+        }
+        function getAverageDate(eventList) {
+            let totalMinutes = 0;
+            for (const event of eventList) {
+                console.log(typeof event.event_time)
+                const dateObj = new Date(event.event_time)
+                totalMinutes += dateObj.getHours() * 60 + dateObj.getMinutes()
+            }
+            totalMinutes /= eventList.length;
+            let hours = Math.floor(totalMinutes / 60);
+            const minutes = Math.round(totalMinutes % 60);
+            let pm = false;
+            if (hours > 12) {
+                pm = true;
+                hours -= 12;
+            }
+            console.log(hours);
+            console.log(minutes);
+            // milliseconds /= eventList.length;
+            // const averageDate = new Date(milliseconds);
+            // console.log(averageDate);
+            return { hours, minutes, pm }
         }
         // TODO: move this processing to the backend
         function processEventData(eventData) {
@@ -181,6 +223,7 @@
                 takeHistoryByDay[dayOfMonth] = {}
                 for (const field of fieldsToSatisfy) {
                     const eventDataForField = eventData[field];
+                    getAverageDate(eventDataForField.events);
                     for (const event of eventDataForField.events) {
                         const eventTimeObj = new Date(event.event_time);
                         if (eventTimeObj > startDate && eventTimeObj < endDate) {
@@ -208,7 +251,11 @@
                     insufficientDataDays.push(dayOfMonth);
                 }
             }
-            return { adherentDays, adherentWithSkipDays, missedDays, insufficientDataDays, takeHistoryByDay, doseDataByTime};
+            const averageDosingTime = {};
+            for (const field in eventData) {
+                averageDosingTime[field] = getAverageDate(eventData[field].events);
+            }
+            return { adherentDays, adherentWithSkipDays, missedDays, insufficientDataDays, takeHistoryByDay, doseDataByTime, averageDosingTime };
         }
         function convertTZ(date, tzString) {
             return (typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: tzString, hour: 'numeric', minute: 'numeric', hour12: true});
