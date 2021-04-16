@@ -184,10 +184,9 @@
         }
         function getAverageDate(eventList) {
             let totalMinutes = 0;
-            const filteredEventList = eventList.filter((event) => {event.event_type === "take"});
+            const filteredEventList = eventList.filter((event) => {return event.event_type === "take"});
             // no take events found, return null
             if (filteredEventList.length === 0) {
-                console.log("null");
                 return null;
             }
             for (const event of eventList) {
@@ -228,7 +227,6 @@
                 takeHistoryByDay[dayOfMonth] = {}
                 for (const field of fieldsToSatisfy) {
                     const eventDataForField = eventData[field];
-                    getAverageDate(eventDataForField.events);
                     for (const event of eventDataForField.events) {
                         const eventTimeObj = new Date(event.event_time);
                         if (eventTimeObj > startDate && eventTimeObj < endDate) {
