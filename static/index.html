@@ -187,6 +187,7 @@
             const filteredEventList = eventList.filter((event) => {event.event_type === "take"});
             // no take events found, return null
             if (filteredEventList.length === 0) {
+                console.log("null");
                 return null;
             }
             for (const event of eventList) {
