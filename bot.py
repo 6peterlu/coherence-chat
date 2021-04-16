@@ -555,7 +555,9 @@ def save_phone_number():
     if secret_code == str(SECRET_CODES[phone_number_formatted]):
         out = jsonify()
         out.set_cookie("phoneNumber", phone_number)
+        log_event("successful_login", phone_number_formatted)
         return out
+    log_event("failed_login", phone_number_formatted)
     return jsonify(), 401
 
 @app.route("/login/requestCode", methods=["POST"])
