@@ -195,7 +195,7 @@
                     totalMinutes += dateObj.getHours() * 60 + dateObj.getMinutes()
                 }
             }
-            totalMinutes /= eventList.length;
+            totalMinutes /= filteredEventList.length;
             let hours = Math.floor(totalMinutes / 60);
             const minutes = Math.floor(totalMinutes % 60);
             let pm = false;
