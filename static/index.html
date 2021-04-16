@@ -140,6 +140,7 @@
         }
         function requestData() {
             fetch(`${apiURL}/patientData`, getInitDetails).then(response => response.json()).then(result => {
+                console.log(result);
                 if (result.phoneNumber) {
                     loginScreen.style.display = "none";
                     welcomeHeader.innerHTML = `Welcome, ${result.patientName}.`;
