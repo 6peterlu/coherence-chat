@@ -184,10 +184,16 @@
         }
         function getAverageDate(eventList) {
             let totalMinutes = 0;
+            const filteredEventList = eventList.filter((event) => {event.event_type === "take"});
+            // no take events found, return null
+            if (filteredEventList.length === 0) {
+                return null;
+            }
             for (const event of eventList) {
-                console.log(typeof event.event_time)
-                const dateObj = new Date(event.event_time)
-                totalMinutes += dateObj.getHours() * 60 + dateObj.getMinutes()
+                if (event.event_type === "take") {
+                    const dateObj = new Date(event.event_time)
+                    totalMinutes += dateObj.getHours() * 60 + dateObj.getMinutes()
+                }
             }
             totalMinutes /= eventList.length;
             let hours = Math.floor(totalMinutes / 60);
@@ -197,8 +203,6 @@
                 pm = true;
                 hours -= 12;
             }
-            console.log(hours);
-            console.log(minutes);
             // milliseconds /= eventList.length;
             // const averageDate = new Date(milliseconds);
             // console.log(averageDate);
@@ -253,7 +257,10 @@
             }
             const averageDosingTime = {};
             for (const field in eventData) {
-                averageDosingTime[field] = getAverageDate(eventData[field].events);
+                const averageDate = getAverageDate(eventData[field].events);
+                if (averageDate) {
+                    averageDosingTime[field] = averageDate;
+                }
             }
             return { adherentDays, adherentWithSkipDays, missedDays, insufficientDataDays, takeHistoryByDay, doseDataByTime, averageDosingTime };
         }
