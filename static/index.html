@@ -168,7 +168,7 @@
         }
         function renderAnalytics() {
             const timeOfDayOrder = ["morning", "afternoon", "evening"];
-            let innerHTML = "<p style='color: #FFF'>Average dose time</p>";
+            let innerHTML = "<p style='color: #FFF'>Average dose time 🕒</p>";
             for (const field of timeOfDayOrder) {
                 if (field in adherenceHistory.averageDosingTime) {
                     const { hours, minutes, pm } = adherenceHistory.averageDosingTime[field];
