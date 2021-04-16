@@ -13,7 +13,7 @@ from pytz import timezone, utc as pytzutc
 import parsedatetime
 import random
 import string
-from itertools import chain
+from itertools import chain, groupby
 
 from apscheduler.events import (
     EVENT_JOB_ERROR,
@@ -57,6 +57,25 @@ TOKENS_TO_RECOGNIZE = [
     "shower",
     "working",
     "tv",
+]
+
+ALL_EVENTS = [
+    "paused",
+    "resumed",
+    "user_reported_error",
+    "requested_time_delay",
+    "activity",
+    "reminder_delay",
+    "take",
+    "skip",
+    "out_of_range",
+    "conversational",
+    "not_interpretable",
+    "manual_text",
+    "followup",
+    "absent",
+    "boundary",
+    "initial"
 ]
 
 # load on server start
@@ -366,6 +385,36 @@ def serve_css(path):
 def serve_svg(path):
     return send_from_directory('svg', path)
 
+
+def round_date(dt, delta=15, round_up=False):
+    if round_up:
+        return dt + (datetime.min - dt) % timedelta(minutes=delta)
+    else:  # round down
+        return dt - (dt - datetime.min) % timedelta(minutes=delta)
+
+
+def generate_activity_analytics(user_events):
+    day_stripped_events = [event.event_time.replace(day=1, month=1, year=1, microsecond=0) for event in user_events]
+    groups = []
+    keys = []
+    for k, g in groupby(day_stripped_events, round_date):
+        keys.append(k)
+        groups.append(list(g))
+    collected_data = dict(zip(keys, groups))
+    num_buckets = keys[len(keys) - 1] - keys[0]
+    activity_data = {}
+    for time_increment in range(int(num_buckets.seconds / (15 * 60))):
+        bucket_id = keys[0] + timedelta(minutes = time_increment * 15)
+        if bucket_id in collected_data:
+            activity_data[bucket_id.isoformat()] = len(collected_data[bucket_id])
+        else:
+            activity_data[bucket_id.isoformat()] = 0
+    largest_count = max(activity_data.values())
+    for bucket in activity_data:
+        activity_data[bucket] /= largest_count
+    return activity_data
+
+
 @app.route("/patientData", methods=["GET"])
 def patient_data():
     recovered_cookie = request.cookies.get("phoneNumber")
@@ -380,12 +429,43 @@ def patient_data():
     relevant_dose_ids = list(chain.from_iterable(patient_dose_times.values()))
     relevant_dose_ids_as_str = [str(x) for x in relevant_dose_ids]
     relevant_doses = Dose.query.filter(Dose.id.in_(relevant_dose_ids), Dose.active.is_(True)).all()
-    relevant_events = Event.query.filter(Event.event_type.in_(["take", "skip", "boundary"]), Event.description.in_(relevant_dose_ids_as_str)).all()
+    take_record_events = [
+        "take",
+        "skip",
+        "boundary"
+    ]
+    user_driven_events = [
+        "take",
+        "skip",
+        "paused",
+        "resumed",
+        "user_reported_error",
+        "out_of_range",
+        "not_interpretable",
+        "requested_time_delay",
+        "activity"
+    ]
+    combined_list = list(set(take_record_events) | set(user_driven_events))
+    # rules
+    # ignore: reminder_delay
+    # reminders from us: followup, absent, boundary, initial, manual_text
+    # best user activity: take, skip
+    # moderate user activity: paused, resumed, user_reported_error, out_of_range, not_interpretable
+    # worst user activity: requested_time_delay, activity
+    relevant_events = Event.query.filter(Event.event_type.in_(combined_list)).all()
+    dose_history_events = list(filter(lambda event: event.event_type in take_record_events and event.description in relevant_dose_ids_as_str, relevant_events))
+    user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
+    activity_analytics = generate_activity_analytics(user_behavior_events)
+    # for event in user_behavior_events:
+
+    #     print(event.event_time)
+    #     print(event.event_type)
+    #     print(event.description)
     event_data_by_time = {}
     for time in patient_dose_times:
         event_data_by_time[time] = {"events": []}
         dose_ids = patient_dose_times[time]
-        for event in relevant_events:
+        for event in dose_history_events:
             if int(event.description) in dose_ids:
                 event_data_by_time[time]["events"].append(event.as_dict())
         for dose in relevant_doses:
@@ -403,7 +483,8 @@ def patient_data():
         "eventData": event_data_by_time,
         "patientName": PATIENT_NAME_MAP[phone_number],
         "takeNow": dose_to_take_now,
-        "pausedService": bool(paused_service)
+        "pausedService": bool(paused_service),
+        "activityAnalytics": activity_analytics
     })
 
 @app.route("/pauseService", methods=["POST"])

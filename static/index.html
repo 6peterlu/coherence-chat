@@ -63,7 +63,7 @@
             </div>
         </div>
         <div id="behaviorAnalysisSection" style="background-color: #002864; padding: 10px;">
-            <h3 style="color: #FFF">Behavior analysis</h3>
+            <h3 style="color: #FFF">Insights for you</h3>
             <p style="color: #FFF">Coming soon! 📈</p>
         </div>
         <div id="servicePausedSection" style="display:flex; width: 100%; flex-direction: column; align-items: center; background-color: rgb(233, 231, 220); box-sizing: border-box; padding: 20px;">
@@ -112,6 +112,7 @@
             }
         }
         var adherenceHistory = {};
+        var activityAnalytics = {};
         var servicePaused = false;
         const getInitDetails = {
             method: 'get',
@@ -153,7 +154,9 @@
                         takeNow.style.color = "#FFF";
                     }
                     adherenceHistory = processEventData(result.eventData);
+                    analyticsData = result.activityAnalytics;
                     servicePaused = result.pausedService;
+                    console.log(result.activityAnalytics);
                     generateCalendar();
                     renderServicePaused();
                 } else {
