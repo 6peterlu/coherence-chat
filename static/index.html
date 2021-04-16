@@ -156,7 +156,6 @@
                     adherenceHistory = processEventData(result.eventData);
                     analyticsData = result.activityAnalytics;
                     servicePaused = result.pausedService;
-                    console.log(result.activityAnalytics);
                     generateCalendar();
                     renderServicePaused();
                     renderAnalytics();
@@ -184,21 +183,25 @@
         }
         function getAverageDate(eventList) {
             let totalMinutes = 0;
-            for (const event of eventList) {
-                console.log(typeof event.event_time)
-                const dateObj = new Date(event.event_time)
-                totalMinutes += dateObj.getHours() * 60 + dateObj.getMinutes()
+            const filteredEventList = eventList.filter((event) => {return event.event_type === "take"});
+            // no take events found, return null
+            if (filteredEventList.length === 0) {
+                return null;
             }
-            totalMinutes /= eventList.length;
+            for (const event of eventList) {
+                if (event.event_type === "take") {
+                    const dateObj = new Date(event.event_time)
+                    totalMinutes += dateObj.getHours() * 60 + dateObj.getMinutes()
+                }
+            }
+            totalMinutes /= filteredEventList.length;
             let hours = Math.floor(totalMinutes / 60);
-            const minutes = Math.round(totalMinutes % 60);
+            const minutes = Math.floor(totalMinutes % 60);
             let pm = false;
             if (hours > 12) {
                 pm = true;
                 hours -= 12;
             }
-            console.log(hours);
-            console.log(minutes);
             // milliseconds /= eventList.length;
             // const averageDate = new Date(milliseconds);
             // console.log(averageDate);
@@ -223,7 +226,6 @@
                 takeHistoryByDay[dayOfMonth] = {}
                 for (const field of fieldsToSatisfy) {
                     const eventDataForField = eventData[field];
-                    getAverageDate(eventDataForField.events);
                     for (const event of eventDataForField.events) {
                         const eventTimeObj = new Date(event.event_time);
                         if (eventTimeObj > startDate && eventTimeObj < endDate) {
@@ -253,7 +255,10 @@
             }
             const averageDosingTime = {};
             for (const field in eventData) {
-                averageDosingTime[field] = getAverageDate(eventData[field].events);
+                const averageDate = getAverageDate(eventData[field].events);
+                if (averageDate) {
+                    averageDosingTime[field] = averageDate;
+                }
             }
             return { adherentDays, adherentWithSkipDays, missedDays, insufficientDataDays, takeHistoryByDay, doseDataByTime, averageDosingTime };
         }

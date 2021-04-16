@@ -458,11 +458,6 @@ def patient_data():
     dose_history_events = list(filter(lambda event: event.event_type in take_record_events and event.description in relevant_dose_ids_as_str, relevant_events))
     user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
     activity_analytics = generate_activity_analytics(user_behavior_events)
-    # for event in user_behavior_events:
-
-    #     print(event.event_time)
-    #     print(event.event_type)
-    #     print(event.description)
     event_data_by_time = {}
     for time in patient_dose_times:
         event_data_by_time[time] = {"events": []}
@@ -555,7 +550,9 @@ def save_phone_number():
     if secret_code == str(SECRET_CODES[phone_number_formatted]):
         out = jsonify()
         out.set_cookie("phoneNumber", phone_number)
+        log_event("successful_login", phone_number_formatted)
         return out
+    log_event("failed_login", phone_number_formatted)
     return jsonify(), 401
 
 @app.route("/login/requestCode", methods=["POST"])
