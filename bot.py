@@ -420,6 +420,11 @@ def round_date(dt, delta=ACTIVITY_TIME_BUCKET_SIZE_MINUTES, round_up=False):
         return dt - (dt - datetime.min) % timedelta(minutes=delta)
 
 
+# normalize all days to same day
+def strip_day(dt):
+    return dt.replace(day=1, month=1, year=1, microsecond=0)
+
+
 def generate_activity_analytics(user_events):
     terminated = True  # if True, don't do lookback.
     last_message_from_system = False
@@ -451,7 +456,19 @@ def generate_activity_analytics(user_events):
             last_message_from_system = True
         if event.event_type in TERMINATION_EVENTS:
             terminated = False
-    return raw_analytics_map
+
+    all_time_keys = list(raw_analytics_map.keys())
+    groups = []
+    keys = []
+    for k, g in groupby(all_time_keys, strip_day):
+        keys.append(k)
+        groups.append(list(g))
+    coalesced_map = {}
+    for i in range(len(keys)):
+        coalesced_map[keys[i]] = 0
+        for time in groups[i]:
+            coalesced_map[keys[i]] += raw_analytics_map[time]
+    return coalesced_map
     # print(raw_analytics_map)
 
 
