@@ -404,12 +404,13 @@ def generate_activity_analytics(user_events):
         keys.append(k)
         groups.append(list(g))
     collected_data = dict(zip(keys, groups))
+    sorted_keys = sorted(keys)
     print(collected_data)
     print(keys)
-    num_buckets = keys[len(keys) - 1] - keys[0]
+    num_buckets = sorted_keys[len(keys) - 1] - sorted_keys[0]
     activity_data = {}
     for time_increment in range(int(num_buckets.seconds / (ACTIVITY_TIME_BUCKET_SIZE_MINUTES * 60))):
-        bucket_id = keys[0] + timedelta(minutes = time_increment * ACTIVITY_TIME_BUCKET_SIZE_MINUTES)
+        bucket_id = sorted_keys[0] + timedelta(minutes = time_increment * ACTIVITY_TIME_BUCKET_SIZE_MINUTES)
         if bucket_id in collected_data:
             activity_data[bucket_id.isoformat()] = len(collected_data[bucket_id])
         else:
