@@ -119,6 +119,8 @@ TWILIO_PHONE_NUMBERS = {
     "production": "2673824152"
 }
 
+ACTIVITY_TIME_BUCKET_SIZE_MINUTES = 10
+
 # numbers for which the person should NOT take it after the dose period.
 CLINICAL_BOUNDARY_PHONE_NUMBERS = ["8587761377"]
 
@@ -386,7 +388,7 @@ def serve_svg(path):
     return send_from_directory('svg', path)
 
 
-def round_date(dt, delta=15, round_up=False):
+def round_date(dt, delta=ACTIVITY_TIME_BUCKET_SIZE_MINUTES, round_up=False):
     if round_up:
         return dt + (datetime.min - dt) % timedelta(minutes=delta)
     else:  # round down
@@ -403,17 +405,19 @@ def generate_activity_analytics(user_events):
     collected_data = dict(zip(keys, groups))
     num_buckets = keys[len(keys) - 1] - keys[0]
     activity_data = {}
-    for time_increment in range(int(num_buckets.seconds / (15 * 60))):
-        bucket_id = keys[0] + timedelta(minutes = time_increment * 15)
+    for time_increment in range(int(num_buckets.seconds / (ACTIVITY_TIME_BUCKET_SIZE_MINUTES * 60))):
+        bucket_id = keys[0] + timedelta(minutes = time_increment * ACTIVITY_TIME_BUCKET_SIZE_MINUTES)
         if bucket_id in collected_data:
             activity_data[bucket_id.isoformat()] = len(collected_data[bucket_id])
         else:
             activity_data[bucket_id.isoformat()] = 0
     if not activity_data:
         return {}
-    largest_count = max(activity_data.values())
-    for bucket in activity_data:
-        activity_data[bucket] /= largest_count
+    # largest_count = max(activity_data.values())
+    # normalizing
+    # for bucket in activity_data:
+    #     activity_data[bucket] /= largest_count
+
     return activity_data
 
 
