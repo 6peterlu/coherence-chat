@@ -467,9 +467,11 @@ def generate_activity_analytics(user_events):
         groups.append(list(g))
     coalesced_map = {}
     for i in range(len(keys)):
-        coalesced_map[keys[i].isoformat()] = 0
+        key_string = keys[i].isoformat()
+        if key_string not in coalesced_map:
+            coalesced_map[key_string] = 0
         for time in groups[i]:
-            coalesced_map[keys[i].isoformat()] += raw_analytics_map[time]
+            coalesced_map[key_string] += raw_analytics_map[time]
     return coalesced_map
     # print(raw_analytics_map)
 
