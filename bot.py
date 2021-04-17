@@ -456,6 +456,8 @@ def generate_activity_analytics(user_events):
             last_message_from_system = True
         if event.event_type in TERMINATION_EVENTS:
             terminated = False
+    if os.environ["FLASK_ENV"] != "local":
+        raw_analytics_map = {dt - timedelta(hours=7): v for dt, v in raw_analytics_map.items()}
 
     all_time_keys = list(raw_analytics_map.keys())
     groups = []
