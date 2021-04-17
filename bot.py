@@ -397,7 +397,7 @@ def round_date(dt, delta=ACTIVITY_TIME_BUCKET_SIZE_MINUTES, round_up=False):
 
 def generate_activity_analytics(user_events):
     print([event.as_dict() for event in user_events])
-    day_stripped_events = [event.event_time.replace(day=1, month=1, year=1, microsecond=0) for event in user_events]
+    day_stripped_events = [event.as_dict()["event_time"].replace(day=1, month=1, year=1, microsecond=0) for event in user_events]
     groups = []
     keys = []
     for k, g in groupby(day_stripped_events, round_date):
