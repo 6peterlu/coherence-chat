@@ -424,6 +424,7 @@ def generate_activity_analytics(user_events):
     terminated = True  # if True, don't do lookback.
     last_message_from_system = False
     raw_analytics_map = {}  # time -> score
+    analytics_metadata = {} # time -> auxiliary data, currently prevents double counting of events
     last_bucket_time = None
     for event in user_events:
         current_time_bucket = round_date(event.event_time)
@@ -437,11 +438,16 @@ def generate_activity_analytics(user_events):
         last_bucket_time = current_time_bucket
         if current_timestr not in raw_analytics_map:
             raw_analytics_map[current_timestr] = 0
+            analytics_metadata[current_timestr] = {}
         if event.event_type in USER_DRIVEN_EVENTS:
-            raw_analytics_map[current_timestr] += 1
+            if analytics_metadata[current_timestr].get("user_action_taken") is None:
+                raw_analytics_map[current_timestr] += 1
+                analytics_metadata[current_timestr]["user_action_taken"] = True
             last_message_from_system = False
         if event.event_type in SYSTEM_EVENTS:
-            raw_analytics_map[current_timestr] -= 0.25
+            if analytics_metadata[current_timestr].get("system_action_taken") is None:
+                raw_analytics_map[current_timestr] -= 0.25
+                analytics_metadata[current_timestr]["system_action_taken"] = True
             last_message_from_system = True
         if event.event_type in TERMINATION_EVENTS:
             terminated = False
