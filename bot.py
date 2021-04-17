@@ -404,6 +404,7 @@ def generate_activity_analytics(user_events):
         keys.append(k)
         groups.append(list(g))
     collected_data = dict(zip(keys, groups))
+    print(collected_data)
     num_buckets = keys[len(keys) - 1] - keys[0]
     activity_data = {}
     for time_increment in range(int(num_buckets.seconds / (ACTIVITY_TIME_BUCKET_SIZE_MINUTES * 60))):
