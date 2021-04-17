@@ -78,6 +78,31 @@ ALL_EVENTS = [
     "initial"
 ]
 
+USER_DRIVEN_EVENTS = [
+    "take",
+    "skip",
+    "paused",
+    "resumed",
+    "user_reported_error",
+    "out_of_range",
+    "not_interpretable",
+    "requested_time_delay",
+    "activity"
+]
+SYSTEM_EVENTS = [
+    "initial",
+    "followup",
+    "absent",
+    "manual_text"
+]
+
+TERMINATION_EVENTS = [
+    "take",
+    "skip",
+    "paused",
+    "boundary"
+]
+
 # load on server start
 SPACY_EMBED_MAP = {token: nlp(token) for token in TOKENS_TO_RECOGNIZE}
 
@@ -396,33 +421,67 @@ def round_date(dt, delta=ACTIVITY_TIME_BUCKET_SIZE_MINUTES, round_up=False):
 
 
 def generate_activity_analytics(user_events):
-    print([event.as_dict() for event in user_events])
-    day_stripped_events = [event.as_dict()["event_time"].replace(day=1, month=1, year=1, microsecond=0) for event in user_events]
-    groups = []
-    keys = []
-    for k, g in groupby(day_stripped_events, round_date):
-        keys.append(k)
-        groups.append(list(g))
-    collected_data = dict(zip(keys, groups))
-    sorted_keys = sorted(keys)
-    print(collected_data)
-    print(keys)
-    num_buckets = sorted_keys[len(keys) - 1] - sorted_keys[0]
-    activity_data = {}
-    for time_increment in range(int(num_buckets.seconds / (ACTIVITY_TIME_BUCKET_SIZE_MINUTES * 60))):
-        bucket_id = sorted_keys[0] + timedelta(minutes = time_increment * ACTIVITY_TIME_BUCKET_SIZE_MINUTES)
-        if bucket_id in collected_data:
-            activity_data[bucket_id.isoformat()] = len(collected_data[bucket_id])
-        else:
-            activity_data[bucket_id.isoformat()] = 0
-    if not activity_data:
-        return {}
-    # largest_count = max(activity_data.values())
-    # normalizing
-    # for bucket in activity_data:
-    #     activity_data[bucket] /= largest_count
+    terminated = True  # if True, don't do lookback.
+    last_message_from_system = False
+    raw_analytics_map = {}  # time -> score
+    last_bucket_time = None
+    for event in user_events:
+        current_time_bucket = round_date(event.event_time)
+        if not terminated and last_message_from_system and last_bucket_time + timedelta(minutes=15) < current_time_bucket:
+            generated_time_bucket = last_bucket_time + timedelta(minutes=15)
+            while generated_time_bucket < current_time_bucket:
+                raw_analytics_map[generated_time_bucket] = -0.25
+                generated_time_bucket += timedelta(minutes=15)
+        last_bucket_time = current_time_bucket
+        if current_time_bucket not in raw_analytics_map:
+            raw_analytics_map[current_time_bucket] = 0
+        if event.event_type in USER_DRIVEN_EVENTS:
+            raw_analytics_map[current_time_bucket] += 1
+            last_message_from_system = False
+        if event.event_type in SYSTEM_EVENTS:
+            raw_analytics_map[current_time_bucket] -= 0.25
+            last_message_from_system = True
+        if event.event_type in TERMINATION_EVENTS:
+            terminated = False
+    return raw_analytics_map
+    # print(raw_analytics_map)
 
-    return activity_data
+
+    # print([event.as_dict() for event in user_events])
+    # user_driven_events = list(filter(lambda event: event.type in USER_DRIVEN_EVENTS, user_events))
+    # system_events = list(filter(lambda event: event.type in SYSTEM_EVENTS, user_events))
+    # termination_events = list(filter(lambda event: event.type in TERMINATION_EVENTS, user_events))
+    # day_stripped_events = [event.as_dict()["event_time"].replace(day=1, month=1, year=1, microsecond=0) for event in user_events]
+    # # TODO: convert to PST, then remove TZ data
+    # groups = []
+    # keys = []
+    # for k, g in groupby(day_stripped_events, round_date):
+    #     keys.append(k)
+    #     groups.append(list(g))
+    # collected_data = dict(zip(keys, groups))
+    # sorted_keys = sorted(keys)
+    # print(collected_data)
+    # print(keys)
+    # num_buckets = sorted_keys[len(keys) - 1] - sorted_keys[0]
+    # activity_data = {}
+    # # if the last recorded activity was from the system
+    # last_activity_type_is_system = False
+    # for time_increment in range(int(num_buckets.seconds / (ACTIVITY_TIME_BUCKET_SIZE_MINUTES * 60))):
+    #     bucket_id = sorted_keys[0] + timedelta(minutes = time_increment * ACTIVITY_TIME_BUCKET_SIZE_MINUTES)
+    #     if bucket_id in collected_data:
+    #         events_in_bucket = collected_data[bucket_id]
+
+    #         activity_data[bucket_id.isoformat()] = len(collected_data[bucket_id])
+    #     else:
+    #         activity_data[bucket_id.isoformat()] = 0
+    # if not activity_data:
+    #     return {}
+    # # largest_count = max(activity_data.values())
+    # # normalizing
+    # # for bucket in activity_data:
+    # #     activity_data[bucket] /= largest_count
+
+    # return activity_data
 
 
 @app.route("/patientData", methods=["GET"])
@@ -444,18 +503,8 @@ def patient_data():
         "skip",
         "boundary"
     ]
-    user_driven_events = [
-        "take",
-        "skip",
-        "paused",
-        "resumed",
-        "user_reported_error",
-        "out_of_range",
-        "not_interpretable",
-        "requested_time_delay",
-        "activity"
-    ]
-    combined_list = list(set(take_record_events) | set(user_driven_events))
+    combined_list = list(set(take_record_events) | set(USER_DRIVEN_EVENTS) | set(SYSTEM_EVENTS) | set(TERMINATION_EVENTS))
+    user_behavior_combined_list = set(USER_DRIVEN_EVENTS) | set(SYSTEM_EVENTS) | set(TERMINATION_EVENTS)
     # rules
     # ignore: reminder_delay
     # reminders from us: followup, absent, boundary, initial, manual_text
@@ -464,8 +513,8 @@ def patient_data():
     # worst user activity: requested_time_delay, activity
     relevant_events = Event.query.filter(Event.event_type.in_(combined_list), Event.phone_number == phone_number).order_by(Event.event_time.asc()).all()
     dose_history_events = list(filter(lambda event: event.event_type in take_record_events and event.description in relevant_dose_ids_as_str, relevant_events))
-    user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
-    activity_analytics = generate_activity_analytics(user_behavior_events)
+    user_behavior_and_system_events = list(filter(lambda event: event.event_type in user_behavior_combined_list, relevant_events))
+    activity_analytics = generate_activity_analytics(user_behavior_and_system_events)
     event_data_by_time = {}
     for time in patient_dose_times:
         event_data_by_time[time] = {"events": []}
