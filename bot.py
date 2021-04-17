@@ -435,7 +435,7 @@ def generate_activity_analytics(user_events):
                 raw_analytics_map[generated_timestr] = -0.25
                 generated_time_bucket += timedelta(minutes=15)
         last_bucket_time = current_time_bucket
-        if current_time_bucket not in raw_analytics_map:
+        if current_timestr not in raw_analytics_map:
             raw_analytics_map[current_timestr] = 0
         if event.event_type in USER_DRIVEN_EVENTS:
             raw_analytics_map[current_timestr] += 1
