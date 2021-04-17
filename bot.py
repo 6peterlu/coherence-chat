@@ -422,6 +422,8 @@ def round_date(dt, delta=ACTIVITY_TIME_BUCKET_SIZE_MINUTES, round_up=False):
 
 # normalize all days to same day
 def strip_day(dt):
+    print(dt)
+    print(type(dt))
     return dt.replace(day=1, month=1, year=1, microsecond=0)
 
 
@@ -433,26 +435,24 @@ def generate_activity_analytics(user_events):
     last_bucket_time = None
     for event in user_events:
         current_time_bucket = round_date(event.event_time)
-        current_timestr = current_time_bucket.isoformat()
-        if not terminated and last_message_from_system and last_bucket_time + timedelta(minutes=15) < current_time_bucket:
-            generated_time_bucket = last_bucket_time + timedelta(minutes=15)
-            generated_timestr = generated_time_bucket.isoformat()
+        if not terminated and last_message_from_system and last_bucket_time + timedelta(minutes=ACTIVITY_TIME_BUCKET_SIZE_MINUTES) < current_time_bucket:
+            generated_time_bucket = last_bucket_time + timedelta(minutes=ACTIVITY_TIME_BUCKET_SIZE_MINUTES)
             while generated_time_bucket < current_time_bucket:
-                raw_analytics_map[generated_timestr] = -0.25
-                generated_time_bucket += timedelta(minutes=15)
+                raw_analytics_map[generated_time_bucket] = -0.25
+                generated_time_bucket += timedelta(minutes=ACTIVITY_TIME_BUCKET_SIZE_MINUTES)
         last_bucket_time = current_time_bucket
-        if current_timestr not in raw_analytics_map:
-            raw_analytics_map[current_timestr] = 0
-            analytics_metadata[current_timestr] = {}
+        if current_time_bucket not in raw_analytics_map:
+            raw_analytics_map[current_time_bucket] = 0
+            analytics_metadata[current_time_bucket] = {}
         if event.event_type in USER_DRIVEN_EVENTS:
-            if analytics_metadata[current_timestr].get("user_action_taken") is None:
-                raw_analytics_map[current_timestr] += 1
-                analytics_metadata[current_timestr]["user_action_taken"] = True
+            if analytics_metadata[current_time_bucket].get("user_action_taken") is None:
+                raw_analytics_map[current_time_bucket] += 1
+                analytics_metadata[current_time_bucket]["user_action_taken"] = True
             last_message_from_system = False
         if event.event_type in SYSTEM_EVENTS:
-            if analytics_metadata[current_timestr].get("system_action_taken") is None:
-                raw_analytics_map[current_timestr] -= 0.25
-                analytics_metadata[current_timestr]["system_action_taken"] = True
+            if analytics_metadata[current_time_bucket].get("system_action_taken") is None:
+                raw_analytics_map[current_time_bucket] -= 0.25
+                analytics_metadata[current_time_bucket]["system_action_taken"] = True
             last_message_from_system = True
         if event.event_type in TERMINATION_EVENTS:
             terminated = False
@@ -465,9 +465,9 @@ def generate_activity_analytics(user_events):
         groups.append(list(g))
     coalesced_map = {}
     for i in range(len(keys)):
-        coalesced_map[keys[i]] = 0
+        coalesced_map[keys[i].isoformat()] = 0
         for time in groups[i]:
-            coalesced_map[keys[i]] += raw_analytics_map[time]
+            coalesced_map[keys[i].isoformat()] += raw_analytics_map[time]
     return coalesced_map
     # print(raw_analytics_map)
 
