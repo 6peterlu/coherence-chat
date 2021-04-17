@@ -427,19 +427,21 @@ def generate_activity_analytics(user_events):
     last_bucket_time = None
     for event in user_events:
         current_time_bucket = round_date(event.event_time)
+        current_timestr = current_time_bucket.isoformat()
         if not terminated and last_message_from_system and last_bucket_time + timedelta(minutes=15) < current_time_bucket:
             generated_time_bucket = last_bucket_time + timedelta(minutes=15)
+            generated_timestr = generated_time_bucket.isoformat()
             while generated_time_bucket < current_time_bucket:
-                raw_analytics_map[generated_time_bucket] = -0.25
+                raw_analytics_map[generated_timestr] = -0.25
                 generated_time_bucket += timedelta(minutes=15)
         last_bucket_time = current_time_bucket
         if current_time_bucket not in raw_analytics_map:
-            raw_analytics_map[current_time_bucket] = 0
+            raw_analytics_map[current_timestr] = 0
         if event.event_type in USER_DRIVEN_EVENTS:
-            raw_analytics_map[current_time_bucket] += 1
+            raw_analytics_map[current_timestr] += 1
             last_message_from_system = False
         if event.event_type in SYSTEM_EVENTS:
-            raw_analytics_map[current_time_bucket] -= 0.25
+            raw_analytics_map[current_timestr] -= 0.25
             last_message_from_system = True
         if event.event_type in TERMINATION_EVENTS:
             terminated = False
