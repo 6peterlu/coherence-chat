@@ -65,7 +65,7 @@
         <div id="behaviorAnalysisSection" style="background-color: #002864; padding: 10px;">
             <h3 style="color: #FFF">Insights for you</h3>
             <div id="averageDoseTaken"></div>
-            <div id="activityMap" style="display: flex; flex-direction: row; align-items: flex-end; overflow-x: auto; white-space: nowrap; height: 100px;"></div>
+            <div id="activityMap" style="display: flex; flex-direction: row; align-items: flex-start; overflow-x: auto; white-space: nowrap; height: 70px;"></div>
         </div>
         <div id="servicePausedSection" style="display:flex; width: 100%; flex-direction: column; align-items: center; background-color: rgb(233, 231, 220); box-sizing: border-box; padding: 20px;">
             <h3 style="color:#000; align-self:center;">Current status: <span id="statusIndicator">active</span></h2>
@@ -75,7 +75,7 @@
         </div>
     </div>
     <script defer>
-        var runningLocally = false;
+        var runningLocally = true;
         var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
         const tracking = document.getElementById("trackingDisplay");
         const loginScreen = document.getElementById("loginScreen");
@@ -186,9 +186,21 @@
         }
         function renderActivityData() {
             let innerHTML = "";
-            for (const time in analyticsData) {
-                const height = analyticsData[time] * 10;
-                innerHTML += `<div style="transform:translateY(${height}px); height: 30px; width: 5px; background-color: #f54242; flex-shrink: 0;"></div>`
+            console.log(analyticsData);
+            const allValues = Object.keys(analyticsData).map(function(key) {
+                return analyticsData[key];
+            });
+            const minScore = Math.min(...allValues);
+            const maxScore = Math.max(...allValues);
+            let normalizedAnalyticsData = {...analyticsData}
+            console.log(normalizedAnalyticsData);
+            console.log(minScore);
+            for (const time in normalizedAnalyticsData) {
+                normalizedAnalyticsData[time] = (normalizedAnalyticsData[time] - minScore) / (maxScore - minScore)
+            }
+            for (const time in normalizedAnalyticsData) {
+                const height = normalizedAnalyticsData[time] * 50;
+                innerHTML += `<div style="transform:translateY(${height}px); height: 5px; width: 5px; border-radius: 50%; background-color: #f54242; flex-shrink: 0;"></div>`
             }
             const analyticsDiv = document.getElementById("activityMap");
             analyticsDiv.innerHTML = innerHTML;
