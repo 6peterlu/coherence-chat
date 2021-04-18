@@ -65,7 +65,7 @@
         <div id="behaviorAnalysisSection" style="background-color: #002864; padding: 10px;">
             <h3 style="color: #FFF">Insights for you</h3>
             <div id="averageDoseTaken"></div>
-            <div id="activityMap" style="overflow-x: auto; white-space: nowrap; height: 200px;"></div>
+            <!-- <div id="activityMap" style="overflow-x: auto; white-space: nowrap; height: 200px;"></div> -->
         </div>
         <div id="servicePausedSection" style="display:flex; width: 100%; flex-direction: column; align-items: center; background-color: rgb(233, 231, 220); box-sizing: border-box; padding: 20px;">
             <h3 style="color:#000; align-self:center;">Current status: <span id="statusIndicator">active</span></h2>
@@ -75,7 +75,7 @@
         </div>
     </div>
     <script defer>
-        var runningLocally = true;
+        var runningLocally = false;
         var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
         const tracking = document.getElementById("trackingDisplay");
         const loginScreen = document.getElementById("loginScreen");
@@ -161,7 +161,8 @@
                     generateCalendar();
                     renderServicePaused();
                     renderAverageDoseTime();
-                    renderActivityData();
+                    // saving this for when we have more data and better visuals
+                    // renderActivityData();
                     console.log(JSON.stringify(analyticsData));
                 } else {
                     loginScreen.style.display = "flex";
