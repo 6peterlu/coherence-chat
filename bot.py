@@ -422,8 +422,6 @@ def round_date(dt, delta=ACTIVITY_TIME_BUCKET_SIZE_MINUTES, round_up=False):
 
 # normalize all days to same day
 def strip_day(dt):
-    print(dt)
-    print(type(dt))
     return dt.replace(day=1, month=1, year=1, microsecond=0)
 
 
@@ -473,44 +471,6 @@ def generate_activity_analytics(user_events):
         for time in groups[i]:
             coalesced_map[key_string] += raw_analytics_map[time]
     return coalesced_map
-    # print(raw_analytics_map)
-
-
-    # print([event.as_dict() for event in user_events])
-    # user_driven_events = list(filter(lambda event: event.type in USER_DRIVEN_EVENTS, user_events))
-    # system_events = list(filter(lambda event: event.type in SYSTEM_EVENTS, user_events))
-    # termination_events = list(filter(lambda event: event.type in TERMINATION_EVENTS, user_events))
-    # day_stripped_events = [event.as_dict()["event_time"].replace(day=1, month=1, year=1, microsecond=0) for event in user_events]
-    # # TODO: convert to PST, then remove TZ data
-    # groups = []
-    # keys = []
-    # for k, g in groupby(day_stripped_events, round_date):
-    #     keys.append(k)
-    #     groups.append(list(g))
-    # collected_data = dict(zip(keys, groups))
-    # sorted_keys = sorted(keys)
-    # print(collected_data)
-    # print(keys)
-    # num_buckets = sorted_keys[len(keys) - 1] - sorted_keys[0]
-    # activity_data = {}
-    # # if the last recorded activity was from the system
-    # last_activity_type_is_system = False
-    # for time_increment in range(int(num_buckets.seconds / (ACTIVITY_TIME_BUCKET_SIZE_MINUTES * 60))):
-    #     bucket_id = sorted_keys[0] + timedelta(minutes = time_increment * ACTIVITY_TIME_BUCKET_SIZE_MINUTES)
-    #     if bucket_id in collected_data:
-    #         events_in_bucket = collected_data[bucket_id]
-
-    #         activity_data[bucket_id.isoformat()] = len(collected_data[bucket_id])
-    #     else:
-    #         activity_data[bucket_id.isoformat()] = 0
-    # if not activity_data:
-    #     return {}
-    # # largest_count = max(activity_data.values())
-    # # normalizing
-    # # for bucket in activity_data:
-    # #     activity_data[bucket] /= largest_count
-
-    # return activity_data
 
 
 @app.route("/patientData", methods=["GET"])

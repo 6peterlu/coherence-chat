@@ -65,6 +65,7 @@
         <div id="behaviorAnalysisSection" style="background-color: #002864; padding: 10px;">
             <h3 style="color: #FFF">Insights for you</h3>
             <div id="averageDoseTaken"></div>
+            <div id="activityMap" style="display: flex; flex-direction: row; align-items: flex-end; overflow-x: auto; white-space: nowrap; height: 100px;"></div>
         </div>
         <div id="servicePausedSection" style="display:flex; width: 100%; flex-direction: column; align-items: center; background-color: rgb(233, 231, 220); box-sizing: border-box; padding: 20px;">
             <h3 style="color:#000; align-self:center;">Current status: <span id="statusIndicator">active</span></h2>
@@ -158,7 +159,8 @@
                     servicePaused = result.pausedService;
                     generateCalendar();
                     renderServicePaused();
-                    renderAnalytics();
+                    renderAverageDoseTime();
+                    renderActivityData();
                     console.log(JSON.stringify(analyticsData));
                 } else {
                     loginScreen.style.display = "flex";
@@ -166,7 +168,7 @@
                 }
             });
         }
-        function renderAnalytics() {
+        function renderAverageDoseTime() {
             const timeOfDayOrder = ["morning", "afternoon", "evening"];
             let innerHTML = "<p style='color: #FFF'>Average dose time 🕒</p>";
             for (const field of timeOfDayOrder) {
@@ -180,6 +182,15 @@
                 }
             }
             const analyticsDiv = document.getElementById("averageDoseTaken");
+            analyticsDiv.innerHTML = innerHTML;
+        }
+        function renderActivityData() {
+            let innerHTML = "";
+            for (const time in analyticsData) {
+                const height = analyticsData[time] * 10;
+                innerHTML += `<div style="transform:translateY(${height}px); height: 30px; width: 5px; background-color: #f54242; flex-shrink: 0;"></div>`
+            }
+            const analyticsDiv = document.getElementById("activityMap");
             analyticsDiv.innerHTML = innerHTML;
         }
         function getAverageDate(eventList) {
