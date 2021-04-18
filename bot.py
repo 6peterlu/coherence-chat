@@ -92,8 +92,7 @@ USER_DRIVEN_EVENTS = [
 SYSTEM_EVENTS = [
     "initial",
     "followup",
-    "absent",
-    "manual_text"
+    "absent"
 ]
 
 TERMINATION_EVENTS = [
@@ -465,12 +464,23 @@ def generate_activity_analytics(user_events):
         groups.append(list(g))
     coalesced_map = {}
     for i in range(len(keys)):
-        key_string = keys[i].isoformat()
-        if key_string not in coalesced_map:
-            coalesced_map[key_string] = 0
+        if keys[i] not in coalesced_map:
+            coalesced_map[keys[i]] = 0
         for time in groups[i]:
-            coalesced_map[key_string] += raw_analytics_map[time]
-    return coalesced_map
+            coalesced_map[keys[i]] += raw_analytics_map[time]
+
+    # fill in blanks
+    output_map = {}
+    last_key = None
+    for key in coalesced_map:
+        if last_key is not None and last_key + timedelta(minutes=ACTIVITY_TIME_BUCKET_SIZE_MINUTES) < key:
+            last_key += timedelta(minutes=ACTIVITY_TIME_BUCKET_SIZE_MINUTES)
+            while last_key < key:
+                output_map[last_key.isoformat()] = None
+        output_map[key.isoformat()] = coalesced_map[key]
+        last_key = key
+    print(output_map)
+    return output_map
 
 
 @app.route("/patientData", methods=["GET"])
