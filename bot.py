@@ -513,7 +513,7 @@ def patient_data():
     relevant_events = Event.query.filter(Event.event_type.in_(combined_list), Event.phone_number == phone_number).order_by(Event.event_time.asc()).all()
     dose_history_events = list(filter(lambda event: event.event_type in take_record_events and event.description in relevant_dose_ids_as_str, relevant_events))
     user_behavior_and_system_events = list(filter(lambda event: event.event_type in user_behavior_combined_list, relevant_events))
-    activity_analytics = generate_activity_analytics(user_behavior_and_system_events)
+    # activity_analytics = generate_activity_analytics(user_behavior_and_system_events)
     event_data_by_time = {}
     for time in patient_dose_times:
         event_data_by_time[time] = {"events": []}
@@ -536,8 +536,7 @@ def patient_data():
         "eventData": event_data_by_time,
         "patientName": PATIENT_NAME_MAP[phone_number],
         "takeNow": dose_to_take_now,
-        "pausedService": bool(paused_service),
-        "activityAnalytics": activity_analytics
+        "pausedService": bool(paused_service)
     })
 
 @app.route("/pauseService", methods=["POST"])
