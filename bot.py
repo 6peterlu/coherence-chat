@@ -434,17 +434,14 @@ def generate_behavior_learning_scores(user_behavior_events, active_doses):
     user_behavior_events_until_today = list(filter(lambda event: event.aware_event_time < end_time, user_behavior_events))
     if len(user_behavior_events_until_today) == 0:
         return {}
-    print(user_behavior_events_until_today[len(user_behavior_events_until_today) - 1])
     behavior_scores_by_day = {}
     # starts at earliest day
     current_day_bucket = user_behavior_events_until_today[0].aware_event_time.astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
     # latest_day = user_behavior_events_until_today[len(user_behavior_events_until_today) - 1].aware_event_time.astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
     while current_day_bucket < end_time:
-        print("bucket")
         current_day_events = list(filter(lambda event: event.aware_event_time < current_day_bucket + timedelta(days=1) and event.aware_event_time > current_day_bucket, user_behavior_events_until_today))
         current_day_take_skip = list(filter(lambda event: event.event_type in ["take", "skip"], current_day_events))
         unique_time_buckets = []
-        print(current_day_events)
         for k, _ in groupby([event.event_time for event in current_day_events], round_date):
             unique_time_buckets.append(k)
         behavior_score_for_day = len(current_day_take_skip) * 3 / len(active_doses) + len(unique_time_buckets) * 2 / len (active_doses) - 3
@@ -506,8 +503,6 @@ def patient_data():
     relevant_events = Event.query.filter(Event.event_type.in_(combined_list), Event.phone_number == phone_number).order_by(Event.event_time.asc()).all()
     dose_history_events = list(filter(lambda event: event.event_type in take_record_events and event.description in relevant_dose_ids_as_str, relevant_events))
     user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
-    for event in user_behavior_events:
-        print(event.event_type)
     # NOTE: add back in later (but maybe post-react world)
     # activity_analytics = generate_activity_analytics(user_behavior_events)
     event_data_by_time = {}
