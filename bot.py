@@ -123,7 +123,7 @@ TWILIO_PHONE_NUMBERS = {
 CLINICAL_BOUNDARY_PHONE_NUMBERS = ["8587761377"]
 
 
-PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113, 115, 116, 117], "afternoon": [114, 152]}} if os.environ["FLASK_ENV"] == "local" else {
+PATIENT_DOSE_MAP = { "+113604508655": {"morning": [153, 154], "afternoon": [114, 152]}} if os.environ["FLASK_ENV"] == "local" else {
     "+113604508655": {"morning": [85]},
     "+113609042210": {"afternoon": [25], "evening": [15]},
     "+113609049085": {"evening": [16]},
@@ -287,6 +287,10 @@ class Event(db.Model):
        return_dict["event_time"] = self.event_time.replace(tzinfo=datetime.now().astimezone().tzinfo)
        return return_dict
 
+    @property
+    def aware_event_time(self):
+        return self.event_time.replace(tzinfo=datetime.now().astimezone().tzinfo)
+
 # list of users that have all messages manually responded to
 class ManualTakeover(db.Model):
     phone_number = db.Column(db.String(13), primary_key=True)
@@ -424,24 +428,23 @@ def generate_activity_analytics(user_events):
 # takes user behavior events to the beginning of time
 def generate_behavior_learning_scores(user_behavior_events, active_doses):
     # end time is end of yesterday.
-    end_time = get_time_now().replace(hour=0, minute=0, second=0, microsecond=0)
-    user_behavior_events_until_today = list(filter(lambda event: event.event_time < end_time, user_behavior_events))
+    end_time = get_time_now().astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
+    user_behavior_events_until_today = list(filter(lambda event: event.aware_event_time < end_time, user_behavior_events))
     if len(user_behavior_events_until_today) == 0:
         return {}
     behavior_scores_by_day = {}
     # starts at earliest day
-    current_day_bucket = user_behavior_events_until_today[0].event_time.replace(hour=0, minute=0, second=0, microsecond=0)
-    lastest_day = user_behavior_events_until_today[len(user_behavior_events_until_today) - 1].event_time.replace(hour=0, minute=0, second=0, microsecond=0)
+    current_day_bucket = user_behavior_events_until_today[0].aware_event_time.astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
+    lastest_day = user_behavior_events_until_today[len(user_behavior_events_until_today) - 1].aware_event_time.astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
     while current_day_bucket <= lastest_day:
-        current_day_events = list(filter(lambda event: event.event_time < current_day_bucket + timedelta(days=1) and event.event_time > current_day_bucket, user_behavior_events_until_today))
-        current_day_take_skip = list(filter(lambda event: event.event_type in ["take", "skip"]))
+        current_day_events = list(filter(lambda event: event.aware_event_time < current_day_bucket + timedelta(days=1) and event.aware_event_time > current_day_bucket, user_behavior_events_until_today))
+        current_day_take_skip = list(filter(lambda event: event.event_type in ["take", "skip"], current_day_events))
         unique_time_buckets = []
         for k, _ in groupby([event.event_time for event in current_day_events], round_date):
             unique_time_buckets.append(k)
         behavior_score_for_day = len(current_day_take_skip) * 3 / len(active_doses) + len(unique_time_buckets) * 2 / len (active_doses) - 3
         behavior_scores_by_day[current_day_bucket] = behavior_score_for_day
         current_day_bucket += timedelta(days=1)
-    print(behavior_scores_by_day)
     return "hello"
 
 
