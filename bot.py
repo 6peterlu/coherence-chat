@@ -168,6 +168,8 @@ SECRET_CODES = { "+113604508655": 123456 } if os.environ["FLASK_ENV"] == "local"
     "+113609010956": 299543
 }
 
+ACTIVITY_BUCKET_SIZE_MINUTES = 10
+
 logging.basicConfig()
 logging.getLogger('apscheduler').setLevel(logging.DEBUG)
 
@@ -386,13 +388,15 @@ def serve_svg(path):
     return send_from_directory('svg', path)
 
 
-def round_date(dt, delta=15, round_up=False):
+def round_date(dt, delta=ACTIVITY_BUCKET_SIZE_MINUTES, round_up=False):
     if round_up:
         return dt + (datetime.min - dt) % timedelta(minutes=delta)
     else:  # round down
         return dt - (dt - datetime.min) % timedelta(minutes=delta)
 
 
+
+# NOTE: Not currently used.
 def generate_activity_analytics(user_events):
     day_stripped_events = [event.event_time.replace(day=1, month=1, year=1, microsecond=0) for event in user_events]
     groups = []
@@ -403,7 +407,7 @@ def generate_activity_analytics(user_events):
     collected_data = dict(zip(keys, groups))
     num_buckets = keys[len(keys) - 1] - keys[0]
     activity_data = {}
-    for time_increment in range(int(num_buckets.seconds / (15 * 60))):
+    for time_increment in range(int(num_buckets.seconds / (ACTIVITY_BUCKET_SIZE_MINUTES * 60))):
         bucket_id = keys[0] + timedelta(minutes = time_increment * 15)
         if bucket_id in collected_data:
             activity_data[bucket_id.isoformat()] = len(collected_data[bucket_id])
@@ -415,6 +419,30 @@ def generate_activity_analytics(user_events):
     for bucket in activity_data:
         activity_data[bucket] /= largest_count
     return activity_data
+
+
+# takes user behavior events to the beginning of time
+def generate_behavior_learning_scores(user_behavior_events, active_doses):
+    # end time is end of yesterday.
+    end_time = get_time_now().replace(hour=0, minute=0, second=0, microsecond=0)
+    user_behavior_events_until_today = list(filter(lambda event: event.event_time < end_time, user_behavior_events))
+    if len(user_behavior_events_until_today) == 0:
+        return {}
+    behavior_scores_by_day = {}
+    # starts at earliest day
+    current_day_bucket = user_behavior_events_until_today[0].event_time.replace(hour=0, minute=0, second=0, microsecond=0)
+    lastest_day = user_behavior_events_until_today[len(user_behavior_events_until_today) - 1].event_time.replace(hour=0, minute=0, second=0, microsecond=0)
+    while current_day_bucket <= lastest_day:
+        current_day_events = list(filter(lambda event: event.event_time < current_day_bucket + timedelta(days=1) and event.event_time > current_day_bucket, user_behavior_events_until_today))
+        current_day_take_skip = list(filter(lambda event: event.event_type in ["take", "skip"]))
+        unique_time_buckets = []
+        for k, _ in groupby([event.event_time for event in current_day_events], round_date):
+            unique_time_buckets.append(k)
+        behavior_score_for_day = len(current_day_take_skip) * 3 / len(active_doses) + len(unique_time_buckets) * 2 / len (active_doses) - 3
+        behavior_scores_by_day[current_day_bucket] = behavior_score_for_day
+        current_day_bucket += timedelta(days=1)
+    print(behavior_scores_by_day)
+    return "hello"
 
 
 @app.route("/patientData", methods=["GET"])
@@ -457,7 +485,8 @@ def patient_data():
     relevant_events = Event.query.filter(Event.event_type.in_(combined_list), Event.phone_number == phone_number).all()
     dose_history_events = list(filter(lambda event: event.event_type in take_record_events and event.description in relevant_dose_ids_as_str, relevant_events))
     user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
-    activity_analytics = generate_activity_analytics(user_behavior_events)
+    # NOTE: add back in later (but maybe post-react world)
+    # activity_analytics = generate_activity_analytics(user_behavior_events)
     event_data_by_time = {}
     for time in patient_dose_times:
         event_data_by_time[time] = {"events": []}
@@ -475,13 +504,14 @@ def patient_data():
             dose_to_take_now = True
             break
     paused_service = PausedService.query.get(phone_number)
+    behavior_learning_scores = generate_behavior_learning_scores(user_behavior_events, relevant_doses)
     return jsonify({
         "phoneNumber": recovered_cookie,
         "eventData": event_data_by_time,
         "patientName": PATIENT_NAME_MAP[phone_number],
         "takeNow": dose_to_take_now,
         "pausedService": bool(paused_service),
-        "activityAnalytics": activity_analytics
+        "behaviorLearningScores": behavior_learning_scores
     })
 
 @app.route("/pauseService", methods=["POST"])
