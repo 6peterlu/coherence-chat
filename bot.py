@@ -501,7 +501,7 @@ def patient_data():
     # best user activity: take, skip
     # moderate user activity: paused, resumed, user_reported_error, out_of_range, not_interpretable
     # worst user activity: requested_time_delay, activity
-    relevant_events = Event.query.filter(Event.event_type.in_(combined_list), Event.phone_number == phone_number).all()
+    relevant_events = Event.query.filter(Event.event_type.in_(combined_list), Event.phone_number == phone_number).order_by(Event.event_time.asc()).all()
     dose_history_events = list(filter(lambda event: event.event_type in take_record_events and event.description in relevant_dose_ids_as_str, relevant_events))
     user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
     for event in user_behavior_events:
