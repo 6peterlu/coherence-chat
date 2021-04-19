@@ -57,6 +57,8 @@ TOKENS_TO_RECOGNIZE = [
     "shower",
     "working",
     "tv",
+    "yes",
+    "phone"
 ]
 
 ALL_EVENTS = [
@@ -123,7 +125,7 @@ TWILIO_PHONE_NUMBERS = {
 CLINICAL_BOUNDARY_PHONE_NUMBERS = ["8587761377"]
 
 
-PATIENT_DOSE_MAP = { "+113604508655": {"morning": [113, 115, 116, 117], "afternoon": [114, 152]}} if os.environ["FLASK_ENV"] == "local" else {
+PATIENT_DOSE_MAP = { "+113604508655": {"morning": [153, 154], "afternoon": [114, 152]}} if os.environ["FLASK_ENV"] == "local" else {
     "+113604508655": {"morning": [85]},
     "+113609042210": {"afternoon": [25], "evening": [15]},
     "+113609049085": {"evening": [16]},
@@ -167,6 +169,8 @@ SECRET_CODES = { "+113604508655": 123456 } if os.environ["FLASK_ENV"] == "local"
     "+113605131225": 846939,
     "+113609010956": 299543
 }
+
+ACTIVITY_BUCKET_SIZE_MINUTES = 10
 
 logging.basicConfig()
 logging.getLogger('apscheduler').setLevel(logging.DEBUG)
@@ -285,6 +289,10 @@ class Event(db.Model):
        return_dict["event_time"] = self.event_time.replace(tzinfo=datetime.now().astimezone().tzinfo)
        return return_dict
 
+    @property
+    def aware_event_time(self):
+        return self.event_time.replace(tzinfo=datetime.now().astimezone().tzinfo)
+
 # list of users that have all messages manually responded to
 class ManualTakeover(db.Model):
     phone_number = db.Column(db.String(13), primary_key=True)
@@ -386,13 +394,15 @@ def serve_svg(path):
     return send_from_directory('svg', path)
 
 
-def round_date(dt, delta=15, round_up=False):
+def round_date(dt, delta=ACTIVITY_BUCKET_SIZE_MINUTES, round_up=False):
     if round_up:
         return dt + (datetime.min - dt) % timedelta(minutes=delta)
     else:  # round down
         return dt - (dt - datetime.min) % timedelta(minutes=delta)
 
 
+
+# NOTE: Not currently used.
 def generate_activity_analytics(user_events):
     day_stripped_events = [event.event_time.replace(day=1, month=1, year=1, microsecond=0) for event in user_events]
     groups = []
@@ -403,7 +413,7 @@ def generate_activity_analytics(user_events):
     collected_data = dict(zip(keys, groups))
     num_buckets = keys[len(keys) - 1] - keys[0]
     activity_data = {}
-    for time_increment in range(int(num_buckets.seconds / (15 * 60))):
+    for time_increment in range(int(num_buckets.seconds / (ACTIVITY_BUCKET_SIZE_MINUTES * 60))):
         bucket_id = keys[0] + timedelta(minutes = time_increment * 15)
         if bucket_id in collected_data:
             activity_data[bucket_id.isoformat()] = len(collected_data[bucket_id])
@@ -415,6 +425,42 @@ def generate_activity_analytics(user_events):
     for bucket in activity_data:
         activity_data[bucket] /= largest_count
     return activity_data
+
+
+# takes user behavior events to the beginning of time
+def generate_behavior_learning_scores(user_behavior_events, active_doses):
+    # end time is end of yesterday.
+    end_time = get_time_now().astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
+    user_behavior_events_until_today = list(filter(lambda event: event.aware_event_time < end_time, user_behavior_events))
+    if len(user_behavior_events_until_today) == 0:
+        return {}
+    behavior_scores_by_day = {}
+    # starts at earliest day
+    current_day_bucket = user_behavior_events_until_today[0].aware_event_time.astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
+    # latest_day = user_behavior_events_until_today[len(user_behavior_events_until_today) - 1].aware_event_time.astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
+    while current_day_bucket < end_time:
+        current_day_events = list(filter(lambda event: event.aware_event_time < current_day_bucket + timedelta(days=1) and event.aware_event_time > current_day_bucket, user_behavior_events_until_today))
+        current_day_take_skip = list(filter(lambda event: event.event_type in ["take", "skip"], current_day_events))
+        unique_time_buckets = []
+        for k, _ in groupby([event.event_time for event in current_day_events], round_date):
+            unique_time_buckets.append(k)
+        behavior_score_for_day = len(current_day_take_skip) * 3 / len(active_doses) + len(unique_time_buckets) * 2 / len (active_doses) - 3
+        behavior_scores_by_day[current_day_bucket] = behavior_score_for_day
+        current_day_bucket += timedelta(days=1)
+    score_sum = 0
+    starting_buffer = len(behavior_scores_by_day) - 7  # combine all data before last 7 days
+    output_scores = []
+    for day in behavior_scores_by_day:
+        score_sum += behavior_scores_by_day[day]
+        if score_sum < 0:
+            score_sum = 0
+        elif score_sum > 100:
+            score_sum = 100
+        if starting_buffer == 0:
+            output_scores.append((day.strftime('%a'), int(score_sum)))
+        else:
+            starting_buffer -= 1
+    return output_scores
 
 
 @app.route("/patientData", methods=["GET"])
@@ -454,10 +500,11 @@ def patient_data():
     # best user activity: take, skip
     # moderate user activity: paused, resumed, user_reported_error, out_of_range, not_interpretable
     # worst user activity: requested_time_delay, activity
-    relevant_events = Event.query.filter(Event.event_type.in_(combined_list), Event.phone_number == phone_number).all()
+    relevant_events = Event.query.filter(Event.event_type.in_(combined_list), Event.phone_number == phone_number).order_by(Event.event_time.asc()).all()
     dose_history_events = list(filter(lambda event: event.event_type in take_record_events and event.description in relevant_dose_ids_as_str, relevant_events))
     user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
-    activity_analytics = generate_activity_analytics(user_behavior_events)
+    # NOTE: add back in later (but maybe post-react world)
+    # activity_analytics = generate_activity_analytics(user_behavior_events)
     event_data_by_time = {}
     for time in patient_dose_times:
         event_data_by_time[time] = {"events": []}
@@ -475,13 +522,14 @@ def patient_data():
             dose_to_take_now = True
             break
     paused_service = PausedService.query.get(phone_number)
+    behavior_learning_scores = generate_behavior_learning_scores(user_behavior_events, relevant_doses)
     return jsonify({
         "phoneNumber": recovered_cookie,
         "eventData": event_data_by_time,
         "patientName": PATIENT_NAME_MAP[phone_number],
         "takeNow": dose_to_take_now,
         "pausedService": bool(paused_service),
-        "activityAnalytics": activity_analytics
+        "behaviorLearningScores": behavior_learning_scores
     })
 
 @app.route("/pauseService", methods=["POST"])
@@ -783,7 +831,7 @@ def activity_detection(message_str):
         "walk": (time_delay_short, f"{computing_prefix} Enjoy your walk! We'll check in later."),
         "eating": (time_delay_long, f"{computing_prefix} Enjoy your meal! We'll check in later."),
         "meeting": (time_delay_long, f"{computing_prefix} Have a productive meeting! We'll check in later."),
-        "call": (time_delay_long, f"{computing_prefix} Have a great call! We'll check in later."),
+        "call": (time_delay_short, f"{computing_prefix} Have a great call! We'll check in later."),
         "out": (time_delay_long, f"{computing_prefix} No problem, we'll check in later."),
         "busy": (time_delay_long, f"{computing_prefix} No problem, we'll check in later."),
         "later": (time_delay_long, f"{computing_prefix} No problem, we'll check in later."),
@@ -799,6 +847,7 @@ def activity_detection(message_str):
         "tv": (time_delay_long, f"{computing_prefix} Have fun, we'll check in later."),
         "shower": (time_delay_short, f"{computing_prefix} Have a good shower, we'll check in later."),
         "working": (time_delay_long, f"{computing_prefix} No problem, we'll check in later."),
+        "call": (time_delay_short, f"{computing_prefix} Have a great call! We'll check in later."),
     }
     best_match_score = 0.0
     best_match_concept = None
@@ -825,7 +874,8 @@ def canned_responses(message_str):
         "ok": "👍",
         "great": "👍",
         "no problem": "👍",
-        "hello": "Hello! 👋"
+        "hello": "Hello! 👋",
+        "yes": "Great, you use 'T' to mark your medication as taken."
     }
     best_match_score = 0.0
     best_match_concept = None
@@ -858,12 +908,13 @@ def incoming_message_processing(incoming_msg):
     processed_msg = processed_msg.translate(str.maketrans("", "", string.punctuation))
     processed_msg = processed_msg.replace("[", "").replace("]", "")
     processed_msg_tokens = processed_msg.split()
-    take_list = list(filter(lambda x: x == "t" or x == "taken", processed_msg_tokens))
+    take_tokens = ["t", "taken", "took"]
+    take_list = list(filter(lambda x: x in take_tokens, processed_msg_tokens))
     skip_list = list(filter(lambda x: x == "s", processed_msg_tokens))
     error_list = list(filter(lambda x: x == "x", processed_msg_tokens))
     thanks_list = list(filter(lambda x: x == "thanks" or x == "thank", processed_msg_tokens))
     filler_words = ["taking", "going", "to", "a", "for", "on", "still"]
-    everything_else = list(filter(lambda x: x != "t" and x != "s" and x != "taken" and x not in filler_words, processed_msg_tokens))
+    everything_else = list(filter(lambda x: x not in take_tokens and x != "s" and x not in filler_words, processed_msg_tokens))
     final_message_list = []
     if len(error_list) > 0:
         return ["x"]  # no more message processing
@@ -938,10 +989,10 @@ def bot():
                     remove_jobs_helper(latest_dose_id, ["followup", "absent"])
                     dose_end_time = get_current_end_date(latest_dose_id)
                     if incoming_msg in ["1", "2", "3"]:
-                        log_event("requested_time_delay", incoming_phone_number, description=f"{message_delays[incoming_msg]}")
+                        log_event("requested_time_delay", f"+1{incoming_phone_number[1:]}", description=f"{message_delays[incoming_msg]}")
                         next_alarm_time = get_time_now() + message_delays[incoming_msg]
                     elif extracted_integer is not None:
-                        log_event("requested_time_delay", incoming_phone_number, description=f"{timedelta(minutes=extracted_integer)}")
+                        log_event("requested_time_delay", f"+1{incoming_phone_number[1:]}", description=f"{timedelta(minutes=extracted_integer)}")
                         next_alarm_time = get_time_now() + timedelta(minutes=extracted_integer)
                     elif activity_detection_time is not None:
                         next_alarm_time = get_time_now() + activity_detection_time[0]
@@ -1014,7 +1065,7 @@ def bot():
                         to=incoming_phone_number
                     )
             else:
-                log_event("out_of_range", incoming_phone_number, description=incoming_msg)
+                log_event("out_of_range", f"+1{incoming_phone_number[1:]}", description=incoming_msg)
                 client.messages.create(
                     body=ACTION_OUT_OF_RANGE_MSG if incoming_msg in ["t", "s"] else REMINDER_OUT_OF_RANGE_MSG,
                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
