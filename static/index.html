@@ -4,6 +4,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Lora&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Didact+Gothic&display=swap" rel="stylesheet">
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 </head>
 <body style="background-color: rgb(233, 231, 220);">
     <div id="loginScreen" style="display:none; height:100%; flex-direction: column;">
@@ -65,6 +66,8 @@
         <div id="behaviorAnalysisSection" style="background-color: #002864; padding: 10px;">
             <h3 style="color: #FFF">Insights for you</h3>
             <div id="averageDoseTaken"></div>
+            <div id="behaviorLearningChartTitle"></div>
+            <div id="behaviorLearningChart"></div>
         </div>
         <div id="servicePausedSection" style="display:flex; width: 100%; flex-direction: column; align-items: center; background-color: rgb(233, 231, 220); box-sizing: border-box; padding: 20px;">
             <h3 style="color:#000; align-self:center;">Current status: <span id="statusIndicator">active</span></h2>
@@ -74,6 +77,10 @@
         </div>
     </div>
     <script defer>
+        // load line chart library
+        google.charts.load('current', {'packages':['corechart']});
+        var chartLibraryLoaded = false;
+        google.charts.setOnLoadCallback(() => {chartLibraryLoaded = true});
         var runningLocally = false;
         var apiURL = runningLocally ? "http://localhost:5000" : "https://coherence-chat.herokuapp.com";
         const tracking = document.getElementById("trackingDisplay");
@@ -154,11 +161,13 @@
                         takeNow.style.color = "#FFF";
                     }
                     adherenceHistory = processEventData(result.eventData);
-                    analyticsData = result.activityAnalytics;
+                    activityAnalytics = {behaviorLearningScores: result.behaviorLearningScores};
+                    console.log(activityAnalytics);
                     servicePaused = result.pausedService;
                     generateCalendar();
                     renderServicePaused();
                     renderAnalytics();
+                    renderBehaviorLearningChart();
                 } else {
                     loginScreen.style.display = "flex";
                     tracking.style.display = "none";
@@ -180,6 +189,40 @@
             }
             const analyticsDiv = document.getElementById("averageDoseTaken");
             analyticsDiv.innerHTML = innerHTML;
+        }
+        function renderBehaviorLearningChart() {
+            if (chartLibraryLoaded) {
+                let behaviorChartHeaderHTML = "<p style='color: #FFF'>AI learning progress 💡</p>";
+                const latestChange = activityAnalytics.behaviorLearningScores.length >= 2 ? activityAnalytics.behaviorLearningScores[activityAnalytics.behaviorLearningScores.length - 1][1] - activityAnalytics.behaviorLearningScores[activityAnalytics.behaviorLearningScores.length - 2][1] : 0;
+                behaviorChartHeaderHTML += `<p style='color: #FFF; font-size: 12px;'>Current learning score: <span style="font-size: 20px;">${activityAnalytics.behaviorLearningScores[activityAnalytics.behaviorLearningScores.length - 1][1]}</span></p>`;
+                behaviorChartHeaderHTML += `<p style='color: #FFF; font-size: 12px;'>Yesterday's score change: <span style="color:${latestChange > 0 ? '#09ad56' : '#f54242'}; font-size: 20px;">${latestChange}</span></p>`;
+                behaviorChartHeaderHTML += "<p style='color: #FFF; font-size: 12px;'>I can learn about your schedule faster if you interact with me consistently. Try and get your score to 100!</p>";
+                document.getElementById("behaviorLearningChartTitle").innerHTML = behaviorChartHeaderHTML;
+                let dataArray = [["Day of Week", "Learning Score"], ...activityAnalytics.behaviorLearningScores]
+                console.log(dataArray);
+
+                var data = google.visualization.arrayToDataTable(dataArray);
+                var options = {
+                    colors: ['white'],
+                    fontName: 'Lora',
+                    chartArea: {width: '80%', height: '80%'},
+                    curveType: 'function',
+                    legend: { position: "none"},
+                    vAxis: {maxValue: 100, minValue: 0, textStyle: {color: "#FFF"}, gridlines: {color: "#AAA"}, minorGridlines: {color: "#AAA"}},
+                    hAxis: {textStyle: {color: "#FFF"}, gridlines: {color: "#FFF"}},
+                    backgroundColor: "#002864",
+                    color: "FFF"
+                };
+
+                var chart = new google.visualization.LineChart(document.getElementById('behaviorLearningChart'));
+
+                chart.draw(data, options);
+            } else {
+                google.charts.setOnLoadCallback(() => {
+                    chartLibraryLoaded = true;
+                    renderBehaviorLearningChart();
+                });
+            }
         }
         function getAverageDate(eventList) {
             let totalMinutes = 0;

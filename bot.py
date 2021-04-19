@@ -57,7 +57,8 @@ TOKENS_TO_RECOGNIZE = [
     "shower",
     "working",
     "tv",
-    "yes"
+    "yes",
+    "phone"
 ]
 
 ALL_EVENTS = [
@@ -437,8 +438,8 @@ def generate_behavior_learning_scores(user_behavior_events, active_doses):
     behavior_scores_by_day = {}
     # starts at earliest day
     current_day_bucket = user_behavior_events_until_today[0].aware_event_time.astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
-    lastest_day = user_behavior_events_until_today[len(user_behavior_events_until_today) - 1].aware_event_time.astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
-    while current_day_bucket <= lastest_day:
+    # latest_day = user_behavior_events_until_today[len(user_behavior_events_until_today) - 1].aware_event_time.astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
+    while current_day_bucket <= end_time:
         print("bucket")
         current_day_events = list(filter(lambda event: event.aware_event_time < current_day_bucket + timedelta(days=1) and event.aware_event_time > current_day_bucket, user_behavior_events_until_today))
         current_day_take_skip = list(filter(lambda event: event.event_type in ["take", "skip"], current_day_events))
@@ -451,7 +452,7 @@ def generate_behavior_learning_scores(user_behavior_events, active_doses):
         current_day_bucket += timedelta(days=1)
     score_sum = 0
     starting_buffer = len(behavior_scores_by_day) - 7  # combine all data before last 7 days
-    output_scores = {}
+    output_scores = []
     for day in behavior_scores_by_day:
         score_sum += behavior_scores_by_day[day]
         if score_sum < 0:
@@ -459,11 +460,10 @@ def generate_behavior_learning_scores(user_behavior_events, active_doses):
         elif score_sum > 100:
             score_sum = 100
         if starting_buffer == 0:
-            output_scores[day.strftime('%a')] = int(score_sum)
+            output_scores.append(((day - timedelta(days=1)).strftime('%a'), int(score_sum)))
         else:
             starting_buffer -= 1
-    print(output_scores)
-    return "hello"
+    return output_scores
 
 
 @app.route("/patientData", methods=["GET"])
@@ -836,7 +836,7 @@ def activity_detection(message_str):
         "walk": (time_delay_short, f"{computing_prefix} Enjoy your walk! We'll check in later."),
         "eating": (time_delay_long, f"{computing_prefix} Enjoy your meal! We'll check in later."),
         "meeting": (time_delay_long, f"{computing_prefix} Have a productive meeting! We'll check in later."),
-        "call": (time_delay_long, f"{computing_prefix} Have a great call! We'll check in later."),
+        "call": (time_delay_short, f"{computing_prefix} Have a great call! We'll check in later."),
         "out": (time_delay_long, f"{computing_prefix} No problem, we'll check in later."),
         "busy": (time_delay_long, f"{computing_prefix} No problem, we'll check in later."),
         "later": (time_delay_long, f"{computing_prefix} No problem, we'll check in later."),
@@ -852,6 +852,7 @@ def activity_detection(message_str):
         "tv": (time_delay_long, f"{computing_prefix} Have fun, we'll check in later."),
         "shower": (time_delay_short, f"{computing_prefix} Have a good shower, we'll check in later."),
         "working": (time_delay_long, f"{computing_prefix} No problem, we'll check in later."),
+        "call": (time_delay_short, f"{computing_prefix} Have a great call! We'll check in later."),
     }
     best_match_score = 0.0
     best_match_concept = None
@@ -912,12 +913,13 @@ def incoming_message_processing(incoming_msg):
     processed_msg = processed_msg.translate(str.maketrans("", "", string.punctuation))
     processed_msg = processed_msg.replace("[", "").replace("]", "")
     processed_msg_tokens = processed_msg.split()
-    take_list = list(filter(lambda x: x == "t" or x == "taken", processed_msg_tokens))
+    take_tokens = ["t", "taken", "took"]
+    take_list = list(filter(lambda x: x in take_tokens, processed_msg_tokens))
     skip_list = list(filter(lambda x: x == "s", processed_msg_tokens))
     error_list = list(filter(lambda x: x == "x", processed_msg_tokens))
     thanks_list = list(filter(lambda x: x == "thanks" or x == "thank", processed_msg_tokens))
     filler_words = ["taking", "going", "to", "a", "for", "on", "still"]
-    everything_else = list(filter(lambda x: x != "t" and x != "s" and x != "taken" and x not in filler_words, processed_msg_tokens))
+    everything_else = list(filter(lambda x: x not in take_tokens and x != "s" and x not in filler_words, processed_msg_tokens))
     final_message_list = []
     if len(error_list) > 0:
         return ["x"]  # no more message processing
