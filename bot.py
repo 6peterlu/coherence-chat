@@ -492,6 +492,8 @@ def patient_data():
     relevant_events = Event.query.filter(Event.event_type.in_(combined_list), Event.phone_number == phone_number).all()
     dose_history_events = list(filter(lambda event: event.event_type in take_record_events and event.description in relevant_dose_ids_as_str, relevant_events))
     user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
+    for event in user_behavior_events:
+        print(event.event_type)
     # NOTE: add back in later (but maybe post-react world)
     # activity_analytics = generate_activity_analytics(user_behavior_events)
     event_data_by_time = {}
