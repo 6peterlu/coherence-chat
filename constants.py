@@ -89,13 +89,13 @@ TAKE_MSG_EXCITED = Template("""🕒 $time\nDose recorded! 🎉\n💊💊💊💊
 
 SKIP_MSG = """Dose skipped."""
 
-UNKNOWN_MSG = """I can understand the following commands:
-[T] mark medication as taken
-[S] skip this dose
-[1] check in with you in 10 minutes
-[2] to check in in 30
-[3] to check in in an hour
-[x] report an error
+UNKNOWN_MSG = """You can reply
+"T" to mark medication as taken
+"S" to skip this dose
+"1" to check in with you in 10 minutes
+"2" to check in in 30
+"3" to check in in an hour
+"x" to report an error
 "I need help", "I'm confused"
 a specific amount of time such as "2 hours", "20 minutes"
 activities such as "eating dinner", "on a walk", etc.
@@ -113,12 +113,12 @@ REMINDER_TOO_CLOSE_MSG = Template("""I can't schedule a reminder after your late
 
 MANUAL_TEXT_NEEDED_MSG = Template("""The phone number $number requires your manual intervention.""")
 
-ACTION_MENU = """I can understand the following commands:
-[T] mark medication as taken
-[S] skip this dose
-[1] check in with you in 10 minutes
-[2] to check in in 30
-[3] to check in in an hour
+ACTION_MENU = """You can reply
+"T" to mark medication as taken
+"S" to skip this dose
+"1" to check in with you in 10 minutes
+"2" to check in in 30
+"3" to check in in an hour
 a specific amount of time such as "2 hours", "20 minutes"
 activities such as "eating dinner", "on a walk", etc."""
 
