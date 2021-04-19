@@ -439,7 +439,7 @@ def generate_behavior_learning_scores(user_behavior_events, active_doses):
     # starts at earliest day
     current_day_bucket = user_behavior_events_until_today[0].aware_event_time.astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
     # latest_day = user_behavior_events_until_today[len(user_behavior_events_until_today) - 1].aware_event_time.astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
-    while current_day_bucket <= end_time:
+    while current_day_bucket < end_time:
         print("bucket")
         current_day_events = list(filter(lambda event: event.aware_event_time < current_day_bucket + timedelta(days=1) and event.aware_event_time > current_day_bucket, user_behavior_events_until_today))
         current_day_take_skip = list(filter(lambda event: event.event_type in ["take", "skip"], current_day_events))
