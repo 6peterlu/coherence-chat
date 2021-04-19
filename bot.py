@@ -456,6 +456,8 @@ def generate_behavior_learning_scores(user_behavior_events, active_doses):
         score_sum += behavior_scores_by_day[day]
         if score_sum < 0:
             score_sum = 0
+        elif score_sum > 100:
+            score_sum = 100
         if starting_buffer == 0:
             output_scores[day.strftime('%a')] = score_sum
         else:
