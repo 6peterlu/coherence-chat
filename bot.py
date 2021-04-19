@@ -433,6 +433,7 @@ def generate_behavior_learning_scores(user_behavior_events, active_doses):
     user_behavior_events_until_today = list(filter(lambda event: event.aware_event_time < end_time, user_behavior_events))
     if len(user_behavior_events_until_today) == 0:
         return {}
+    print(user_behavior_events_until_today[len(user_behavior_events_until_today) - 1])
     behavior_scores_by_day = {}
     # starts at earliest day
     current_day_bucket = user_behavior_events_until_today[0].aware_event_time.astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
