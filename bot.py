@@ -445,6 +445,7 @@ def generate_behavior_learning_scores(user_behavior_events, active_doses):
         behavior_score_for_day = len(current_day_take_skip) * 3 / len(active_doses) + len(unique_time_buckets) * 2 / len (active_doses) - 3
         behavior_scores_by_day[current_day_bucket] = behavior_score_for_day
         current_day_bucket += timedelta(days=1)
+    print(behavior_scores_by_day)
     return "hello"
 
 
