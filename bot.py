@@ -78,6 +78,30 @@ ALL_EVENTS = [
     "initial"
 ]
 
+USER_DRIVEN_EVENTS = [
+    "take",
+    "skip",
+    "paused",
+    "resumed",
+    "user_reported_error",
+    "out_of_range",
+    "not_interpretable",
+    "requested_time_delay",
+    "activity"
+]
+SYSTEM_EVENTS = [
+    "initial",
+    "followup",
+    "absent"
+]
+
+TERMINATION_EVENTS = [
+    "take",
+    "skip",
+    "paused",
+    "boundary"
+]
+
 # load on server start
 SPACY_EMBED_MAP = {token: nlp(token) for token in TOKENS_TO_RECOGNIZE}
 
@@ -118,6 +142,8 @@ TWILIO_PHONE_NUMBERS = {
     "local": "2813771848",
     "production": "2673824152"
 }
+
+ACTIVITY_TIME_BUCKET_SIZE_MINUTES = 10
 
 # numbers for which the person should NOT take it after the dose period.
 CLINICAL_BOUNDARY_PHONE_NUMBERS = ["8587761377"]
@@ -386,35 +412,75 @@ def serve_svg(path):
     return send_from_directory('svg', path)
 
 
-def round_date(dt, delta=15, round_up=False):
+def round_date(dt, delta=ACTIVITY_TIME_BUCKET_SIZE_MINUTES, round_up=False):
     if round_up:
         return dt + (datetime.min - dt) % timedelta(minutes=delta)
     else:  # round down
         return dt - (dt - datetime.min) % timedelta(minutes=delta)
 
 
+# normalize all days to same day
+def strip_day(dt):
+    return dt.replace(day=1, month=1, year=1, microsecond=0)
+
+
 def generate_activity_analytics(user_events):
-    day_stripped_events = [event.event_time.replace(day=1, month=1, year=1, microsecond=0) for event in user_events]
+    terminated = True  # if True, don't do lookback.
+    last_message_from_system = False
+    raw_analytics_map = {}  # time -> score
+    analytics_metadata = {} # time -> auxiliary data, currently prevents double counting of events
+    last_bucket_time = None
+    for event in user_events:
+        current_time_bucket = round_date(event.event_time)
+        if not terminated and last_message_from_system and last_bucket_time + timedelta(minutes=ACTIVITY_TIME_BUCKET_SIZE_MINUTES) < current_time_bucket:
+            generated_time_bucket = last_bucket_time + timedelta(minutes=ACTIVITY_TIME_BUCKET_SIZE_MINUTES)
+            while generated_time_bucket < current_time_bucket:
+                raw_analytics_map[generated_time_bucket] = -0.25
+                generated_time_bucket += timedelta(minutes=ACTIVITY_TIME_BUCKET_SIZE_MINUTES)
+        last_bucket_time = current_time_bucket
+        if current_time_bucket not in raw_analytics_map:
+            raw_analytics_map[current_time_bucket] = 0
+            analytics_metadata[current_time_bucket] = {}
+        if event.event_type in USER_DRIVEN_EVENTS:
+            if analytics_metadata[current_time_bucket].get("user_action_taken") is None:
+                raw_analytics_map[current_time_bucket] += 1
+                analytics_metadata[current_time_bucket]["user_action_taken"] = True
+            last_message_from_system = False
+        if event.event_type in SYSTEM_EVENTS:
+            if analytics_metadata[current_time_bucket].get("system_action_taken") is None:
+                raw_analytics_map[current_time_bucket] -= 0.25
+                analytics_metadata[current_time_bucket]["system_action_taken"] = True
+            last_message_from_system = True
+        if event.event_type in TERMINATION_EVENTS:
+            terminated = False
+    if os.environ["FLASK_ENV"] != "local":
+        raw_analytics_map = {dt - timedelta(hours=7): v for dt, v in raw_analytics_map.items()}
+
+    all_time_keys = list(raw_analytics_map.keys())
     groups = []
     keys = []
-    for k, g in groupby(day_stripped_events, round_date):
+    for k, g in groupby(all_time_keys, strip_day):
         keys.append(k)
         groups.append(list(g))
-    collected_data = dict(zip(keys, groups))
-    num_buckets = keys[len(keys) - 1] - keys[0]
-    activity_data = {}
-    for time_increment in range(int(num_buckets.seconds / (15 * 60))):
-        bucket_id = keys[0] + timedelta(minutes = time_increment * 15)
-        if bucket_id in collected_data:
-            activity_data[bucket_id.isoformat()] = len(collected_data[bucket_id])
-        else:
-            activity_data[bucket_id.isoformat()] = 0
-    if not activity_data:
-        return {}
-    largest_count = max(activity_data.values())
-    for bucket in activity_data:
-        activity_data[bucket] /= largest_count
-    return activity_data
+    coalesced_map = {}
+    for i in range(len(keys)):
+        if keys[i] not in coalesced_map:
+            coalesced_map[keys[i]] = 0
+        for time in groups[i]:
+            coalesced_map[keys[i]] += raw_analytics_map[time]
+
+    # fill in blanks
+    output_map = {}
+    last_key = None
+    for key in coalesced_map:
+        if last_key is not None and last_key + timedelta(minutes=ACTIVITY_TIME_BUCKET_SIZE_MINUTES) < key:
+            last_key += timedelta(minutes=ACTIVITY_TIME_BUCKET_SIZE_MINUTES)
+            while last_key < key:
+                output_map[last_key.isoformat()] = None
+        output_map[key.isoformat()] = coalesced_map[key]
+        last_key = key
+    print(output_map)
+    return output_map
 
 
 @app.route("/patientData", methods=["GET"])
@@ -436,28 +502,18 @@ def patient_data():
         "skip",
         "boundary"
     ]
-    user_driven_events = [
-        "take",
-        "skip",
-        "paused",
-        "resumed",
-        "user_reported_error",
-        "out_of_range",
-        "not_interpretable",
-        "requested_time_delay",
-        "activity"
-    ]
-    combined_list = list(set(take_record_events) | set(user_driven_events))
+    combined_list = list(set(take_record_events) | set(USER_DRIVEN_EVENTS) | set(SYSTEM_EVENTS) | set(TERMINATION_EVENTS))
+    user_behavior_combined_list = set(USER_DRIVEN_EVENTS) | set(SYSTEM_EVENTS) | set(TERMINATION_EVENTS)
     # rules
     # ignore: reminder_delay
     # reminders from us: followup, absent, boundary, initial, manual_text
     # best user activity: take, skip
     # moderate user activity: paused, resumed, user_reported_error, out_of_range, not_interpretable
     # worst user activity: requested_time_delay, activity
-    relevant_events = Event.query.filter(Event.event_type.in_(combined_list), Event.phone_number == phone_number).all()
+    relevant_events = Event.query.filter(Event.event_type.in_(combined_list), Event.phone_number == phone_number).order_by(Event.event_time.asc()).all()
     dose_history_events = list(filter(lambda event: event.event_type in take_record_events and event.description in relevant_dose_ids_as_str, relevant_events))
-    user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
-    activity_analytics = generate_activity_analytics(user_behavior_events)
+    user_behavior_and_system_events = list(filter(lambda event: event.event_type in user_behavior_combined_list, relevant_events))
+    # activity_analytics = generate_activity_analytics(user_behavior_and_system_events)
     event_data_by_time = {}
     for time in patient_dose_times:
         event_data_by_time[time] = {"events": []}
@@ -480,8 +536,7 @@ def patient_data():
         "eventData": event_data_by_time,
         "patientName": PATIENT_NAME_MAP[phone_number],
         "takeNow": dose_to_take_now,
-        "pausedService": bool(paused_service),
-        "activityAnalytics": activity_analytics
+        "pausedService": bool(paused_service)
     })
 
 @app.route("/pauseService", methods=["POST"])
