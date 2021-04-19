@@ -978,10 +978,10 @@ def bot():
                     remove_jobs_helper(latest_dose_id, ["followup", "absent"])
                     dose_end_time = get_current_end_date(latest_dose_id)
                     if incoming_msg in ["1", "2", "3"]:
-                        log_event("requested_time_delay", incoming_phone_number, description=f"{message_delays[incoming_msg]}")
+                        log_event("requested_time_delay", f"+1{incoming_phone_number[1:]}", description=f"{message_delays[incoming_msg]}")
                         next_alarm_time = get_time_now() + message_delays[incoming_msg]
                     elif extracted_integer is not None:
-                        log_event("requested_time_delay", incoming_phone_number, description=f"{timedelta(minutes=extracted_integer)}")
+                        log_event("requested_time_delay", f"+1{incoming_phone_number[1:]}", description=f"{timedelta(minutes=extracted_integer)}")
                         next_alarm_time = get_time_now() + timedelta(minutes=extracted_integer)
                     elif activity_detection_time is not None:
                         next_alarm_time = get_time_now() + activity_detection_time[0]
@@ -1054,7 +1054,7 @@ def bot():
                         to=incoming_phone_number
                     )
             else:
-                log_event("out_of_range", incoming_phone_number, description=incoming_msg)
+                log_event("out_of_range", f"+1{incoming_phone_number[1:]}", description=incoming_msg)
                 client.messages.create(
                     body=ACTION_OUT_OF_RANGE_MSG if incoming_msg in ["t", "s"] else REMINDER_OUT_OF_RANGE_MSG,
                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
