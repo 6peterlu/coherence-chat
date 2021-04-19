@@ -195,7 +195,7 @@
                 let behaviorChartHeaderHTML = "<p style='color: #FFF'>AI learning progress 💡</p>";
                 const latestChange = activityAnalytics.behaviorLearningScores.length >= 2 ? activityAnalytics.behaviorLearningScores[activityAnalytics.behaviorLearningScores.length - 1][1] - activityAnalytics.behaviorLearningScores[activityAnalytics.behaviorLearningScores.length - 2][1] : 0;
                 behaviorChartHeaderHTML += `<p style='color: #FFF; font-size: 12px;'>Current learning score: <span style="font-size: 20px;">${activityAnalytics.behaviorLearningScores[activityAnalytics.behaviorLearningScores.length - 1][1]}</span></p>`;
-                behaviorChartHeaderHTML += `<p style='color: #FFF; font-size: 12px;'>Yesterday's score change: <span style="color:${latestChange > 0 ? '#09ad56' : '#f54242'}; font-size: 20px;">${latestChange}</span></p>`;
+                behaviorChartHeaderHTML += `<p style='color: #FFF; font-size: 12px;'>Yesterday's score change: <span style="color:${latestChange > 0 ? '#09ad56' : '#f54242'}; font-size: 20px;">${latestChange > 0 ? "+" : ""}${latestChange}</span></p>`;
                 behaviorChartHeaderHTML += "<p style='color: #FFF; font-size: 12px;'>I can learn about your schedule faster if you interact with me consistently. Try and get your score to 100!</p>";
                 document.getElementById("behaviorLearningChartTitle").innerHTML = behaviorChartHeaderHTML;
                 let dataArray = [["Day of Week", "Learning Score"], ...activityAnalytics.behaviorLearningScores]
