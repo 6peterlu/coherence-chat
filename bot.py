@@ -912,7 +912,7 @@ def incoming_message_processing(incoming_msg):
     take_list = list(filter(lambda x: x in take_tokens, processed_msg_tokens))
     skip_list = list(filter(lambda x: x == "s", processed_msg_tokens))
     error_list = list(filter(lambda x: x == "x", processed_msg_tokens))
-    thanks_list = list(filter(lambda x: x == "thanks" or x == "thank", processed_msg_tokens))
+    thanks_list = list(filter(lambda x: x == "thanks" or x == "thank" or x == "ty", processed_msg_tokens))
     filler_words = ["taking", "going", "to", "a", "for", "on", "still"]
     everything_else = list(filter(lambda x: x not in take_tokens and x != "s" and x not in filler_words, processed_msg_tokens))
     final_message_list = []
