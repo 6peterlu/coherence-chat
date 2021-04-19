@@ -57,6 +57,7 @@ TOKENS_TO_RECOGNIZE = [
     "shower",
     "working",
     "tv",
+    "yes"
 ]
 
 ALL_EVENTS = [
@@ -859,7 +860,8 @@ def canned_responses(message_str):
         "ok": "👍",
         "great": "👍",
         "no problem": "👍",
-        "hello": "Hello! 👋"
+        "hello": "Hello! 👋",
+        "yes": "Great, you use 'T' to mark your medication as taken."
     }
     best_match_score = 0.0
     best_match_concept = None
