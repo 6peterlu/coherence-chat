@@ -453,8 +453,10 @@ def generate_behavior_learning_scores(user_behavior_events, active_doses):
     output_scores = {}
     for day in behavior_scores_by_day:
         score_sum += behavior_scores_by_day[day]
+        if score_sum < 0:
+            score_sum = 0
         if starting_buffer == 0:
-            output_scores[day] = score_sum
+            output_scores[day.weekday()] = score_sum
         else:
             starting_buffer -= 1
     print(output_scores)
