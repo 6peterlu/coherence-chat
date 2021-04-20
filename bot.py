@@ -403,28 +403,28 @@ def round_date(dt, delta=ACTIVITY_BUCKET_SIZE_MINUTES, round_up=False):
 
 
 # NOTE: Not currently used.
-def generate_activity_analytics(user_events):
-    day_stripped_events = [event.event_time.replace(day=1, month=1, year=1, microsecond=0) for event in user_events]
-    groups = []
-    keys = []
-    for k, g in groupby(day_stripped_events, round_date):
-        keys.append(k)
-        groups.append(list(g))
-    collected_data = dict(zip(keys, groups))
-    num_buckets = keys[len(keys) - 1] - keys[0]
-    activity_data = {}
-    for time_increment in range(int(num_buckets.seconds / (ACTIVITY_BUCKET_SIZE_MINUTES * 60))):
-        bucket_id = keys[0] + timedelta(minutes = time_increment * 15)
-        if bucket_id in collected_data:
-            activity_data[bucket_id.isoformat()] = len(collected_data[bucket_id])
-        else:
-            activity_data[bucket_id.isoformat()] = 0
-    if not activity_data:
-        return {}
-    largest_count = max(activity_data.values())
-    for bucket in activity_data:
-        activity_data[bucket] /= largest_count
-    return activity_data
+# def generate_activity_analytics(user_events):
+#     day_stripped_events = [event.event_time.replace(day=1, month=1, year=1, microsecond=0) for event in user_events]
+#     groups = []
+#     keys = []
+#     for k, g in groupby(day_stripped_events, round_date):
+#         keys.append(k)
+#         groups.append(list(g))
+#     collected_data = dict(zip(keys, groups))
+#     num_buckets = keys[len(keys) - 1] - keys[0]
+#     activity_data = {}
+#     for time_increment in range(int(num_buckets.seconds / (ACTIVITY_BUCKET_SIZE_MINUTES * 60))):
+#         bucket_id = keys[0] + timedelta(minutes = time_increment * 15)
+#         if bucket_id in collected_data:
+#             activity_data[bucket_id.isoformat()] = len(collected_data[bucket_id])
+#         else:
+#             activity_data[bucket_id.isoformat()] = 0
+#     if not activity_data:
+#         return {}
+#     largest_count = max(activity_data.values())
+#     for bucket in activity_data:
+#         activity_data[bucket] /= largest_count
+#     return activity_data
 
 
 # takes user behavior events to the beginning of time
@@ -470,6 +470,7 @@ def patient_data():
     if recovered_cookie is None:
         return jsonify()  # empty response if no cookie
     phone_number = f"+11{recovered_cookie}"
+    print(request.remote_addr)
     log_event("patient_portal_load", phone_number)
     if phone_number not in PATIENT_DOSE_MAP:
         response = jsonify({"error": "The secret code was incorrect. Please double-check that you've entered it correctly."})
