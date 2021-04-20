@@ -173,6 +173,8 @@ SECRET_CODES = { "+113604508655": 123456 } if os.environ["FLASK_ENV"] == "local"
 
 ACTIVITY_BUCKET_SIZE_MINUTES = 10
 
+IP_BLACKLIST = ["73.93.153.54", "73.15.102.35", "73.93.154.210"]
+
 logging.basicConfig()
 logging.getLogger('apscheduler').setLevel(logging.DEBUG)
 
@@ -474,7 +476,7 @@ def patient_data():
     # blacklist my IPs to reduce data pollution
     print(request.remote_addr)
     # my IP might be changing, not sure.
-    if request.remote_addr not in ["73.93.153.54", "73.15.102.35", "73.93.154.210"]:
+    if request.remote_addr not in IP_BLACKLIST:
         log_event("patient_portal_load", phone_number, description=request.remote_addr)
     if phone_number not in PATIENT_DOSE_MAP:
         response = jsonify({"error": "The secret code was incorrect. Please double-check that you've entered it correctly."})
@@ -605,7 +607,8 @@ def save_phone_number():
     if secret_code == str(SECRET_CODES[phone_number_formatted]):
         out = jsonify()
         out.set_cookie("phoneNumber", phone_number)
-        log_event("successful_login", phone_number_formatted)
+        if request.remote_addr not in in IP_BLACKLIST:
+            log_event("successful_login", phone_number_formatted, description=request.remote_addr)
         return out
     log_event("failed_login", phone_number_formatted)
     return jsonify(), 401
