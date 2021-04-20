@@ -473,8 +473,7 @@ def patient_data():
         return jsonify()  # empty response if no cookie
     phone_number = f"+11{recovered_cookie}"
     # blacklist my IPs to reduce data pollution
-    print(request.environ['REMOTE_ADDR'])
-    if request.remote_addr not in ["10.95.165.205"]:
+    if request.remote_addr not in ["73.93.153.54", "73.15.102.35"]:
         log_event("patient_portal_load", phone_number)
     if phone_number not in PATIENT_DOSE_MAP:
         response = jsonify({"error": "The secret code was incorrect. Please double-check that you've entered it correctly."})
