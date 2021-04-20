@@ -431,6 +431,8 @@ def round_date(dt, delta=ACTIVITY_BUCKET_SIZE_MINUTES, round_up=False):
 
 # takes user behavior events to the beginning of time
 def generate_behavior_learning_scores(user_behavior_events, active_doses):
+    print(user_behavior_events)
+    print(active_doses)
     # end time is end of yesterday.
     end_time = get_time_now().astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
     user_behavior_events_until_today = list(filter(lambda event: event.aware_event_time < end_time, user_behavior_events))
@@ -441,6 +443,7 @@ def generate_behavior_learning_scores(user_behavior_events, active_doses):
     current_day_bucket = user_behavior_events_until_today[0].aware_event_time.astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
     # latest_day = user_behavior_events_until_today[len(user_behavior_events_until_today) - 1].aware_event_time.astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
     while current_day_bucket < end_time:
+        print("entered while")
         current_day_events = list(filter(lambda event: event.aware_event_time < current_day_bucket + timedelta(days=1) and event.aware_event_time > current_day_bucket, user_behavior_events_until_today))
         current_day_take_skip = list(filter(lambda event: event.event_type in ["take", "skip"], current_day_events))
         unique_time_buckets = []
@@ -449,6 +452,7 @@ def generate_behavior_learning_scores(user_behavior_events, active_doses):
         behavior_score_for_day = len(current_day_take_skip) * 3 / len(active_doses) + len(unique_time_buckets) * 2 / len (active_doses) - 3
         behavior_scores_by_day[current_day_bucket] = behavior_score_for_day
         current_day_bucket += timedelta(days=1)
+    print(behavior_scores_by_day)
     score_sum = 0
     starting_buffer = len(behavior_scores_by_day) - 7  # combine all data before last 7 days
     output_scores = []
@@ -458,7 +462,7 @@ def generate_behavior_learning_scores(user_behavior_events, active_doses):
             score_sum = 0
         elif score_sum > 100:
             score_sum = 100
-        if starting_buffer == 0:
+        if starting_buffer <= 0:
             output_scores.append((day.strftime('%a'), int(score_sum)))
         else:
             starting_buffer -= 1
@@ -473,6 +477,7 @@ def patient_data():
         return jsonify()  # empty response if no cookie
     phone_number = f"+11{recovered_cookie}"
     # blacklist my IPs to reduce data pollution
+    print(request.remote_addr)
     if request.remote_addr not in ["73.93.153.54", "73.15.102.35"]:
         log_event("patient_portal_load", phone_number)
     if phone_number not in PATIENT_DOSE_MAP:

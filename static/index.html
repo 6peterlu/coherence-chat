@@ -191,7 +191,6 @@
         }
         function renderBehaviorLearningChart() {
             if (chartLibraryLoaded) {
-                // TODO: handle edge cases with less data
                 if (activityAnalytics.behaviorLearningScores.length >= 2) {
                     let behaviorChartHeaderHTML = "<p style='color: #FFF'>AI learning progress 💡</p>";
                     const latestChange = activityAnalytics.behaviorLearningScores[activityAnalytics.behaviorLearningScores.length - 1][1] - activityAnalytics.behaviorLearningScores[activityAnalytics.behaviorLearningScores.length - 2][1];
