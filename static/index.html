@@ -190,9 +190,9 @@
             analyticsDiv.innerHTML = innerHTML;
         }
         function renderBehaviorLearningChart() {
-            if (chartLibraryLoaded) {
+            if (chartLibraryLoaded && activityAnalytics.behaviorLearningScores.length >= 2) {
                 let behaviorChartHeaderHTML = "<p style='color: #FFF'>AI learning progress 💡</p>";
-                const latestChange = activityAnalytics.behaviorLearningScores.length >= 2 ? activityAnalytics.behaviorLearningScores[activityAnalytics.behaviorLearningScores.length - 1][1] - activityAnalytics.behaviorLearningScores[activityAnalytics.behaviorLearningScores.length - 2][1] : 0;
+                const latestChange = activityAnalytics.behaviorLearningScores[activityAnalytics.behaviorLearningScores.length - 1][1] - activityAnalytics.behaviorLearningScores[activityAnalytics.behaviorLearningScores.length - 2][1];
                 behaviorChartHeaderHTML += `<p style='color: #FFF; font-size: 12px;'>Current learning score: <span style="font-size: 20px;">${activityAnalytics.behaviorLearningScores[activityAnalytics.behaviorLearningScores.length - 1][1]}</span></p>`;
                 behaviorChartHeaderHTML += `<p style='color: #FFF; font-size: 12px;'>Yesterday's score change: <span style="color:${latestChange > 0 ? '#09ad56' : '#f54242'}; font-size: 20px;">${latestChange > 0 ? "+" : ""}${latestChange}</span></p>`;
                 behaviorChartHeaderHTML += "<p style='color: #FFF; font-size: 12px;'>Your score improves when you consistently interact with us. Once you're at 100, I will be able to better understand when you're busy and free and give you texts at even better times.</p>";
@@ -212,7 +212,6 @@
                 };
 
                 var chart = new google.visualization.LineChart(document.getElementById('behaviorLearningChart'));
-
                 chart.draw(data, options);
             } else {
                 google.charts.setOnLoadCallback(() => {

@@ -460,6 +460,7 @@ def generate_behavior_learning_scores(user_behavior_events, active_doses):
             output_scores.append((day.strftime('%a'), int(score_sum)))
         else:
             starting_buffer -= 1
+    print(output_scores)
     return output_scores
 
 
