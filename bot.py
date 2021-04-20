@@ -857,7 +857,7 @@ def activity_detection(message_str):
         "tv": (time_delay_long, f"{computing_prefix} Have fun, we'll check in later."),
         "shower": (time_delay_short, f"{computing_prefix} Have a good shower, we'll check in later."),
         "working": (time_delay_long, f"{computing_prefix} No problem, we'll check in later."),
-        "call": (time_delay_short, f"{computing_prefix} Have a great call! We'll check in later."),
+        "phone": (time_delay_short, f"{computing_prefix} Have a great call! We'll check in later."),
     }
     best_match_score = 0.0
     best_match_concept = None
