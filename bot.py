@@ -607,7 +607,7 @@ def save_phone_number():
     if secret_code == str(SECRET_CODES[phone_number_formatted]):
         out = jsonify()
         out.set_cookie("phoneNumber", phone_number)
-        if request.remote_addr not in in IP_BLACKLIST:
+        if request.remote_addr not in IP_BLACKLIST:
             log_event("successful_login", phone_number_formatted, description=request.remote_addr)
         return out
     log_event("failed_login", phone_number_formatted)
