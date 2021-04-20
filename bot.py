@@ -14,6 +14,7 @@ import parsedatetime
 import random
 import string
 from itertools import chain, groupby
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from apscheduler.events import (
     EVENT_JOB_ERROR,
@@ -191,6 +192,7 @@ class Config(object):
 # create app
 app = Flask(__name__)
 app.config.from_object(Config())
+app.wsgi_app = ProxyFix(app.wsgi_app)
 CORS(app)
 
 # sqlalchemy db
