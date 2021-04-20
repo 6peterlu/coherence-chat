@@ -469,6 +469,7 @@ def patient_data():
     if recovered_cookie is None:
         return jsonify()  # empty response if no cookie
     phone_number = f"+11{recovered_cookie}"
+    log_event("patient_portal_load", phone_number)
     if phone_number not in PATIENT_DOSE_MAP:
         response = jsonify({"error": "The secret code was incorrect. Please double-check that you've entered it correctly."})
         response.set_cookie("phoneNumber", "", expires=0)
@@ -903,6 +904,7 @@ def extract_integer(message):
 # this function returns a list of tokens which get processed in order through chat pipeline
 # note that there's no guarantee of text sending order
 def incoming_message_processing(incoming_msg):
+    # regex for taken @: -> (taken|take|t)\s?(?:(?:at|@)\s?(\S+)?)?
     processed_msg = incoming_msg.lower().strip()
     excited = "!" in processed_msg
     processed_msg = processed_msg.translate(str.maketrans("", "", string.punctuation))
