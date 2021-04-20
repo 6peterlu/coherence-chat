@@ -1104,12 +1104,39 @@ def manual_send():
     incoming_data = request.json
     dose_id = int(incoming_data["doseId"])
     reminder_type = incoming_data["reminderType"]
-    if reminder_type == "absent":
-        send_absent_text(dose_id)
-    elif reminder_type == "followup":
-        send_followup_text(dose_id)
-    elif reminder_type == "initial":
-        send_intro_text(dose_id)
+    manual_time = incoming_data["manualTime"]
+    if not manual_time:
+        if reminder_type == "absent":
+            send_absent_text(dose_id)
+        elif reminder_type == "followup":
+            send_followup_text(dose_id)
+        elif reminder_type == "initial":
+            send_intro_text(dose_id)
+    else:
+        event_time_obj = datetime.strptime(manual_time, "%Y-%m-%dT%H:%M")
+        if os.environ["FLASK_ENV"] != "local":
+            event_time_obj += timedelta(hours=7)  # HACK to transform to UTC
+        if reminder_type == "absent":
+            scheduler.add_job(f"{dose_id}-absent", send_absent_text,
+                args=[dose_id],
+                trigger="date",
+                run_date=event_time_obj,  # HACK, assumes this executes after start_date
+                misfire_grace_time=5*60
+            )
+        elif reminder_type == "followup":
+            scheduler.add_job(f"{dose_id}-followup", send_followup_text,
+                args=[dose_id],
+                trigger="date",
+                run_date=event_time_obj,  # HACK, assumes this executes after start_date
+                misfire_grace_time=5*60
+            )
+        elif reminder_type == "initial":
+            scheduler.add_job(f"{dose_id}-initial", send_intro_text,
+                args=[dose_id],
+                trigger="date",
+                run_date=event_time_obj,  # HACK, assumes this executes after start_date
+                misfire_grace_time=5*60
+            )
     return jsonify()
 
 @app.route("/manual/takeover", methods=["POST"])
@@ -1163,14 +1190,14 @@ def maybe_schedule_absent(dose_id):
     # schedule absent text in an hour or ten mins before boundary
     if end_date is not None:  # if it's none, there's no boundary set up
         desired_absent_reminder = min(get_time_now() + timedelta(minutes=random.randint(45,75)), end_date - timedelta(minutes=BUFFER_TIME_MINS))
-    # room to schedule absent
-    if desired_absent_reminder > get_time_now():
-        scheduler.add_job(f"{dose_id}-absent", send_absent_text,
-            args=[dose_id],
-            trigger="date",
-            run_date=desired_absent_reminder,
-            misfire_grace_time=5*60
-        )
+        # room to schedule absent
+        if desired_absent_reminder > get_time_now():
+            scheduler.add_job(f"{dose_id}-absent", send_absent_text,
+                args=[dose_id],
+                trigger="date",
+                run_date=desired_absent_reminder,
+                misfire_grace_time=5*60
+            )
 
 def remove_jobs_helper(dose_id, jobs_list):
     for job in jobs_list:
