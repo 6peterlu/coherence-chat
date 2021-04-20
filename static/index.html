@@ -190,7 +190,8 @@
             analyticsDiv.innerHTML = innerHTML;
         }
         function renderBehaviorLearningChart() {
-            if (chartLibraryLoaded && activityAnalytics.behaviorLearningScores.length >= 2) {
+            if (chartLibraryLoaded) {
+                //  && activityAnalytics.behaviorLearningScores.length >= 2
                 let behaviorChartHeaderHTML = "<p style='color: #FFF'>AI learning progress 💡</p>";
                 const latestChange = activityAnalytics.behaviorLearningScores[activityAnalytics.behaviorLearningScores.length - 1][1] - activityAnalytics.behaviorLearningScores[activityAnalytics.behaviorLearningScores.length - 2][1];
                 behaviorChartHeaderHTML += `<p style='color: #FFF; font-size: 12px;'>Current learning score: <span style="font-size: 20px;">${activityAnalytics.behaviorLearningScores[activityAnalytics.behaviorLearningScores.length - 1][1]}</span></p>`;
