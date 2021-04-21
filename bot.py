@@ -240,7 +240,7 @@ def get_initial_message(dose_id, time_string, welcome_back=False):
         return f"{random.choice(TIME_OF_DAY_PREFIX_MAP[current_time_of_day])} {random.choice(INITIAL_SUFFIXES).substitute(time=time_string)}"
 
 def get_take_message(excited, input_time=None):
-    datestring = get_time_now().astimezone(timezone(USER_TIMEZONE)).strftime('%b %d, %I:%M %p') if input_time is None else input_time
+    datestring = get_time_now().astimezone(timezone(USER_TIMEZONE)).strftime('%b %d, %I:%M %p') if input_time is None else input_time.strftime('%b %d, %I:%M %p')
     return TAKE_MSG_EXCITED.substitute(time=datestring) if excited else TAKE_MSG.substitute(time=datestring)
 
 def get_absent_message():
@@ -763,6 +763,7 @@ def bot():
                 if latest_dose is not None and latest_dose.within_dosing_period():
                     excited = incoming_msg["modifiers"]["emotion"] == "excited"
                     input_time = incoming_msg.get("payload")
+                    # input_time = datetime.strptime(incoming_msg.get("payload"), "%Y-%m-%d %H:%M:%S-")
                     outgoing_copy = get_take_message(excited, input_time=input_time)
                     log_event("take", formatted_incoming_phone_number, description=latest_dose_id, event_time=input_time)
                     # text patient confirmation

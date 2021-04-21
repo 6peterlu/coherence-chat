@@ -1,4 +1,5 @@
 # handler for all regexing and message segmentation (later, more stuff I hope)
+from datetime import date
 from pytz import timezone, utc as pytzutc
 import os
 import string
@@ -17,10 +18,10 @@ cal = parsedatetime.Calendar()
 
 USER_TIMEZONE = "US/Pacific"
 
-MEDICATION_TAKEN_REGEX = r'(?:\s+|^)(taken|take|t)(?:\s+|$)'
+MEDICATION_TAKEN_REGEX = r'(?:\W|^)(taken|take|t)(?:\W|$)'
 TIME_EXTRACTION_REGEX = r'(\d+(?:\:\d+)?)\s*(pm|am|hr|hours|hour|mins|min)?'
-SKIP_REGEX = r'(?:\s+|^)(skipped|skipping|skip|s)(?:\s+|$)'
-SPECIAL_COMMANDS_REGEX = r'(?:\s+|^)(\d+|x)(?:\s+|$)'
+SKIP_REGEX = r'(?:\W|^)(skipped|skipping|skip|s)(?:\W|$)'
+SPECIAL_COMMANDS_REGEX = r'(?:\W|^)(\d+|x)(?:\W|$)'
 
 COMPUTING_PREFIX = "Computing ideal reminder time...done."
 
@@ -58,39 +59,57 @@ THANKS_VERSIONS = ["thank", "ty"]
 # re-integrate spacy later
 # SPACY_EMBEDDINGS = {token: nlp(token) for token in RECOGNIZED_ACTIVITIES}
 
+
+def get_datetime_obj_from_string(timestring, force=False):
+    datetime_data, parse_status = cal.parseDT(timestring)
+    pacific_time = timezone(USER_TIMEZONE)
+    next_alarm_time = pacific_time.localize(datetime_data.replace(tzinfo=None))
+    if parse_status != 0:
+        return next_alarm_time
+    if force:
+        if len(timestring) <= 2:
+            modified_timestring = f"{timestring}:00"
+            datetime_data, parse_status = cal.parseDT(modified_timestring)
+            next_alarm_time = pacific_time.localize(datetime_data.replace(tzinfo=None))
+            if parse_status != 0:
+                return next_alarm_time
+    return None
+
 def segment_message(raw_message_str):
     message_segments = []
     processed_msg = raw_message_str.lower().strip()
     excited = "!" in processed_msg
-    # grab time before punctuation is removed because we need the :
-    extracted_time = re.findall(TIME_EXTRACTION_REGEX, processed_msg)
-    # remove all punctuation
-    processed_msg = processed_msg.translate(str.maketrans("", "", string.punctuation))
+    # remove all punctuation besides : and @
+    punctuation = string.punctuation.replace("@", "").replace(":", "")
+    processed_msg = processed_msg.translate(str.maketrans("", "", punctuation))
     # remove brackets
     processed_msg = processed_msg.replace("[", "").replace("]", "")
+    extracted_time = re.findall(TIME_EXTRACTION_REGEX, processed_msg)
     taken_data = re.findall(MEDICATION_TAKEN_REGEX, processed_msg)
+    print("taken data")
     print(taken_data)
     skip_data = re.findall(SKIP_REGEX, processed_msg)
     special_commands = re.findall(SPECIAL_COMMANDS_REGEX, processed_msg)
-    parse_status = 0
+    reconstructed_time = None
+    next_alarm_time = None
     if extracted_time:
         reconstructed_time = extracted_time[0][0]
-        if extracted_time[0][1] is not None:
+        if extracted_time[0][1]:
             reconstructed_time += " " + extracted_time[0][1]
-        print(reconstructed_time)
-        datetime_data, parse_status = cal.parseDT(reconstructed_time)
-        next_alarm_time = datetime_data
-        if os.environ['FLASK_ENV'] == "local":  # HACK: required to get this to work on local
-            pacific_time = timezone(USER_TIMEZONE)
-            next_alarm_time = pacific_time.localize(datetime_data.replace(tzinfo=None))
+        next_alarm_time = get_datetime_obj_from_string(reconstructed_time)
     if taken_data:
+        print(reconstructed_time)
+        print(next_alarm_time)
+        if reconstructed_time and next_alarm_time is None:
+            print("run it again")
+            next_alarm_time = get_datetime_obj_from_string(reconstructed_time, force=True)
         message_body = {"type": "take", "modifiers": {"emotion": "excited" if excited else "neutral"}}
-        if parse_status != 0:
+        if next_alarm_time is not None:
             message_body["payload"] = next_alarm_time
         message_segments.append(message_body)
     elif skip_data:
         message_segments.append({"type": "skip"})
-    elif parse_status != 0:
+    elif next_alarm_time is not None:
         message_segments.append({"type": "requested_alarm_time", "payload": next_alarm_time})
     else:
         if special_commands:

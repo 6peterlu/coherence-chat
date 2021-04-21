@@ -16,6 +16,10 @@ def test_segment_message():
     assert segment_message("10 min")[0] == {'type': 'requested_alarm_time', 'payload': pacific_time.localize(datetime(1999, 12, 31, 16, 10)), "raw": "10 min"}
     assert segment_message("20")[0] == {'type': 'delay_minutes', 'payload': 20, "raw": "20"}
     assert segment_message("T at 8:00")[0] == {'type': 'take', 'modifiers': {'emotion': 'neutral'}, 'payload': pacific_time.localize(datetime(1999, 12, 31, 8, 0)), "raw": "T at 8:00"}
+    assert segment_message("T at 8")[0] == {'type': 'take', 'modifiers': {'emotion': 'neutral'}, 'payload': pacific_time.localize(datetime(1999, 12, 31, 8, 0)), "raw": "T at 8"}
+    assert segment_message("T at8")[0] == {'type': 'take', 'modifiers': {'emotion': 'neutral'}, 'payload': pacific_time.localize(datetime(1999, 12, 31, 8, 0)), "raw": "T at8"}
+    assert segment_message("T@8")[0] == {'type': 'take', 'modifiers': {'emotion': 'neutral'}, 'payload': pacific_time.localize(datetime(1999, 12, 31, 8, 0)), "raw": "T@8"}
+    assert segment_message("Taken@ 8")[0] == {'type': 'take', 'modifiers': {'emotion': 'neutral'}, 'payload': pacific_time.localize(datetime(1999, 12, 31, 8, 0)), "raw": "Taken@ 8"}
     assert segment_message("T at 12:30")[0] == {'type': 'take', 'modifiers': {'emotion': 'neutral'}, 'payload': pacific_time.localize(datetime(1999, 12, 31, 12, 30)), "raw": "T at 12:30"}
     assert segment_message("T at 1:30pm")[0] == {'type': 'take', 'modifiers': {'emotion': 'neutral'}, 'payload': pacific_time.localize(datetime(1999, 12, 31, 13, 30)), "raw": "T at 1:30pm"}
     assert segment_message("2 on a walk")[0] == {'payload': '2', 'type': 'special', "raw": "2 on a walk"}
