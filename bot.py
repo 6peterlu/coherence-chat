@@ -835,13 +835,13 @@ def bot():
                                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                 to=incoming_phone_number
                             )
+                            remove_jobs_helper(latest_dose_id, ["followup", "absent"])
                             scheduler.add_job(f"{latest_dose_id}-followup", send_followup_text,
                                 args=[latest_dose_id],
                                 trigger="date",
                                 run_date=next_alarm_time,
                                 misfire_grace_time=5*60
                             )
-                            remove_jobs_helper(latest_dose_id, ["followup", "absent"])
                         else:
                             client.messages.create(
                                 body=REMINDER_TOO_LATE_MSG.substitute(time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")),
@@ -876,13 +876,13 @@ def bot():
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                             to=incoming_phone_number
                         )
+                        remove_jobs_helper(latest_dose_id, ["followup", "absent"])
                         scheduler.add_job(f"{latest_dose_id}-followup", send_followup_text,
                             args=[latest_dose_id],
                             trigger="date",
                             run_date=next_alarm_time,
                             misfire_grace_time=5*60
                         )
-                        remove_jobs_helper(latest_dose_id, ["followup", "absent"])
                     else:
                         client.messages.create(
                             body=REMINDER_TOO_LATE_MSG.substitute(time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")),
@@ -915,13 +915,13 @@ def bot():
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                             to=incoming_phone_number
                         )
+                        remove_jobs_helper(latest_dose_id, ["followup", "absent"])
                         scheduler.add_job(f"{latest_dose_id}-followup", send_followup_text,
                             args=[latest_dose_id],
                             trigger="date",
                             run_date=next_alarm_time,
                             misfire_grace_time=5*60
                         )
-                        remove_jobs_helper(latest_dose_id, ["followup", "absent"])
                     else:
                         client.messages.create(
                             body=REMINDER_TOO_LATE_MSG.substitute(time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")),
@@ -952,13 +952,13 @@ def bot():
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                             to=incoming_phone_number
                         )
+                        remove_jobs_helper(latest_dose_id, ["followup", "absent"])
                         scheduler.add_job(f"{latest_dose_id}-followup", send_followup_text,
                             args=[latest_dose_id],
                             trigger="date",
                             run_date=next_alarm_time,
                             misfire_grace_time=5*60
                         )
-                        remove_jobs_helper(latest_dose_id, ["followup", "absent"])
                     else:
                         client.messages.create(
                             body=REMINDER_TOO_LATE_MSG.substitute(time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")),
@@ -1178,12 +1178,13 @@ def send_intro_text(dose_id, manual=False, welcome_back=False):
     log_event("initial", dose_obj.phone_number, description=dose_id)
 
 def scheduler_error_alert(event):
-    with scheduler.app.app_context():
+    if "UNITTESTING" not in os.environ:
         client.messages.create(
             body=f"Scheduler reports job missed for event ID {event.job_id}.",
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
             to="+13604508655"
         )
+
 scheduler.add_listener(scheduler_error_alert, EVENT_JOB_MISSED | EVENT_JOB_ERROR)
 scheduler.init_app(app)
 scheduler.start()

@@ -4,9 +4,10 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 import sqlalchemy as sa
 from pytest_postgresql.janitor import DatabaseJanitor
+from unittest import mock
 from models import db
 
-from bot import app as prod_app
+from bot import app as prod_app, scheduler as prod_scheduler, scheduler_error_alert as prod_error_alert
 
 # Retrieve a database connection string from the shell environment
 try:
@@ -17,6 +18,7 @@ except KeyError:
                    'TEST_DATABASE_URI in order to run tests.')
 else:
     DB_OPTS = sa.engine.url.make_url(DB_CONN).translate_connect_args()
+
 
 @pytest.fixture(scope='session')
 def database(request):
@@ -41,9 +43,13 @@ def app(database):
     '''
     prod_app.config['SQLALCHEMY_DATABASE_URI'] = DB_CONN
     prod_app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
     return prod_app
 
+
+@pytest.fixture(scope='session')
+def scheduler(app):
+    prod_scheduler.remove_listener(prod_error_alert)  # prevent these from triggering
+    return prod_scheduler
 
 @pytest.fixture
 def client(app):
