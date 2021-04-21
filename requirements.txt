@@ -35,7 +35,7 @@ six==1.15.0
 smart-open==3.0.0
 spacy==3.0.5
 spacy-legacy==3.0.2
-SQLAlchemy==1.4.5
+SQLAlchemy==1.3.24  # pinned here so pytest can work
 srsly==2.4.0
 thinc==8.0.2
 tqdm==4.59.0
