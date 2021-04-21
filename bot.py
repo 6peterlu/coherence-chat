@@ -131,7 +131,7 @@ PATIENT_DOSE_MAP = { "+113604508655": {"morning": [153, 154], "afternoon": [114,
     "+113604508655": {"morning": [85]},
     "+113609042210": {"afternoon": [25], "evening": [15]},
     "+113609049085": {"evening": [16]},
-    "+114152142478": {"morning": [26, 82]},
+    "+114152142478": {"morning": [26, 82, 92]},
     "+116502690598": {"evening": [27]},
     "+118587761377": {"morning": [29]},
     "+113607738908": {"morning": [68, 87], "evening": [69, 81]},
@@ -225,7 +225,7 @@ def get_time_now(tzaware=True):
 def get_followup_message():
     return random.choice(FOLLOWUP_MSGS)
 
-def get_initial_message(dose_id, time_string, welcome_back=False):
+def get_initial_message(dose_id, time_string, welcome_back=False, phone_number=None):
     current_time_of_day = None
     for phone_number in PATIENT_DOSE_MAP:
         for time_of_day in PATIENT_DOSE_MAP[phone_number]:
@@ -234,7 +234,7 @@ def get_initial_message(dose_id, time_string, welcome_back=False):
     if welcome_back:
         return f"{random.choice(WELCOME_BACK_MESSAGES)} {random.choice(INITIAL_SUFFIXES).substitute(time=time_string)}"
     random_choice = random.random()
-    if random_choice < 0.8 or current_time_of_day is None:
+    if random_choice < 0.8 or current_time_of_day is None or phone_number == "+114152142478":  # blacklist miki
         return random.choice(INITIAL_MSGS).substitute(time=time_string)
     else:
         return f"{random.choice(TIME_OF_DAY_PREFIX_MAP[current_time_of_day])} {random.choice(INITIAL_SUFFIXES).substitute(time=time_string)}"
@@ -1161,7 +1161,7 @@ def send_boundary_text(dose_id):
 def send_intro_text(dose_id, manual=False, welcome_back=False):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
-        body=f"{get_initial_message(dose_id, get_time_now().astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M'), welcome_back)}{ACTION_MENU}",
+        body=f"{get_initial_message(dose_id, get_time_now().astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M'), welcome_back, dose_obj.phone_number)}{ACTION_MENU}",
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=dose_obj.phone_number
     )

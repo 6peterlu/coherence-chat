@@ -4,6 +4,8 @@ Chatservice for Coherence
 ## Deployment pattern
 During development, test with a dev flask server: `python bot.py`.
 
+Run pytest with `pytest` and ensure all is passing.
+
 Before pushing to prod, test with gunicorn locally: `gunicorn -b 0.0.0.0:5000 bot:app --workers 1`
 
 Then you can safely push to prod.
