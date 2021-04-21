@@ -25,6 +25,7 @@
             <option value="followup">followup</option>
             <option value="initial">initial</option>
         </select>
+        <input id="manualEventTime" type="datetime-local" />
         <button id="sendManual" onclick="sendManual()">Send manual</button>
     </div>
 
@@ -372,8 +373,8 @@
         function sendManual() {
             const reminderType = document.getElementById("reminderType").value;
             const doseId = document.getElementById("doseId").value;
-            const body = { reminderType, doseId }
-            post("manual", { reminderType, doseId }).then(
+            const manualTime = document.getElementById("manualEventTime").value;
+            post("manual", { reminderType, doseId, manualTime }).then(
                 response => response.json()).then(result => {
                     retrieveJobs();
                 }
