@@ -1178,7 +1178,6 @@ def send_intro_text(dose_id, manual=False, welcome_back=False):
     log_event("initial", dose_obj.phone_number, description=dose_id)
 
 def scheduler_error_alert(event):
-    print("UNITTESTING" in os.environ)
     if "UNITTESTING" not in os.environ:
         client.messages.create(
             body=f"Scheduler reports job missed for event ID {event.job_id}.",
