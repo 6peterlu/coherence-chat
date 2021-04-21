@@ -3,9 +3,10 @@ import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 import sqlalchemy as sa
-from pytest_postgresql.factories import (init_postgresql_database,
-                                         drop_postgresql_database)
 from pytest_postgresql.janitor import DatabaseJanitor
+from models import db
+
+from bot import app as prod_app
 
 # Retrieve a database connection string from the shell environment
 try:
@@ -38,12 +39,15 @@ def app(database):
     '''
     Create a Flask app context for the tests.
     '''
-    app = Flask(__name__)
+    prod_app.config['SQLALCHEMY_DATABASE_URI'] = DB_CONN
+    prod_app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = DB_CONN
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    return prod_app
 
-    return app
+
+@pytest.fixture
+def client(app):
+    return app.test_client()
 
 
 @pytest.fixture(scope='session')
@@ -52,13 +56,7 @@ def _db(app):
     Provide the transactional fixtures with access to the database via a Flask-SQLAlchemy
     database connection.
     '''
-    db = SQLAlchemy(app=app)
-
-    class Online(db.Model):
-        id = db.Column(db.Integer, primary_key=True)
-        online = db.Column(db.Boolean)
-        def __repr__(self):
-            return f"<Online {id}>"
+    db.init_app(app)
     db.create_all()
 
     return db

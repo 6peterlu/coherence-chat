@@ -19,10 +19,12 @@ def test_segment_message():
     assert segment_message("T at 12:30")[0] == {'type': 'take', 'modifiers': {'emotion': 'neutral'}, 'payload': pacific_time.localize(datetime(1999, 12, 31, 12, 30)), "raw": "T at 12:30"}
     assert segment_message("T at 1:30pm")[0] == {'type': 'take', 'modifiers': {'emotion': 'neutral'}, 'payload': pacific_time.localize(datetime(1999, 12, 31, 13, 30)), "raw": "T at 1:30pm"}
     assert segment_message("2 on a walk")[0] == {'payload': '2', 'type': 'special', "raw": "2 on a walk"}
-    assert segment_message("2 on a walk")[1] == {"payload": {"response": "Computing ideal reminder time...done. Enjoy your walk! We'll check in later.", 'type': 'short'}, "type": "activity", "raw": "2 on a walk"}
+    assert segment_message("2 on a walk")[1] == {"payload": {"response": "Computing ideal reminder time...done. Enjoy your walk! We'll check in later.", 'type': 'short', 'concept': 'leisure'}, "type": "activity", "raw": "2 on a walk"}
     assert segment_message("T @ 0759")[0] == {'modifiers': {'emotion': 'neutral'}, 'payload': pacific_time.localize(datetime(1999, 12, 31, 7, 59)), "type": "take", "raw": "T @ 0759"}
     assert segment_message("T. Thanks!")[0] == {'modifiers': {'emotion': 'excited'}, 'type': 'take', "raw": "T. Thanks!"}
     assert segment_message("T. Thanks!")[1] == {'modifiers': {'emotion': 'excited'}, 'type': 'thanks', "raw": "T. Thanks!"}
     assert segment_message("Thank you! 5 minutes")[0] == {'type': 'requested_alarm_time', 'payload': pacific_time.localize(datetime(1999, 12, 31, 16, 5)), "raw": "Thank you! 5 minutes"}
     assert segment_message("Thank you! 5 minutes")[1] == {'type': 'thanks', 'modifiers': {'emotion': 'excited'}, "raw": "Thank you! 5 minutes"}
     assert segment_message("S :)")[0] == {'type': 'skip', "raw": "S :)"}
+    assert segment_message("walking")[0] == {'type': 'activity', 'payload': {'type': 'short', 'response': "Computing ideal reminder time...done. Enjoy your walk! We'll check in later.", 'concept': 'leisure'}, 'raw': 'walking'}
+    assert segment_message("dinner")[0] == {'type': 'activity', 'payload': {'type': 'long', 'response': "Computing ideal reminder time...done. Have a great dinner! We'll check in later.", 'concept': 'meal'}, 'raw': 'dinner'}
