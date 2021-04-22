@@ -29,6 +29,7 @@ class User(db.Model):
 class DoseWindow(db.Model):
     __tablename__ = 'dose_window'
     id = db.Column(db.Integer, primary_key=True)
+    # remmeber, UTC only
     day_of_week = db.Column(db.Integer, nullable=False)
     start_hour = db.Column(db.Integer, nullable=False)
     end_hour = db.Column(db.Integer, nullable=False)
@@ -37,6 +38,11 @@ class DoseWindow(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     medications = db.relationship("Medication", secondary=dose_medication_linker, back_populates="dose_windows")
     events = db.relationship("EventLog", backref="dose_window", lazy='dynamic')
+
+    def within_dosing_period(self, time=None):
+        time_to_compare = get_time_now() if time is None else time
+        # boundary condition
+        return self.next_end_date - timedelta(days=1) > time_to_compare and self.next_start_date - timedelta(days=1) < time_to_compare
 
 
 class Medication(db.Model):
@@ -47,14 +53,19 @@ class Medication(db.Model):
     events = db.relationship("EventLog", backref="medication", lazy='dynamic')
     dose_windows = db.relationship("DoseWindow", secondary=dose_medication_linker, back_populates="medications")
 
+    # TODO: add property to check dose taken status
+    # @property
+    # def
+
 class EventLog(db.Model):
     __tablename__ = 'event_log'
     id = db.Column(db.Integer, primary_key=True)
-    event_type = db.Column(db.String)
-    description = db.Column(db.String)
+    event_type = db.Column(db.String, nullable=False)
+    description = db.Column(db.String, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     dose_window_id = db.Column(db.Integer, db.ForeignKey('dose_window.id'))
     medication_id = db.Column(db.Integer, db.ForeignKey('medication.id'))
+    event_time = db.Column(db.DateTime, nullable=False)
 
 
 # old tables

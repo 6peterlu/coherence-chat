@@ -13,7 +13,17 @@ import parsedatetime
 import random
 from itertools import chain, groupby
 from werkzeug.middleware.proxy_fix import ProxyFix
-from models import Dose, Reminder, Online, ManualTakeover, Concept, Event, PausedService
+from models import (
+    Dose,
+    Reminder,
+    Online,
+    ManualTakeover,
+    Event,
+    PausedService,
+    # new data models
+    User,
+    EventLog
+)
 
 from models import db
 from nlp import segment_message
@@ -254,6 +264,20 @@ def log_event(event_type, phone_number, event_time=None, description=None):
     if event_time is None:
         event_time = get_time_now()  # done at runtime for accurate timing
     new_event = Event(event_type=event_type, phone_number=phone_number, event_time=event_time, description=description)
+    db.session.add(new_event)
+    db.session.commit()
+
+def log_event_new(event_type, user_id, dose_window_id, medication_id, event_time=None, description=None):
+    if event_time is None:
+        event_time = get_time_now()  # done at runtime for accurate timing
+    new_event = EventLog(
+        event_type=event_type,
+        user_id=user_id,
+        dose_window_id=dose_window_id,
+        medication_id=medication_id,
+        event_time=event_time,
+        description=description
+    )
     db.session.add(new_event)
     db.session.commit()
 
@@ -737,10 +761,29 @@ def extract_integer(message):
 def bot():
     incoming_msg_list = segment_message(request.values.get('Body', ''))
     incoming_phone_number = request.values.get('From', None)
+    formatted_incoming_phone_number = f"+1{incoming_phone_number[1:]}"
     if "NEW_DATA_MODEL" in os.environ:
-        pass
+        standardized_incoming_phone_number = incoming_phone_number[2:]
+        # we weren't able to parse any part of the message
+        if len(incoming_msg_list) == 0:
+            log_event("not_interpretable", formatted_incoming_phone_number, description=request.values.get('Body', ''))
+            text_fallback(incoming_phone_number)
+        associated_user = User.query.filter(User.phone_number == standardized_incoming_phone_number)
+        user_local_timezone = timezone(associated_user.timezone)
+        dose_windows_for_user = associated_user.dose_windows
+        overlapping_dose_windows = filter(lambda dw: dw.within_dosing_period(), associated_user.dose_windows)
+        for incoming_msg in incoming_msg_list:
+            if associated_user.manual_takeover:
+                log_event("manually_silenced", formatted_incoming_phone_number, description=incoming_msg["raw"])
+                text_fallback(incoming_phone_number)
+            else:
+                if incoming_msg["type"] == "take":
+                    if len(overlapping_dose_windows) > 0:
+                        overlapping_window = overlapping_dose_windows[0]
+                        associated_doses = overlapping_window.medications
+                        # TODO: start here
+
     else:
-        formatted_incoming_phone_number = f"+1{incoming_phone_number[1:]}"
         # we weren't able to parse any part of the message
         if len(incoming_msg_list) == 0:
             log_event("not_interpretable", formatted_incoming_phone_number, description=request.values.get('Body', ''))
