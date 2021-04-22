@@ -61,16 +61,22 @@ THANKS_VERSIONS = ["thank", "ty"]
 
 
 def get_datetime_obj_from_string(timestring, force=False):
-    datetime_data, parse_status = cal.parseDT(timestring, tzinfo=pytzutc)
-    pacific_time = timezone(USER_TIMEZONE)
-    next_alarm_time = pacific_time.localize(datetime_data.replace(tzinfo=None))
+    next_alarm_time, parse_status = cal.parseDT(timestring, tzinfo=pytzutc)
+    # HACK: required to get this to work on local
+    if os.environ["FLASK_ENV"] == "local":
+        pacific_time = timezone(USER_TIMEZONE)
+        next_alarm_time = pacific_time.localize(next_alarm_time.replace(tzinfo=None))
     if parse_status != 0:
         return next_alarm_time
     if force:
         if len(timestring) <= 2:
             modified_timestring = f"{timestring}:00"
-            datetime_data, parse_status = cal.parseDT(modified_timestring, tzinfo=pytzutc)
-            next_alarm_time = pacific_time.localize(datetime_data.replace(tzinfo=None))
+            next_alarm_time, parse_status = cal.parseDT(modified_timestring, tzinfo=pytzutc)
+            # HACK: required to get this to work on local
+            if os.environ["FLASK_ENV"] == "local":
+                pacific_time = timezone(USER_TIMEZONE)
+                next_alarm_time = pacific_time.localize(next_alarm_time.replace(tzinfo=None))
+            next_alarm_time = pacific_time.localize(next_alarm_time.replace(tzinfo=None))
             if parse_status != 0:
                 return next_alarm_time
     return None
