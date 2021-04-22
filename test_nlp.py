@@ -1,9 +1,16 @@
 from freezegun import freeze_time
 from datetime import datetime
-from pytz import timezone
+from pytz import timezone, utc
 from nlp import segment_message, USER_TIMEZONE
+import time_machine
 
-@freeze_time("2000-01-01")
+@time_machine.travel(datetime(1985, 10, 26, 1, 24, tzinfo=utc))
+def test_utc():
+    print(datetime.now())
+    print(datetime.utcnow())
+    assert False
+
+@time_machine.travel(datetime(2000, 1, 1, tzinfo=utc), tick=False)
 def test_segment_message():
     pacific_time = timezone(USER_TIMEZONE)
     assert segment_message("T")[0] == {'type': 'take', 'modifiers': {'emotion': 'neutral'}, "raw": "T"}
