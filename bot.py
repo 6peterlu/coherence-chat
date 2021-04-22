@@ -1178,7 +1178,7 @@ def send_intro_text(dose_id, manual=False, welcome_back=False):
     log_event("initial", dose_obj.phone_number, description=dose_id)
 
 def scheduler_error_alert(event):
-    if "UNITTESTING" not in os.environ:
+    if "NOALERTS" not in os.environ:
         client.messages.create(
             body=f"Scheduler reports job missed for event ID {event.job_id}.",
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
