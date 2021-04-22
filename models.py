@@ -7,6 +7,55 @@ db = SQLAlchemy()
 def get_time_now(tzaware=True):
     return datetime.now(pytzutc) if tzaware else datetime.utcnow()
 # sqlalchemy models & deserializers
+
+# new tables
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    phone_number = db.Column(db.String(10), nullable=False)
+    name = db.Column(db.String, nullable=False)
+    dose_windows = db.relationship("DoseWindow", backref="user", lazy='dynamic')
+    doses = db.relationship("Medication", backref="user", lazy='dynamic')
+    events = db.relationship("Event", backref="user", lazy='dynamic')
+    manual_takeover = db.Column(db.Boolean, nullable=False)
+    paused = db.Column(db.Boolean, nullable=False)
+
+
+class DoseWindow(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    day_of_week = db.Column(db.Integer, nullable=False)
+    start_hour = db.Column(db.Integer, nullable=False)
+    end_hour = db.Column(db.Integer, nullable=False)
+    start_minute = db.Column(db.Integer, nullable=False)
+    end_minute = db.Column(db.Integer, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    medications = db.relationship("Medication", secondary="DoseMedicationAssociation")
+    events = db.relationship("Event", backref="dose_window", lazy='dynamic')
+
+
+class DoseMedicationAssociation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    dose_windows = db.relationship("DoseWindow", backref=db.backref("medications", cascade="all, delete-orphan"))
+    doses = db.relationship("Medication", backref=db.backref("dose_windows", cascade="all, delete-orphan"))
+
+
+class Medication(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    dose_windows = db.relationship("DoseWindow", secondary="DoseMedicationAssociation")
+    instructions = db.Column(db.String)
+    events = db.relationship("Event", backref="medication", lazy='dynamic')
+
+class EventLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    event_type = db.Column(db.String)
+    description = db.Column(db.String)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    dose_window_id = db.Column(db.Integer, db.ForeignKey('dose_window.id'))
+    medication_id = db.Column(db.Integer, db.ForeignKey('medication.id'))
+
+
+
+# old tables
 class Dose(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     start_hour = db.Column(db.Integer, nullable=False)

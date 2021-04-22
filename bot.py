@@ -374,7 +374,6 @@ def patient_data():
         return jsonify()  # empty response if no cookie
     phone_number = f"+11{recovered_cookie}"
     # blacklist my IPs to reduce data pollution
-    print(request.remote_addr)
     # my IP might be changing, not sure.
     if request.remote_addr not in IP_BLACKLIST:
         log_event("patient_portal_load", phone_number, description=request.remote_addr)
