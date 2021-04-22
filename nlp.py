@@ -76,7 +76,6 @@ def get_datetime_obj_from_string(timestring, force=False):
             if os.environ["FLASK_ENV"] == "local":
                 pacific_time = timezone(USER_TIMEZONE)
                 next_alarm_time = pacific_time.localize(next_alarm_time.replace(tzinfo=None))
-            next_alarm_time = pacific_time.localize(next_alarm_time.replace(tzinfo=None))
             if parse_status != 0:
                 return next_alarm_time
     return None
