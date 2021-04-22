@@ -10,7 +10,7 @@ def test_utc():
     print(datetime.utcnow())
     assert False
 
-@time_machine.travel(datetime(2000, 1, 1, tzinfo=utc), tick=False)
+@freeze_time("2000-01-01 18:00:00")
 def test_segment_message():
     pacific_time = timezone(USER_TIMEZONE)
     assert segment_message("T")[0] == {'type': 'take', 'modifiers': {'emotion': 'neutral'}, "raw": "T"}
