@@ -9,18 +9,25 @@ def get_time_now(tzaware=True):
 # sqlalchemy models & deserializers
 
 # new tables
+dose_medication_linker = db.Table('dose_medication_linker',
+    db.Column('dose_window_id', db.Integer, db.ForeignKey('dose_window.id')),
+    db.Column('medication_id', db.Integer, db.ForeignKey('medication.id'))
+)
 class User(db.Model):
+    __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     phone_number = db.Column(db.String(10), nullable=False)
     name = db.Column(db.String, nullable=False)
     dose_windows = db.relationship("DoseWindow", backref="user", lazy='dynamic')
     doses = db.relationship("Medication", backref="user", lazy='dynamic')
-    events = db.relationship("Event", backref="user", lazy='dynamic')
+    events = db.relationship("EventLog", backref="user", lazy='dynamic')
     manual_takeover = db.Column(db.Boolean, nullable=False)
     paused = db.Column(db.Boolean, nullable=False)
+    timezone = db.Column(db.String, nullable=False)
 
 
 class DoseWindow(db.Model):
+    __tablename__ = 'dose_window'
     id = db.Column(db.Integer, primary_key=True)
     day_of_week = db.Column(db.Integer, nullable=False)
     start_hour = db.Column(db.Integer, nullable=False)
@@ -28,31 +35,26 @@ class DoseWindow(db.Model):
     start_minute = db.Column(db.Integer, nullable=False)
     end_minute = db.Column(db.Integer, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    medications = db.relationship("Medication", secondary="DoseMedicationAssociation")
-    events = db.relationship("Event", backref="dose_window", lazy='dynamic')
-
-
-class DoseMedicationAssociation(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    dose_windows = db.relationship("DoseWindow", backref=db.backref("medications", cascade="all, delete-orphan"))
-    doses = db.relationship("Medication", backref=db.backref("dose_windows", cascade="all, delete-orphan"))
+    medications = db.relationship("Medication", secondary=dose_medication_linker, back_populates="dose_windows")
+    events = db.relationship("EventLog", backref="dose_window", lazy='dynamic')
 
 
 class Medication(db.Model):
+    __tablename__ = 'medication'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    dose_windows = db.relationship("DoseWindow", secondary="DoseMedicationAssociation")
     instructions = db.Column(db.String)
-    events = db.relationship("Event", backref="medication", lazy='dynamic')
+    events = db.relationship("EventLog", backref="medication", lazy='dynamic')
+    dose_windows = db.relationship("DoseWindow", secondary=dose_medication_linker, back_populates="medications")
 
 class EventLog(db.Model):
+    __tablename__ = 'event_log'
     id = db.Column(db.Integer, primary_key=True)
     event_type = db.Column(db.String)
     description = db.Column(db.String)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     dose_window_id = db.Column(db.Integer, db.ForeignKey('dose_window.id'))
     medication_id = db.Column(db.Integer, db.ForeignKey('medication.id'))
-
 
 
 # old tables
