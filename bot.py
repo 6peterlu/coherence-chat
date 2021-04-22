@@ -127,7 +127,7 @@ TWILIO_PHONE_NUMBERS = {
 CLINICAL_BOUNDARY_PHONE_NUMBERS = ["8587761377"]
 
 
-PATIENT_DOSE_MAP = { "+113604508655": {"morning": [153, 154], "afternoon": [114, 152]}} if os.environ["FLASK_ENV"] == "local" else {
+PATIENT_DOSE_MAP = { "+113604508655": {"morning": [153, 154, 173], "afternoon": [114, 152]}} if os.environ["FLASK_ENV"] == "local" else {
     "+113604508655": {"morning": [85]},
     "+113609042210": {"afternoon": [25], "evening": [15]},
     "+113609049085": {"evening": [16]},
@@ -336,7 +336,7 @@ def generate_behavior_learning_scores(user_behavior_events, active_doses):
     # end time is end of yesterday.
     end_time = get_time_now().astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
     user_behavior_events_until_today = list(filter(lambda event: event.aware_event_time < end_time, user_behavior_events))
-    if len(user_behavior_events_until_today) == 0:
+    if len(user_behavior_events_until_today) == 0 or len(active_doses) == 0:
         return {}
     behavior_scores_by_day = {}
     # starts at earliest day

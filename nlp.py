@@ -104,10 +104,11 @@ def segment_message(raw_message_str):
         if reconstructed_time and next_alarm_time is None:
             next_alarm_time = get_datetime_obj_from_string(reconstructed_time, force=True)
         message_body = {"type": "take", "modifiers": {"emotion": "excited" if excited else "neutral"}}
-        if next_alarm_time is not None:
-            # maybe this is only needed in the pm?
-            # next_alarm_time -= timedelta(hours=12)  # go back to last referenced time
-            message_body["payload"] = next_alarm_time
+        # disable this for now, because its really broken
+        # if next_alarm_time is not None:
+        #     # maybe this is only needed in the pm?
+        #     # next_alarm_time -= timedelta(hours=12)  # go back to last referenced time
+        #     message_body["payload"] = next_alarm_time
         message_segments.append(message_body)
     elif skip_data:
         message_segments.append({"type": "skip"})
