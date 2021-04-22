@@ -1,4 +1,4 @@
-from bot import get_take_message
+from bot import user_behavior_learning_scores
 import pytest
 from unittest import mock
 from datetime import datetime, timedelta
@@ -41,7 +41,6 @@ def manual_takeover_number(db_session):
     db_session.add(manual_obj)
     db_session.commit()
     return manual_obj
-
 
 # @pytest.fixture
 # def boundary_reminder_record(db_session, dose_record):
