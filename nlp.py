@@ -1,5 +1,5 @@
 # handler for all regexing and message segmentation (later, more stuff I hope)
-from datetime import date
+from datetime import timedelta
 from pytz import timezone, utc as pytzutc
 import os
 import string
@@ -92,8 +92,6 @@ def segment_message(raw_message_str):
     processed_msg = processed_msg.replace("[", "").replace("]", "")
     extracted_time = re.findall(TIME_EXTRACTION_REGEX, processed_msg)
     taken_data = re.findall(MEDICATION_TAKEN_REGEX, processed_msg)
-    print("taken data")
-    print(taken_data)
     skip_data = re.findall(SKIP_REGEX, processed_msg)
     special_commands = re.findall(SPECIAL_COMMANDS_REGEX, processed_msg)
     reconstructed_time = None
@@ -104,13 +102,11 @@ def segment_message(raw_message_str):
             reconstructed_time += " " + extracted_time[0][1]
         next_alarm_time = get_datetime_obj_from_string(reconstructed_time)
     if taken_data:
-        print(reconstructed_time)
-        print(next_alarm_time)
         if reconstructed_time and next_alarm_time is None:
-            print("run it again")
             next_alarm_time = get_datetime_obj_from_string(reconstructed_time, force=True)
         message_body = {"type": "take", "modifiers": {"emotion": "excited" if excited else "neutral"}}
         if next_alarm_time is not None:
+            next_alarm_time -= timedelta(hours=12)  # go back to last referenced time
             message_body["payload"] = next_alarm_time
         message_segments.append(message_body)
     elif skip_data:
