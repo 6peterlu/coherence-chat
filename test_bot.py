@@ -178,15 +178,33 @@ def test_option_3_near_boundary(mock_get_current_end_date, segment_message_mock,
     assert all_events[1].description == "delayed to 2012-01-01 04:50:00-08:00"
     scheduled_job = scheduler.get_job(f"{dose_record.id}-followup")
     assert scheduled_job is not None
-    assert scheduled_job.next_run_time == timezone("UTC").localize(datetime(2012, 1, 1, 12, 50, 1))
+    assert scheduled_job.next_run_time == timezone("UTC").localize(datetime(2012, 1, 1, 12, 50))
 
-# within time range of dose
+# # within time range of dose
 @freeze_time("2012-01-1 12:00:01")
 @mock.patch("bot.client.messages.create")
 @mock.patch("bot.segment_message")
 @mock.patch("bot.send_followup_text")
 @mock.patch("bot.get_current_end_date")
 def test_1_hr_delay(mock_get_current_end_date, mock_followup_text, segment_message_mock, create_messages_mock, client, db_session, dose_record, initial_reminder_record, scheduler):
+    segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': timezone("UTC").localize(datetime(2012, 1, 1, 13)), "raw": "1hr"}]
+    mock_get_current_end_date.return_value = timezone("UTC").localize(datetime(2012, 1, 1, 14))
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    all_events = db_session.query(Event).all()
+    assert len(all_events) == 1
+    assert all_events[0].event_type == "reminder_delay"
+    assert all_events[0].description == "delayed to 2012-01-01 05:00:00-08:00"
+    scheduled_job = scheduler.get_job(f"{dose_record.id}-followup")
+    assert scheduled_job is not None
+    assert scheduled_job.next_run_time == timezone("UTC").localize(datetime(2012, 1, 1, 13, 0))
+
+@freeze_time("2012-01-1 12:00:01")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.segment_message")
+@mock.patch("bot.send_followup_text")
+@mock.patch("bot.get_current_end_date")
+def test_1_hr_delay_near_boundary(mock_get_current_end_date, mock_followup_text, segment_message_mock, create_messages_mock, client, db_session, dose_record, initial_reminder_record, scheduler):
     segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': timezone("UTC").localize(datetime(2012, 1, 1, 13)), "raw": "1hr"}]
     mock_get_current_end_date.return_value = timezone("UTC").localize(datetime(2012, 1, 1, 13))
     client.post("/bot", query_string={"From": "+13604508655"})
@@ -197,7 +215,7 @@ def test_1_hr_delay(mock_get_current_end_date, mock_followup_text, segment_messa
     assert all_events[0].description == "delayed to 2012-01-01 04:50:00-08:00"
     scheduled_job = scheduler.get_job(f"{dose_record.id}-followup")
     assert scheduled_job is not None
-    assert scheduled_job.next_run_time == timezone("UTC").localize(datetime(2012, 1, 1, 12, 50, 1))
+    assert scheduled_job.next_run_time == timezone("UTC").localize(datetime(2012, 1, 1, 12, 50))
 
 # within time range of dose
 @freeze_time("2012-01-1 12:00:01")

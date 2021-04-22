@@ -61,7 +61,7 @@ THANKS_VERSIONS = ["thank", "ty"]
 
 
 def get_datetime_obj_from_string(timestring, force=False):
-    datetime_data, parse_status = cal.parseDT(timestring)
+    datetime_data, parse_status = cal.parseDT(timestring, tzinfo=pytzutc)
     pacific_time = timezone(USER_TIMEZONE)
     next_alarm_time = pacific_time.localize(datetime_data.replace(tzinfo=None))
     if parse_status != 0:
@@ -69,7 +69,7 @@ def get_datetime_obj_from_string(timestring, force=False):
     if force:
         if len(timestring) <= 2:
             modified_timestring = f"{timestring}:00"
-            datetime_data, parse_status = cal.parseDT(modified_timestring)
+            datetime_data, parse_status = cal.parseDT(modified_timestring, tzinfo=pytzutc)
             next_alarm_time = pacific_time.localize(datetime_data.replace(tzinfo=None))
             if parse_status != 0:
                 return next_alarm_time
