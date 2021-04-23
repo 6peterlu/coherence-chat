@@ -877,7 +877,7 @@ def bot():
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                             to=incoming_phone_number
                         )
-                elif incoming_msg["type"] == "special":
+                elif incoming_msg["type"] == "special":  # TODO: start here
                     if incoming_msg["payload"] == "x":
                         client.messages.create(
                             body=USER_ERROR_RESPONSE,
