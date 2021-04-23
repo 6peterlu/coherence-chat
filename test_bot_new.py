@@ -336,3 +336,299 @@ def test_skip_dose_out_of_range(
     assert all_events[0].dose_window_id is None
     assert all_events[0].medication_id is None
     assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 17, tzinfo=utc)
+
+@mock.patch("bot.segment_message")
+@mock.patch("bot.client.messages.create")
+def test_error_report(create_messages_mock, segment_message_mock, client, db_session, user_record):
+    segment_message_mock.return_value = segment_message_mock.return_value = [{'type': 'special', 'payload': 'x', "raw": "x"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1
+    assert all_events[0].event_type == "user_reported_error"
+    assert all_events[0].description is None
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].medication_id is None
+    assert all_events[0].dose_window_id is None
+
+
+@freeze_time("2012-01-01 17:00:00")
+@mock.patch("bot.segment_message")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.remove_jobs_helper")
+def test_canned_delay(
+    remove_jobs_mock, create_messages_mock, segment_message_mock,
+    client, db_session, user_record, dose_window_record,
+    medication_record, scheduler
+):
+    segment_message_mock.return_value = segment_message_mock.return_value = [{'type': 'special', 'payload': '1', "raw": "1"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    assert remove_jobs_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 2
+    assert all_events[0].event_type == "requested_time_delay"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id == dose_window_record.id
+    assert all_events[0].medication_id is None
+    assert all_events[1].event_type == "reminder_delay"
+    assert all_events[1].user_id == user_record.id
+    assert all_events[1].dose_window_id == dose_window_record.id
+    assert all_events[1].medication_id is None
+    scheduled_job = scheduler.get_job(f"{dose_window_record.id}-followup-new")
+    assert scheduled_job is not None
+    assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 10, tzinfo=utc)
+
+@freeze_time("2012-01-01 17:00:00")
+@mock.patch("bot.segment_message")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.remove_jobs_helper")
+def test_canned_delay_near_boundary(
+    remove_jobs_mock, create_messages_mock, segment_message_mock,
+    client, db_session, user_record, dose_window_record,
+    medication_record, scheduler
+):
+    segment_message_mock.return_value = segment_message_mock.return_value = [{'type': 'special', 'payload': '3', "raw": "3"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    assert remove_jobs_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 2
+    assert all_events[0].event_type == "requested_time_delay"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id == dose_window_record.id
+    assert all_events[0].medication_id is None
+    assert all_events[1].event_type == "reminder_delay"
+    assert all_events[1].user_id == user_record.id
+    assert all_events[1].dose_window_id == dose_window_record.id
+    assert all_events[1].medication_id is None
+    scheduled_job = scheduler.get_job(f"{dose_window_record.id}-followup-new")
+    assert scheduled_job is not None
+    assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 50, tzinfo=utc)
+
+@freeze_time("2012-01-01 17:55:00")
+@mock.patch("bot.segment_message")
+@mock.patch("bot.client.messages.create")
+def test_canned_delay_too_late(
+    create_messages_mock, segment_message_mock,
+    client, db_session, user_record, dose_window_record,
+    medication_record, scheduler
+):
+    segment_message_mock.return_value = segment_message_mock.return_value = [{'type': 'special', 'payload': '1', "raw": "1"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1
+    assert all_events[0].event_type == "requested_time_delay"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id == dose_window_record.id
+    assert all_events[0].medication_id is None
+    scheduled_job = scheduler.get_job(f"{dose_window_record.id}-followup-new")
+    assert scheduled_job is None
+
+
+@freeze_time("2012-01-01 17:00:00")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.segment_message")
+def test_canned_delay_out_of_range(
+    segment_message_mock, create_messages_mock,
+    client, db_session, user_record, dose_window_record_out_of_range
+):
+    local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
+    segment_message_mock.return_value = [{'type': 'special', 'payload': '1', "raw": "1"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1  # first one is our inserted take record
+    # we expect it to record again since the record is outdated
+    assert all_events[0].event_type == "out_of_range"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id is None
+    assert all_events[0].medication_id is None
+    assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 17, tzinfo=utc)
+
+
+@freeze_time("2012-01-01 17:00:00")
+@mock.patch("bot.segment_message")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.remove_jobs_helper")
+def test_delay_minutes(
+    remove_jobs_mock, create_messages_mock, segment_message_mock,
+    client, db_session, user_record, dose_window_record,
+    medication_record, scheduler
+):
+    segment_message_mock.return_value = [{'type': 'delay_minutes', 'payload': 20, "raw": "20"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    assert remove_jobs_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 2
+    assert all_events[0].event_type == "requested_time_delay"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id == dose_window_record.id
+    assert all_events[0].medication_id is None
+    assert all_events[1].event_type == "reminder_delay"
+    assert all_events[1].user_id == user_record.id
+    assert all_events[1].dose_window_id == dose_window_record.id
+    assert all_events[1].medication_id is None
+    scheduled_job = scheduler.get_job(f"{dose_window_record.id}-followup-new")
+    assert scheduled_job is not None
+    assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 20, tzinfo=utc)
+
+@freeze_time("2012-01-01 17:00:00")
+@mock.patch("bot.segment_message")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.remove_jobs_helper")
+def test_delay_minutes_near_boundary(
+    remove_jobs_mock, create_messages_mock, segment_message_mock,
+    client, db_session, user_record, dose_window_record,
+    medication_record, scheduler
+):
+    segment_message_mock.return_value = [{'type': 'delay_minutes', 'payload': 60, "raw": "60"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    assert remove_jobs_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 2
+    assert all_events[0].event_type == "requested_time_delay"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id == dose_window_record.id
+    assert all_events[0].medication_id is None
+    assert all_events[1].event_type == "reminder_delay"
+    assert all_events[1].user_id == user_record.id
+    assert all_events[1].dose_window_id == dose_window_record.id
+    assert all_events[1].medication_id is None
+    scheduled_job = scheduler.get_job(f"{dose_window_record.id}-followup-new")
+    assert scheduled_job is not None
+    assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 50, tzinfo=utc)
+
+@freeze_time("2012-01-01 17:55:00")
+@mock.patch("bot.segment_message")
+@mock.patch("bot.client.messages.create")
+def test_delay_minutes_too_late(
+    create_messages_mock, segment_message_mock,
+    client, db_session, user_record, dose_window_record,
+    medication_record, scheduler
+):
+    segment_message_mock.return_value = [{'type': 'delay_minutes', 'payload': 60, "raw": "60"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1
+    assert all_events[0].event_type == "requested_time_delay"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id == dose_window_record.id
+    assert all_events[0].medication_id is None
+    scheduled_job = scheduler.get_job(f"{dose_window_record.id}-followup-new")
+    assert scheduled_job is None
+
+
+@freeze_time("2012-01-01 17:00:00")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.segment_message")
+def test_delay_minutes_out_of_range(
+    segment_message_mock, create_messages_mock,
+    client, db_session, user_record, dose_window_record_out_of_range
+):
+    local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
+    segment_message_mock.return_value = [{'type': 'special', 'payload': '1', "raw": "1"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1  # first one is our inserted take record
+    # we expect it to record again since the record is outdated
+    assert all_events[0].event_type == "out_of_range"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id is None
+    assert all_events[0].medication_id is None
+    assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 17, tzinfo=utc)
+
+
+@freeze_time("2012-01-01 17:00:00")
+@mock.patch("bot.segment_message")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.remove_jobs_helper")
+def test_requested_alarm_time(
+    remove_jobs_mock, create_messages_mock, segment_message_mock,
+    client, db_session, user_record, dose_window_record,
+    medication_record, scheduler
+):
+    user_tz = timezone(user_record.timezone)
+    segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': datetime(2012, 1, 1, 9, 30, tzinfo=user_tz), "raw": "30min"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    assert remove_jobs_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1
+    assert all_events[0].event_type == "reminder_delay"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id == dose_window_record.id
+    assert all_events[0].medication_id is None
+    scheduled_job = scheduler.get_job(f"{dose_window_record.id}-followup-new")
+    assert scheduled_job is not None
+    assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 30, tzinfo=utc)
+
+
+@freeze_time("2012-01-01 17:00:00")
+@mock.patch("bot.segment_message")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.remove_jobs_helper")
+def test_requested_alarm_time_near_boundary(
+    remove_jobs_mock, create_messages_mock, segment_message_mock,
+    client, db_session, user_record, dose_window_record,
+    medication_record, scheduler
+):
+    user_tz = timezone(user_record.timezone)
+    segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': datetime(2012, 1, 1, 10, tzinfo=user_tz), "raw": "1hr"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    assert remove_jobs_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1
+    assert all_events[0].event_type == "reminder_delay"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id == dose_window_record.id
+    assert all_events[0].medication_id is None
+    scheduled_job = scheduler.get_job(f"{dose_window_record.id}-followup-new")
+    assert scheduled_job is not None
+    assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 50, tzinfo=utc)
+
+
+@freeze_time("2012-01-01 17:55:00")
+@mock.patch("bot.segment_message")
+@mock.patch("bot.client.messages.create")
+def test_requested_alarm_time_near_boundary(
+    create_messages_mock, segment_message_mock,
+    client, db_session, user_record, dose_window_record,
+    medication_record, scheduler
+):
+    user_tz = timezone(user_record.timezone)
+    segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': datetime(2012, 1, 1, 10, tzinfo=user_tz), "raw": "1hr"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 0
+    scheduled_job = scheduler.get_job(f"{dose_window_record.id}-followup-new")
+    assert scheduled_job is None
+
+
+@freeze_time("2012-01-01 17:00:00")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.segment_message")
+def test_requested_alarm_time_out_of_range(
+    segment_message_mock, create_messages_mock,
+    client, db_session, user_record, dose_window_record_out_of_range
+):
+    local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
+    user_tz = timezone(user_record.timezone)
+    segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': datetime(2012, 1, 1, 10, tzinfo=user_tz), "raw": "1hr"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1  # first one is our inserted take record
+    # we expect it to record again since the record is outdated
+    assert all_events[0].event_type == "out_of_range"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id is None
+    assert all_events[0].medication_id is None
+    assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 17, tzinfo=utc)

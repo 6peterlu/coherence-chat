@@ -880,41 +880,43 @@ def bot():
                 elif incoming_msg["type"] == "special":  # TODO: start here
                     if incoming_msg["payload"] == "x":
                         client.messages.create(
-                            body=USER_ERROR_RESPONSE,
+                            body=USER_ERROR_REPORT.substitute(phone_number=incoming_phone_number),
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                            to=incoming_phone_number
+                            to="+13604508655"
                         )
                         client.messages.create(
                             body=USER_ERROR_RESPONSE,
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                             to=incoming_phone_number
                         )
-                        for dose in associated_doses:
-                            log_event_new("user_reported_error", associated_user.id, None if dose_window is None else dose_window.id, None, event_time=input_time)
+                        log_event_new("user_reported_error", associated_user.id, None if dose_window is None else dose_window.id, None)
                     elif incoming_msg["payload"] in ["1", "2", "3"]:
                         if dose_window is not None:
                             associated_doses = dose_window.medications
-                            log_event_new("requested_time_delay", associated_user.id, dose_window.id, None, description=f"{message_delays[incoming_msg['payload']]}")
                             message_delays = {
                                 "1": timedelta(minutes=10),
                                 "2": timedelta(minutes=30),
                                 "3": timedelta(hours=1)
                             }
+                            log_event_new("requested_time_delay", associated_user.id, dose_window.id, None, description=f"{message_delays[incoming_msg['payload']]}")
                             next_alarm_time = get_time_now() + message_delays[incoming_msg["payload"]]
                             too_close = False
                             dose_end_time = dose_window.next_end_date - timedelta(days=1)
+                            if next_alarm_time > dose_end_time - timedelta(minutes=10):
+                                next_alarm_time = dose_end_time - timedelta(minutes=10)
+                                too_close = True
                             if next_alarm_time > get_time_now():
-                                log_event_new("reminder_delay", associated_user.id, dose_window.id, None, description=f"delayed to {next_alarm_time.astimezone(timezone(USER_TIMEZONE))}")
+                                log_event_new("reminder_delay", associated_user.id, dose_window.id, None, description=f"delayed to {next_alarm_time.astimezone(timezone(associated_user.timezone))}")
                                 client.messages.create(
                                     body=REMINDER_TOO_CLOSE_MSG.substitute(
-                                        time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M"),
-                                        reminder_time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")
+                                        time=dose_end_time.astimezone(timezone(associated_user.timezone)).strftime("%I:%M"),
+                                        reminder_time=next_alarm_time.astimezone(timezone(associated_user.timezone)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")
                                     ),
                                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                     to=incoming_phone_number
                                 )
                                 remove_jobs_helper(dose_window.id, ["followup", "absent"])
-                                scheduler.add_job(f"{dose_window.id}-followup", send_followup_text_new,
+                                scheduler.add_job(f"{dose_window.id}-followup-new", send_followup_text_new,
                                     args=[dose_window, associated_user],
                                     trigger="date",
                                     run_date=next_alarm_time,
@@ -922,12 +924,12 @@ def bot():
                                 )
                             else:
                                 client.messages.create(
-                                    body=REMINDER_TOO_LATE_MSG.substitute(time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")),
+                                    body=REMINDER_TOO_LATE_MSG.substitute(time=dose_end_time.astimezone(timezone(associated_user.timezone)).strftime("%I:%M")),
                                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                     to=incoming_phone_number
                                 )
                         else:
-                            log_event_new("out_of_range", associated_user.id, dose_window.id, None, description=incoming_msg["raw"])
+                            log_event_new("out_of_range", associated_user.id, None, None, description=incoming_msg["raw"])
                             client.messages.create(
                                 body=ACTION_OUT_OF_RANGE_MSG if incoming_msg in ["t", "s"] else REMINDER_OUT_OF_RANGE_MSG,
                                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
@@ -945,17 +947,17 @@ def bot():
                             next_alarm_time = dose_end_time - timedelta(minutes=10)
                             too_close = True
                         if next_alarm_time > get_time_now():
-                            log_event_new("reminder_delay", associated_user.id, dose_window.id, None, description=f"delayed to {next_alarm_time.astimezone(timezone(USER_TIMEZONE))}")
+                            log_event_new("reminder_delay", associated_user.id, dose_window.id, None, description=f"delayed to {next_alarm_time.astimezone(timezone(associated_user.timezone))}")
                             client.messages.create(
                                 body=REMINDER_TOO_CLOSE_MSG.substitute(
-                                    time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M"),
-                                    reminder_time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")
+                                    time=dose_end_time.astimezone(timezone(associated_user.timezone)).strftime("%I:%M"),
+                                    reminder_time=next_alarm_time.astimezone(timezone(associated_user.timezone)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(associated_user.timezone)).strftime("%I:%M")
                                 ),
                                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                 to=incoming_phone_number
                             )
                             remove_jobs_helper(dose_window.id, ["followup", "absent"])
-                            scheduler.add_job(f"{dose_window.id}-followup", send_followup_text_new,
+                            scheduler.add_job(f"{dose_window.id}-followup-new", send_followup_text_new,
                                 args=[dose_window, associated_user],
                                 trigger="date",
                                 run_date=next_alarm_time,
@@ -963,7 +965,7 @@ def bot():
                             )
                         else:
                             client.messages.create(
-                                body=REMINDER_TOO_LATE_MSG.substitute(time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")),
+                                body=REMINDER_TOO_LATE_MSG.substitute(time=dose_end_time.astimezone(timezone(associated_user.timezone)).strftime("%I:%M")),
                                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                 to=incoming_phone_number
                             )
@@ -976,7 +978,7 @@ def bot():
                         )
                 if incoming_msg["type"] == "requested_alarm_time":
                     if dose_window is not None:
-                        next_alarm_time = convert_to_user_local_time(incoming_msg["payload"])
+                        next_alarm_time = convert_to_user_local_time(associated_user, incoming_msg["payload"])
                         # TODO: remove repeated code block
                         too_close = False
                         dose_end_time = dose_window.next_end_date - timedelta(days=1)
@@ -994,7 +996,7 @@ def bot():
                                 to=incoming_phone_number
                             )
                             remove_jobs_helper(dose_window.id, ["followup", "absent"])
-                            scheduler.add_job(f"{dose_window.id}-followup", send_followup_text_new,
+                            scheduler.add_job(f"{dose_window.id}-followup-new", send_followup_text_new,
                                 args=[dose_window, associated_user],
                                 trigger="date",
                                 run_date=next_alarm_time,
@@ -1007,7 +1009,7 @@ def bot():
                                 to=incoming_phone_number
                             )
                     else:
-                        log_event_new("out_of_range", associated_user.id, dose_window.id, None, description=incoming_msg["raw"])
+                        log_event_new("out_of_range", associated_user.id, None, None, description=incoming_msg["raw"])
                         client.messages.create(
                             body=ACTION_OUT_OF_RANGE_MSG if incoming_msg in ["t", "s"] else REMINDER_OUT_OF_RANGE_MSG,
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
