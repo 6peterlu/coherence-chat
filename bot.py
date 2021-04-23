@@ -880,7 +880,7 @@ def bot():
                 elif incoming_msg["type"] == "special":
                     if incoming_msg["payload"] == "x":
                         client.messages.create(
-                            body=ACTION_OUT_OF_RANGE_MSG if incoming_msg in ["t", "s"] else REMINDER_OUT_OF_RANGE_MSG,
+                            body=USER_ERROR_RESPONSE,
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                             to=incoming_phone_number
                         )
@@ -890,7 +890,7 @@ def bot():
                             to=incoming_phone_number
                         )
                         for dose in associated_doses:
-                            log_event_new("user_reported_error", associated_user.id, dose_window.id, dose.id, event_time=input_time)
+                            log_event_new("user_reported_error", associated_user.id, None if dose_window is None else dose_window.id, None, event_time=input_time)
                     elif incoming_msg["payload"] in ["1", "2", "3"]:
                         if dose_window is not None:
                             associated_doses = dose_window.medications
