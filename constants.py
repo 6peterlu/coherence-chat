@@ -134,3 +134,5 @@ THANKS_MESSAGES = [
     "Glad to be helpful!",
     "Glad I could help out!"
 ]
+
+ALREADY_RECORDED = "We already have a record of this dose. If you'd like to edit it, please go to https://www.coherence-chat.herokuapp.com and tap on the current day."

@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
-from pytz import utc as pytzutc
+from pytz import utc as pytzutc, timezone
+from sqlalchemy import func
 
 db = SQLAlchemy()
 
@@ -25,6 +26,14 @@ class User(db.Model):
     paused = db.Column(db.Boolean, nullable=False)
     timezone = db.Column(db.String, nullable=False)
 
+    @property
+    def current_day_bounds(self):
+        local_timezone = timezone(self.timezone)
+        local_time_now = local_timezone.localize(get_time_now())
+        start_of_day = local_time_now.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_of_day = start_of_day + timedelta(days=1)
+        return start_of_day, end_of_day
+
 
 class DoseWindow(db.Model):
     __tablename__ = 'dose_window'
@@ -38,6 +47,20 @@ class DoseWindow(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     medications = db.relationship("Medication", secondary=dose_medication_linker, back_populates="dose_windows")
     events = db.relationship("EventLog", backref="dose_window", lazy='dynamic')
+    @property
+    def next_start_date(self):
+        alarm_starttime = get_time_now().replace(hour=self.start_hour, minute=self.start_minute, second=0, microsecond=0)
+        if alarm_starttime < get_time_now():
+            alarm_starttime += timedelta(days=1)
+        return alarm_starttime
+    @property
+    def next_end_date(self):
+        alarm_endtime = get_time_now().replace(hour=self.end_hour, minute=self.end_minute, second=0, microsecond=0)
+        if alarm_endtime < get_time_now():
+            alarm_endtime += timedelta(days=1)
+        if alarm_endtime < self.next_start_date:
+            alarm_endtime += timedelta(days=1)
+        return alarm_endtime
 
     def within_dosing_period(self, time=None):
         time_to_compare = get_time_now() if time is None else time
@@ -53,15 +76,21 @@ class Medication(db.Model):
     events = db.relationship("EventLog", backref="medication", lazy='dynamic')
     dose_windows = db.relationship("DoseWindow", secondary=dose_medication_linker, back_populates="medications")
 
-    # TODO: add property to check dose taken status
-    # @property
-    # def
+    def is_recorded_for_today(self, dose_window_obj, user_obj):
+        start_of_day, end_of_day = user_obj.current_day_bounds
+        relevant_medication_history_records = EventLog.query.filter(
+            EventLog.dose_window_id == dose_window_obj.id,
+            EventLog.medication_id == self.id,
+            EventLog.event_time > start_of_day,
+            EventLog.event_time < end_of_day
+        ).all()
+        return len(relevant_medication_history_records) > 0
 
 class EventLog(db.Model):
     __tablename__ = 'event_log'
     id = db.Column(db.Integer, primary_key=True)
     event_type = db.Column(db.String, nullable=False)
-    description = db.Column(db.String, nullable=False)
+    description = db.Column(db.String)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     dose_window_id = db.Column(db.Integer, db.ForeignKey('dose_window.id'))
     medication_id = db.Column(db.Integer, db.ForeignKey('medication.id'))
