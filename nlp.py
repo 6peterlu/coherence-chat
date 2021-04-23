@@ -4,6 +4,7 @@ from pytz import timezone, utc as pytzutc
 import os
 import string
 import re
+import tzlocal
 
 # parse timestrings
 import parsedatetime
@@ -19,7 +20,8 @@ cal = parsedatetime.Calendar()
 USER_TIMEZONE = "US/Pacific"
 
 MEDICATION_TAKEN_REGEX = r'(?:\W|^)(taken|take|t)(?:\W|$)'
-TIME_EXTRACTION_REGEX = r'(\d+(?:\:\d+)?)\s*(pm|am|hr|hours|hour|mins|min)?'
+TIME_DELAY_EXTRACTION_REGEX = r'(\d+)\s*(minutes|minute|mins|min|hours|hour|hr)'
+ABSOLUTE_TIME_EXTRACTION_REGEX = r'(\d+(?:\:\d+)?)\s*(am|pm)?'
 SKIP_REGEX = r'(?:\W|^)(skipped|skipping|skip|s)(?:\W|$)'
 SPECIAL_COMMANDS_REGEX = r'(?:\W|^)(\d+|x)(?:\W|$)'
 
@@ -59,26 +61,29 @@ THANKS_VERSIONS = ["thank", "ty"]
 # re-integrate spacy later
 # SPACY_EMBEDDINGS = {token: nlp(token) for token in RECOGNIZED_ACTIVITIES}
 
-
-def get_datetime_obj_from_string(timestring, force=False):
-    next_alarm_time, parse_status = cal.parseDT(timestring, tzinfo=pytzutc)
-    # HACK: required to get this to work on local
-    if os.environ["FLASK_ENV"] == "local":
-        pacific_time = timezone(USER_TIMEZONE)
-        next_alarm_time = pacific_time.localize(next_alarm_time.replace(tzinfo=None))
-    if parse_status != 0:
-        return next_alarm_time
-    if force:
-        if len(timestring) <= 2:
-            modified_timestring = f"{timestring}:00"
-            next_alarm_time, parse_status = cal.parseDT(modified_timestring, tzinfo=pytzutc)
-            # HACK: required to get this to work on local
-            if os.environ["FLASK_ENV"] == "local":
-                pacific_time = timezone(USER_TIMEZONE)
-                next_alarm_time = pacific_time.localize(next_alarm_time.replace(tzinfo=None))
+def get_datetime_obj_from_string(input_str, expanded_search=False, format_restrictions=False):
+    output_time = None
+    # search for time delays if flagged
+    if expanded_search:
+        extracted_time_delay = re.findall(TIME_DELAY_EXTRACTION_REGEX, input_str)
+        reconstructed_time = " ".join([" ".join(time_pair) for time_pair in extracted_time_delay])
+        computed_time, parse_status = cal.parseDT(reconstructed_time, tzinfo=tzlocal.get_localzone())
+        if parse_status != 0:
+            output_time = computed_time
+    if output_time is None:
+        if format_restrictions and not re.match(r'(pm|am|\:)', input_str):
+            return None
+        extracted_absolute_time = re.findall(ABSOLUTE_TIME_EXTRACTION_REGEX, input_str)
+        if extracted_absolute_time:
+            reconstructed_time = extracted_absolute_time[0][0]
+            if len(reconstructed_time) <= 2 and ":" not in reconstructed_time:
+                reconstructed_time += ":00"
+            if extracted_absolute_time[0][1]:
+                reconstructed_time += " " + extracted_absolute_time[0][1]
+            computed_time, parse_status = cal.parseDT(reconstructed_time, tzinfo=pytzutc)
             if parse_status != 0:
-                return next_alarm_time
-    return None
+                output_time = computed_time
+    return output_time
 
 def segment_message(raw_message_str):
     message_segments = []
@@ -89,31 +94,26 @@ def segment_message(raw_message_str):
     processed_msg = processed_msg.translate(str.maketrans("", "", punctuation))
     # remove brackets
     processed_msg = processed_msg.replace("[", "").replace("]", "")
-    extracted_time = re.findall(TIME_EXTRACTION_REGEX, processed_msg)
     taken_data = re.findall(MEDICATION_TAKEN_REGEX, processed_msg)
     skip_data = re.findall(SKIP_REGEX, processed_msg)
     special_commands = re.findall(SPECIAL_COMMANDS_REGEX, processed_msg)
-    reconstructed_time = None
-    next_alarm_time = None
-    if extracted_time:
-        reconstructed_time = extracted_time[0][0]
-        if extracted_time[0][1]:
-            reconstructed_time += " " + extracted_time[0][1]
-        next_alarm_time = get_datetime_obj_from_string(reconstructed_time)
+
+    extracted_time = get_datetime_obj_from_string(processed_msg, expanded_search=True, format_restrictions=True)
+
     if taken_data:
-        if reconstructed_time and next_alarm_time is None:
-            next_alarm_time = get_datetime_obj_from_string(reconstructed_time, force=True)
+        next_alarm_time = get_datetime_obj_from_string(processed_msg, expanded_search=False)
         message_body = {"type": "take", "modifiers": {"emotion": "excited" if excited else "neutral"}}
-        # disable this for now, because its really broken
-        # if next_alarm_time is not None:
-        #     # maybe this is only needed in the pm?
-        #     # next_alarm_time -= timedelta(hours=12)  # go back to last referenced time
-        #     message_body["payload"] = next_alarm_time
+        if "NEW_DATA_MODEL" in os.environ:
+        # only enabled for new data model
+            if next_alarm_time is not None:
+                # maybe this is only needed in the pm?
+                # next_alarm_time -= timedelta(hours=12)  # go back to last referenced time
+                message_body["payload"] = next_alarm_time
         message_segments.append(message_body)
     elif skip_data:
         message_segments.append({"type": "skip"})
-    elif next_alarm_time is not None:
-        message_segments.append({"type": "requested_alarm_time", "payload": next_alarm_time})
+    elif extracted_time is not None:
+        message_segments.append({"type": "requested_alarm_time", "payload": extracted_time})
     else:
         if special_commands:
             command = special_commands[0]
