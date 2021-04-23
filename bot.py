@@ -792,14 +792,13 @@ def bot():
     formatted_incoming_phone_number = f"+1{incoming_phone_number[1:]}"
     if "NEW_DATA_MODEL" in os.environ:
         standardized_incoming_phone_number = incoming_phone_number[2:]
-        associated_user = User.query.filter(User.phone_number == standardized_incoming_phone_number)
+        associated_users = User.query.filter(User.phone_number == standardized_incoming_phone_number).all()
+        associated_user = None if len(associated_users) == 0 else associated_users[0]
         # the phone number is not in our system. we could consider sending a signup link
         if associated_user is None:
             log_event_new("unexpected_phone_number", None, None, None, description=standardized_incoming_phone_number)
             return jsonify(), 401
-        user_local_timezone = timezone(associated_user.timezone)
-        dose_windows_for_user = associated_user.dose_windows
-        overlapping_dose_windows = filter(lambda dw: dw.within_dosing_period(), associated_user.dose_windows)
+        overlapping_dose_windows = list(filter(lambda dw: dw.within_dosing_period(), associated_user.dose_windows))
         dose_window = None if len(overlapping_dose_windows) == 0 else overlapping_dose_windows[0]
         # we weren't able to parse any part of the message
         if len(incoming_msg_list) == 0:
@@ -813,10 +812,10 @@ def bot():
                 if incoming_msg["type"] == "take":
                     if dose_window is not None:
                         associated_doses = dose_window.medications
-                        doses_not_recorded = filter(
+                        doses_not_recorded = list(filter(
                             lambda dose: not dose.is_recorded_for_today(dose_window, associated_user),
                             associated_doses
-                        )
+                        ))
                         if len(doses_not_recorded) == 0: # all doses already recorded.
                             for dose in associated_doses:
                                 log_event_new("attempted_rerecord", associated_user.id, dose_window.id, dose.id, description=incoming_msg["raw"])
@@ -839,7 +838,7 @@ def bot():
                                 to=incoming_phone_number
                             )
                     else:
-                        log_event_new("out_of_range", associated_user.id, dose_window.id, None, description=incoming_msg["raw"])
+                        log_event_new("out_of_range", associated_user.id, None, None, description=incoming_msg["raw"])
                         client.messages.create(
                             body=ACTION_OUT_OF_RANGE_MSG if incoming_msg in ["t", "s"] else REMINDER_OUT_OF_RANGE_MSG,
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
@@ -848,10 +847,10 @@ def bot():
                 elif incoming_msg["type"] == "skip":
                     if dose_window is not None:
                         associated_doses = dose_window.medications
-                        doses_not_recorded = filter(
+                        doses_not_recorded = list(filter(
                             lambda dose: not dose.is_recorded_for_today(dose_window, associated_user),
                             associated_doses
-                        )
+                        ))
                         if len(doses_not_recorded) == 0: # all doses already recorded.
                             for dose in associated_doses:
                                 log_event_new("attempted_rerecord", associated_user.id, dose_window.id, dose.id, description=incoming_msg["raw"])
@@ -1054,7 +1053,7 @@ def bot():
                             to=incoming_phone_number
                         )
                 if incoming_msg["type"] == "thanks":
-                    log_event_new("conversational", associated_user.id, dose_window.id, None, description=dose_window.id)
+                    log_event_new("conversational", associated_user.id, None, None, description=incoming_msg["raw"])
                     client.messages.create(
                         body=get_thanks_message(),
                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",

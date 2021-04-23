@@ -19,17 +19,27 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     phone_number = db.Column(db.String(10), nullable=False)
     name = db.Column(db.String, nullable=False)
-    dose_windows = db.relationship("DoseWindow", backref="user", lazy='dynamic')
-    doses = db.relationship("Medication", backref="user", lazy='dynamic')
-    events = db.relationship("EventLog", backref="user", lazy='dynamic')
+    dose_windows = db.relationship("DoseWindow", backref="user")
+    doses = db.relationship("Medication", backref="user")
+    events = db.relationship("EventLog", backref="user")
     manual_takeover = db.Column(db.Boolean, nullable=False)
     paused = db.Column(db.Boolean, nullable=False)
     timezone = db.Column(db.String, nullable=False)
 
+    def __init__(self, phone_number, name, dose_windows=[], doses=[], events=[], manual_takeover=False, paused=False, timezone="US/Pacific"):
+        self.phone_number = phone_number
+        self.name = name
+        self.dose_windows = dose_windows
+        self.doses = doses
+        self.events = events
+        self.manual_takeover = manual_takeover
+        self.paused = paused
+        self.timezone = timezone
+
     @property
     def current_day_bounds(self):
         local_timezone = timezone(self.timezone)
-        local_time_now = local_timezone.localize(get_time_now())
+        local_time_now = local_timezone.localize(get_time_now(tzaware=False))
         start_of_day = local_time_now.replace(hour=0, minute=0, second=0, microsecond=0)
         end_of_day = start_of_day + timedelta(days=1)
         return start_of_day, end_of_day
@@ -44,9 +54,22 @@ class DoseWindow(db.Model):
     end_hour = db.Column(db.Integer, nullable=False)
     start_minute = db.Column(db.Integer, nullable=False)
     end_minute = db.Column(db.Integer, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     medications = db.relationship("Medication", secondary=dose_medication_linker, back_populates="dose_windows")
-    events = db.relationship("EventLog", backref="dose_window", lazy='dynamic')
+    events = db.relationship("EventLog", backref="dose_window")
+    active = db.Column(db.Boolean)
+
+    def __init__(self, day_of_week, start_hour, start_minute, end_hour, end_minute, user_id, medications=[], events=[], active=True):
+        self.day_of_week = day_of_week
+        self.start_hour = start_hour
+        self.start_minute = start_minute
+        self.end_hour = end_hour
+        self.end_minute = end_minute
+        self.user_id = user_id
+        self.medications = medications
+        self.events = events
+        self.active = active
+
     @property
     def next_start_date(self):
         alarm_starttime = get_time_now().replace(hour=self.start_hour, minute=self.start_minute, second=0, microsecond=0)
@@ -71,10 +94,20 @@ class DoseWindow(db.Model):
 class Medication(db.Model):
     __tablename__ = 'medication'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    medication_name = db.Column(db.String, nullable=False)
     instructions = db.Column(db.String)
-    events = db.relationship("EventLog", backref="medication", lazy='dynamic')
+    events = db.relationship("EventLog", backref="medication")
     dose_windows = db.relationship("DoseWindow", secondary=dose_medication_linker, back_populates="medications")
+    active = db.Column(db.Boolean, nullable=False)
+
+    def __init__(self, user_id, medication_name, instructions="", events=[], dose_windows=[], active=True):
+        self.user_id = user_id
+        self.medication_name = medication_name
+        self.instructions = instructions
+        self.events = events
+        self.dose_windows = dose_windows
+        self.active = active
 
     def is_recorded_for_today(self, dose_window_obj, user_obj):
         start_of_day, end_of_day = user_obj.current_day_bounds
@@ -95,6 +128,14 @@ class EventLog(db.Model):
     dose_window_id = db.Column(db.Integer, db.ForeignKey('dose_window.id'))
     medication_id = db.Column(db.Integer, db.ForeignKey('medication.id'))
     event_time = db.Column(db.DateTime, nullable=False)
+
+    def __init__(self, event_type, user_id, dose_window_id, medication_id, event_time=None, description=""):
+        self.event_type = event_type
+        self.user_id = user_id
+        self.dose_window_id = dose_window_id
+        self.medication_id = medication_id
+        self.event_time = get_time_now() if event_time is None else event_time
+        self.description = description
 
 
 # old tables
