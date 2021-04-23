@@ -23,7 +23,9 @@ from models import (
     PausedService,
     # new data models
     User,
-    EventLog
+    EventLog,
+    DoseWindow,
+    Medication
 )
 
 from models import db
@@ -1608,6 +1610,63 @@ def scheduler_error_alert(event):
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
             to="+13604508655"
         )
+
+
+@app.route("/user/create", methods=["POST"])
+@auth_required_post_delete
+def create_user():
+    incoming_data = request.json
+    new_user = User(
+        phone_number=incoming_data["phoneNumber"],
+        name= incoming_data["name"],
+    )
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify()
+
+
+@app.route("/doseWindow/create", methods=["POST"])
+@auth_required_post_delete
+def create_dose_window():
+    incoming_data = request.json
+    create_for_all_days = "createForAllDays" in request.json
+    if create_for_all_days:
+        for i in range(7):
+            new_dose_window = DoseWindow(
+                i,
+                int(incoming_data["startHour"]),
+                int(incoming_data["startMinute"]),
+                int(incoming_data["endHour"]),
+                int(incoming_data["endMinute"]),
+                int(incoming_data["userId"])
+            )
+            db.session.add(new_dose_window)
+    else:
+        new_dose_window = DoseWindow(
+            int(incoming_data["dayOfWeek"]),
+            int(incoming_data["startHour"]),
+            int(incoming_data["startMinute"]),
+            int(incoming_data["endHour"]),
+            int(incoming_data["endMinute"]),
+            int(incoming_data["userId"])
+        )
+        db.session.add(new_dose_window)
+    db.session.commit()
+    return jsonify()
+
+@app.route("/medication/create", methods=["POST"])
+@auth_required_post_delete
+def create_medication():
+    incoming_data = request.json
+    new_medication = Medication(
+        int(incoming_data["userId"]),
+        incoming_data["medicationName"],
+        incoming_data.get("instructions"),
+    )
+    db.session.add(new_medication)
+    db.session.commit()
+    return jsonify()
+
 
 scheduler.add_listener(scheduler_error_alert, EVENT_JOB_MISSED | EVENT_JOB_ERROR)
 scheduler.init_app(app)

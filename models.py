@@ -26,7 +26,17 @@ class User(db.Model):
     paused = db.Column(db.Boolean, nullable=False)
     timezone = db.Column(db.String, nullable=False)
 
-    def __init__(self, phone_number, name, dose_windows=[], doses=[], events=[], manual_takeover=False, paused=False, timezone="US/Pacific"):
+    def __init__(
+        self,
+        phone_number,
+        name,
+        dose_windows=[],
+        doses=[],
+        events=[],
+        manual_takeover=False,
+        paused=False,
+        timezone="US/Pacific",
+    ):
         self.phone_number = phone_number
         self.name = name
         self.dose_windows = dose_windows
@@ -36,6 +46,7 @@ class User(db.Model):
         self.paused = paused
         self.timezone = timezone
 
+    # TODO: determine bounds from dose window settings. for now, it's hardcoded to midnight (which is not gonna work).
     @property
     def current_day_bounds(self):
         local_timezone = timezone(self.timezone)
@@ -101,7 +112,7 @@ class Medication(db.Model):
     dose_windows = db.relationship("DoseWindow", secondary=dose_medication_linker, back_populates="medications")
     active = db.Column(db.Boolean, nullable=False)
 
-    def __init__(self, user_id, medication_name, instructions="", events=[], dose_windows=[], active=True):
+    def __init__(self, user_id, medication_name, instructions=None, events=[], dose_windows=[], active=True):
         self.user_id = user_id
         self.medication_name = medication_name
         self.instructions = instructions
