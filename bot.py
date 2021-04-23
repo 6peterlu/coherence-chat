@@ -1016,8 +1016,8 @@ def bot():
                             to=incoming_phone_number
                         )
                 if incoming_msg["type"] == "activity":
-                    log_event_new("activity", associated_user.id, dose_window.id, None, description=incoming_msg["raw"])
                     if dose_window is not None:
+                        log_event_new("activity", associated_user.id, dose_window.id, None, description=incoming_msg["raw"])
                         next_alarm_time = get_time_now() + (timedelta(minutes=random.randint(10, 30)) if incoming_msg["payload"]["type"] == "short" else timedelta(minutes=random.randint(30, 60)))
                         dose_end_time = dose_window.next_end_date - timedelta(days=1)
                         # TODO: remove repeated code block
@@ -1034,7 +1034,7 @@ def bot():
                                 to=incoming_phone_number
                             )
                             remove_jobs_helper(dose_window.id, ["followup", "absent"])
-                            scheduler.add_job(f"{dose_window.id}-followup", send_followup_text_new,
+                            scheduler.add_job(f"{dose_window.id}-followup-new", send_followup_text_new,
                                 args=[dose_window, associated_user],
                                 trigger="date",
                                 run_date=next_alarm_time,
@@ -1047,7 +1047,7 @@ def bot():
                                 to=incoming_phone_number
                             )
                     else:
-                        log_event_new("out_of_range", associated_user.id, dose_window.id, None, description=incoming_msg["raw"])
+                        log_event_new("out_of_range", associated_user.id, None, None, description=incoming_msg["raw"])
                         client.messages.create(
                             body=ACTION_OUT_OF_RANGE_MSG if incoming_msg in ["t", "s"] else REMINDER_OUT_OF_RANGE_MSG,
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",

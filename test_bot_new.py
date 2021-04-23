@@ -597,7 +597,7 @@ def test_requested_alarm_time_near_boundary(
 @freeze_time("2012-01-01 17:55:00")
 @mock.patch("bot.segment_message")
 @mock.patch("bot.client.messages.create")
-def test_requested_alarm_time_near_boundary(
+def test_requested_alarm_time_too_late(
     create_messages_mock, segment_message_mock,
     client, db_session, user_record, dose_window_record,
     medication_record, scheduler
@@ -622,6 +622,139 @@ def test_requested_alarm_time_out_of_range(
     local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
     user_tz = timezone(user_record.timezone)
     segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': datetime(2012, 1, 1, 10, tzinfo=user_tz), "raw": "1hr"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1  # first one is our inserted take record
+    # we expect it to record again since the record is outdated
+    assert all_events[0].event_type == "out_of_range"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id is None
+    assert all_events[0].medication_id is None
+    assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 17, tzinfo=utc)
+
+
+@freeze_time("2012-01-01 17:00:00")
+@mock.patch("bot.segment_message")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.remove_jobs_helper")
+@mock.patch("bot.random.randint")
+def test_activity(
+    randint_mock, remove_jobs_mock, create_messages_mock, segment_message_mock,
+    client, db_session, user_record, dose_window_record,
+    medication_record, scheduler
+):
+    randint_mock.return_value = 25
+    segment_message_mock.return_value = [{
+        'type': 'activity',
+        'payload': {
+            'type': 'short',
+            'response': "Computing ideal reminder time...done. Enjoy your walk! We'll check in later.",
+            'concept': 'leisure'
+        },
+        'raw': 'walking'
+    }]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    assert remove_jobs_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 2
+    assert all_events[0].event_type == "activity"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id == dose_window_record.id
+    assert all_events[0].medication_id is None
+    assert all_events[1].event_type == "reminder_delay"
+    assert all_events[1].user_id == user_record.id
+    assert all_events[1].dose_window_id == dose_window_record.id
+    assert all_events[1].medication_id is None
+    scheduled_job = scheduler.get_job(f"{dose_window_record.id}-followup-new")
+    assert scheduled_job is not None
+    assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 25, tzinfo=utc)
+
+@freeze_time("2012-01-01 17:00:00")
+@mock.patch("bot.segment_message")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.remove_jobs_helper")
+@mock.patch("bot.random.randint")
+def test_activity_near_boundary(
+    randint_mock, remove_jobs_mock, create_messages_mock, segment_message_mock,
+    client, db_session, user_record, dose_window_record,
+    medication_record, scheduler
+):
+    randint_mock.return_value = 60
+    segment_message_mock.return_value = [{
+        'type': 'activity',
+        'payload': {
+            'type': 'short',
+            'response': "Computing ideal reminder time...done. Enjoy your walk! We'll check in later.",
+            'concept': 'leisure'
+        },
+        'raw': 'walking'
+    }]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    assert remove_jobs_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 2
+    assert all_events[0].event_type == "activity"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id == dose_window_record.id
+    assert all_events[0].medication_id is None
+    assert all_events[1].event_type == "reminder_delay"
+    assert all_events[1].user_id == user_record.id
+    assert all_events[1].dose_window_id == dose_window_record.id
+    assert all_events[1].medication_id is None
+    scheduled_job = scheduler.get_job(f"{dose_window_record.id}-followup-new")
+    assert scheduled_job is not None
+    assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 50, tzinfo=utc)
+
+@freeze_time("2012-01-01 17:55:00")
+@mock.patch("bot.segment_message")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.random.randint")
+def test_activity_too_late(
+    randint_mock, create_messages_mock, segment_message_mock,
+    client, db_session, user_record, dose_window_record,
+    medication_record, scheduler
+):
+    randint_mock.return_value = 10
+    segment_message_mock.return_value = [{
+        'type': 'activity',
+        'payload': {
+            'type': 'short',
+            'response': "Computing ideal reminder time...done. Enjoy your walk! We'll check in later.",
+            'concept': 'leisure'
+        },
+        'raw': 'walking'
+    }]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1
+    assert all_events[0].event_type == "activity"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id == dose_window_record.id
+    assert all_events[0].medication_id is None
+    scheduled_job = scheduler.get_job(f"{dose_window_record.id}-followup-new")
+    assert scheduled_job is None
+
+@freeze_time("2012-01-01 17:00:00")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.segment_message")
+def test_activity_out_of_range(
+    segment_message_mock, create_messages_mock,
+    client, db_session, user_record, dose_window_record_out_of_range
+):
+    local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
+    segment_message_mock.return_value = [{
+        'type': 'activity',
+        'payload': {
+            'type': 'short',
+            'response': "Computing ideal reminder time...done. Enjoy your walk! We'll check in later.",
+            'concept': 'leisure'
+        },
+        'raw': 'walking'
+    }]
     client.post("/bot", query_string={"From": "+13604508655"})
     assert create_messages_mock.called
     all_events = db_session.query(EventLog).all()
