@@ -840,7 +840,7 @@ def bot():
                     else:
                         log_event_new("out_of_range", associated_user.id, None, None, description=incoming_msg["raw"])
                         client.messages.create(
-                            body=ACTION_OUT_OF_RANGE_MSG if incoming_msg in ["t", "s"] else REMINDER_OUT_OF_RANGE_MSG,
+                            body=ACTION_OUT_OF_RANGE_MSG,
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                             to=incoming_phone_number
                         )
@@ -861,7 +861,6 @@ def bot():
                             )
                         else:
                             # all doses not recorded, we record now
-                            excited = incoming_msg["modifiers"]["emotion"] == "excited"
                             input_time = incoming_msg.get("payload")
                             for dose in associated_doses:
                                 log_event_new("skip", associated_user.id, dose_window.id, dose.id, description=dose.id, event_time=input_time)
@@ -872,9 +871,9 @@ def bot():
                                 to=incoming_phone_number
                             )
                     else:
-                        log_event_new("out_of_range", associated_user.id, dose_window.id, None, description=incoming_msg["raw"])
+                        log_event_new("out_of_range", associated_user.id, None, None, description=incoming_msg["raw"])
                         client.messages.create(
-                            body=ACTION_OUT_OF_RANGE_MSG if incoming_msg in ["t", "s"] else REMINDER_OUT_OF_RANGE_MSG,
+                            body=ACTION_OUT_OF_RANGE_MSG,
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                             to=incoming_phone_number
                         )
