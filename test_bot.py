@@ -1,4 +1,3 @@
-from bot import user_behavior_learning_scores
 import pytest
 from unittest import mock
 from datetime import datetime, timedelta

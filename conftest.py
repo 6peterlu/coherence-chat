@@ -4,7 +4,6 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 import sqlalchemy as sa
 from pytest_postgresql.janitor import DatabaseJanitor
-from unittest import mock
 from models import db
 
 from bot import app as prod_app, scheduler as prod_scheduler, scheduler_error_alert as prod_error_alert
