@@ -1,7 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 from pytz import utc as pytzutc, timezone
-from sqlalchemy import func
+from marshmallow import Schema, fields
 
 db = SQLAlchemy()
 
@@ -250,3 +250,57 @@ class ManualTakeover(db.Model):
 # list of users that have paused the reminder service
 class PausedService(db.Model):
     phone_number = db.Column(db.String(13), primary_key=True)
+
+
+# marshmallow schemas
+class UserSchema(Schema):
+    id = fields.Integer()
+    phone_number = fields.String()
+    name = fields.String()
+    manual_takeover = fields.Boolean()
+    paused = fields.Boolean()
+    timezone = fields.String()
+    dose_windows = fields.List(fields.Nested(
+        DoseWindowSchema(exclude=("user", "events", "medications"))
+        ))
+    doses = fields.List(fields.Nested(
+        MedicationSchema(exclude=("user", "dose_windows", "events"))
+    ))
+    events = fields.List(fields.Nested(
+        EventLogSchema(exclude=("user", "dose_window", "medication"))
+    ))
+
+class DoseWindowSchema(Schema):
+    id = fields.Integer()
+    day_of_week = fields.Integer()
+    start_hour = fields.Integer()
+    start_minute = fields.Integer()
+    end_hour = fields.Integer()
+    end_minute = fields.Integer()
+    user = fields.Nested(UserSchema(exclude=("dose_windows", "events", "doses")))
+    medications = fields.List(fields.Nested(MedicationSchema(exclude=("dose_windows", "user", "events"))))
+    events = fields.List(fields.Nested(EventLogSchema(exclude=("user", "dose_window", "medication"))))
+    active = fields.Boolean()
+
+
+class MedicationSchema(Schema):
+    id = fields.Integer()
+    medication_name = fields.String()
+    instructions = fields.String()
+    active = fields.Boolean()
+    fields.List(fields.Nested(EventLogSchema(exclude=("user", "dose_window", "medication"))))
+    dose_windows = dose_windows = fields.List(fields.Nested(
+        DoseWindowSchema(exclude=("user", "events", "medications"))
+        ))
+    user = fields.Nested(UserSchema(exclude=("dose_windows", "events", "doses")))
+
+
+
+class EventLogSchema(Schema):
+    id = fields.Integer()
+    event_type = fields.String()
+    description = fields.String()
+    event_time = fields.DateTime
+    user = fields.Nested(UserSchema(exclude=("dose_windows", "events", "doses")))
+    medication = fields.Nested(MedicationSchema(exclude=("dose_windows", "user", "events")))
+    dose_window = fields.Nested(DoseWindowSchema(exclude=("user", "events", "medications")))

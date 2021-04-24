@@ -25,7 +25,12 @@ from models import (
     User,
     EventLog,
     DoseWindow,
-    Medication
+    Medication,
+    # new data schemas
+    UserSchema,
+    DoseWindowSchema,
+    MedicationSchema,
+    EventLogSchema
 )
 
 from models import db
@@ -1611,20 +1616,52 @@ def scheduler_error_alert(event):
             to="+13604508655"
         )
 
-
+# user methods
 @app.route("/user/create", methods=["POST"])
 @auth_required_post_delete
 def create_user():
     incoming_data = request.json
     new_user = User(
         phone_number=incoming_data["phoneNumber"],
-        name= incoming_data["name"],
+        name=incoming_data["name"],
     )
     db.session.add(new_user)
     db.session.commit()
     return jsonify()
 
+@app.route("/user/everything", methods=["GET"])
+@auth_required_post_delete
+def get_all_data_for_user():
+    incoming_data = request.json
+    user = User.query.get(int(incoming_data["userId"]))
+    if user is None:
+        return jsonify(), 400
+    user_schema = UserSchema()
+    return jsonify()
+@app.route("/user/togglePause", methods=["POST"])
+@auth_required_post_delete
+def pause_user():
+    incoming_data = request.json
+    user = User.query.get(incoming_data["userId"])
+    if user is None:
+        return jsonify(), 400
+    user.paused = not user.paused
+    db.session.commit()
+    return jsonify()
 
+
+@app.route("/user/manualTakeover", methods=["POST"])
+@auth_required_post_delete
+def toggle_manual_takeover_user():
+    incoming_data = request.json
+    user = User.query.get(incoming_data["userId"])
+    if user is None:
+        return jsonify(), 400
+    user.manual_takeover = not user.manual_takeover
+    db.session.commit()
+    return jsonify()
+
+# dose window methods
 @app.route("/doseWindow/create", methods=["POST"])
 @auth_required_post_delete
 def create_dose_window():
@@ -1654,16 +1691,77 @@ def create_dose_window():
     db.session.commit()
     return jsonify()
 
+@app.route("doseWindow/update", methods=["POST"])
+@auth_required_post_delete
+def update_dose_window():
+    incoming_data = request.json
+    dose_window_id = int(incoming_data["doseWindowId"])
+    dose_window = DoseWindow.query.get(dose_window_id)
+    if dose_window is None:
+        return jsonify(), 400
+    dose_window.start_hour = int(incoming_data["startHour"])
+    dose_window.start_minute = int(incoming_data["startMinute"])
+    dose_window.end_hour = int(incoming_data["endHour"])
+    dose_window.end_minute = int(incoming_data["endMinute"])
+    db.session.commit()
+
+@app.route("/doseWindow/addMedication", methods=["POST"])
+@auth_required_post_delete
+def associate_medication_with_dose_window():
+    incoming_data = request.json
+    dose_window_id = int(incoming_data["doseWindowId"])
+    medication_id = int(incoming_data["medicationId"])
+    dose_window = DoseWindow.query.get(dose_window_id)
+    medication = Medication.query.get(medication_id)
+    if dose_window is None or medication is None:
+        return jsonify(), 400
+    dose_window.medications.append(medication)
+    db.session.commit()
+    return jsonify()
+
+@app.route("/doseWindow/removeMedication", methods=["POST"])
+@auth_required_post_delete
+def disassociate_medication_with_dose_window():
+    incoming_data = request.json
+    dose_window_id = int(incoming_data["doseWindowId"])
+    medication_id = int(incoming_data["medicationId"])
+    dose_window = DoseWindow.query.get(dose_window_id)
+    medication = Medication.query.get(medication_id)
+    if dose_window is None or medication is None:
+        return jsonify(), 400
+    dose_window.medications.append(medication)
+    db.session.commit()
+    return jsonify()
+
+# medication methods
 @app.route("/medication/create", methods=["POST"])
 @auth_required_post_delete
 def create_medication():
     incoming_data = request.json
+    dose_window_id = int(incoming_data["doseWindowId"])
+    dose_window = DoseWindow.query.get(dose_window_id)
+    if dose_window is None:
+        return jsonify(), 400
     new_medication = Medication(
         int(incoming_data["userId"]),
         incoming_data["medicationName"],
         incoming_data.get("instructions"),
+        dose_windows=[dose_window]  # initialize with a dose window
     )
     db.session.add(new_medication)
+    db.session.commit()
+    return jsonify()
+
+@app.route("/medication/update", methods=["POST"])
+@auth_required_post_delete
+def create_medication():
+    incoming_data = request.json
+    medication_id = int(incoming_data["medicationId"])
+    medication = Medication.query.get(medication_id)
+    if medication is None:
+        return jsonify(), 400
+    medication.name = incoming_data["medicationName"]
+    medication.instructions = incoming_data["medicationInstructions"]
     db.session.commit()
     return jsonify()
 
