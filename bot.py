@@ -1630,14 +1630,14 @@ def create_user():
     return jsonify()
 
 @app.route("/user/everything", methods=["GET"])
-@auth_required_post_delete
+@auth_required_get
 def get_all_data_for_user():
-    incoming_data = request.json
-    user = User.query.get(int(incoming_data["userId"]))
+    user = User.query.get(int(request.args.get("userId")))
     if user is None:
         return jsonify(), 400
     user_schema = UserSchema()
-    return jsonify()
+    return jsonify(user_schema.dump(user))
+
 @app.route("/user/togglePause", methods=["POST"])
 @auth_required_post_delete
 def pause_user():
@@ -1691,7 +1691,7 @@ def create_dose_window():
     db.session.commit()
     return jsonify()
 
-@app.route("doseWindow/update", methods=["POST"])
+@app.route("/doseWindow/update", methods=["POST"])
 @auth_required_post_delete
 def update_dose_window():
     incoming_data = request.json
@@ -1754,7 +1754,7 @@ def create_medication():
 
 @app.route("/medication/update", methods=["POST"])
 @auth_required_post_delete
-def create_medication():
+def update_medication():
     incoming_data = request.json
     medication_id = int(incoming_data["medicationId"])
     medication = Medication.query.get(medication_id)
@@ -1764,6 +1764,59 @@ def create_medication():
     medication.instructions = incoming_data["medicationInstructions"]
     db.session.commit()
     return jsonify()
+
+
+PHONE_NUMBERS_TO_PORT = [
+    "3604508655"
+]
+
+
+# TODO: testing
+def port_legacy_data(phone_numbers_to_port, names, patient_dose_map):
+    for phone_number in phone_numbers_to_port:
+        user_obj = User(phone_number, names[f"+11{phone_number}"])
+        db.session.add(user_obj)
+        db.session.flush()  # populate user_id
+        formatted_phone_number = f"+11{phone_number}"
+        doses = Dose.query.filter(Dose.phone_number == formatted_phone_number).all()
+        events_for_user = Event.query.filter(Event.phone_number == formatted_phone_number).all()
+        for dose in doses:
+            dose_id_equivalency_list = []
+            for _, equivalency_list in patient_dose_map[formatted_phone_number].items():
+                if dose.id in equivalency_list:
+                    dose_id_equivalency_list = equivalency_list
+            dose_id_equivalency_list_str = [str(x) for x in dose_id_equivalency_list]
+            medication_names = dose.medication_name.split(", ")
+            medication_obj_list = []
+            for medication_name in medication_names:
+                medication_obj = Medication(user_obj.id, medication_name)
+                medication_obj_list.append(medication_obj)
+            db.session.flush()
+            dose_window_obj = DoseWindow(
+                dose.start_hour,
+                dose.start_minute,
+                dose.end_hour,
+                dose.end_minute,
+                user_obj.id,
+                medications=medication_obj_list
+            )
+            db.session.add(dose_window_obj)
+            db.session.flush()
+            events_for_dose = filter(
+                lambda event: event.description in dose_id_equivalency_list_str,
+                events_for_user
+            )
+            for event in events_for_dose:
+                for medication in medication_obj_list:
+                    corresponding_event = EventLog(
+                        event.type,
+                        user_obj.id,
+                        dose_window_obj.id,
+                        medication.id,
+                        event.event_time,
+                        description=medication.id
+                    )
+                    db.session.add(corresponding_event)
 
 
 scheduler.add_listener(scheduler_error_alert, EVENT_JOB_MISSED | EVENT_JOB_ERROR)

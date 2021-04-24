@@ -8,10 +8,15 @@ import tzlocal
 
 
 from models import (
+    Dose,
     DoseWindow,
     EventLog,
     User,
-    Medication
+    Medication,
+    # schemas
+    UserSchema,
+    DoseWindowSchema,
+    MedicationSchema
 )
 
 # turn on new bot
@@ -41,7 +46,6 @@ def user_record_with_manual_takeover(db_session):
 @pytest.fixture
 def dose_window_record(db_session, user_record):
     dose_window_obj = DoseWindow(
-        day_of_week=2,  # wednesday
         start_hour=9+7,
         start_minute=0,
         end_hour=11+7,
@@ -55,7 +59,6 @@ def dose_window_record(db_session, user_record):
 @pytest.fixture
 def dose_window_record_out_of_range(db_session, user_record):
     dose_window_obj = DoseWindow(
-        day_of_week=2,  # wednesday
         start_hour=13+7,
         start_minute=0,
         end_hour=15+7,
@@ -104,6 +107,114 @@ def medication_take_event_record_not_in_dose_window(db_session, medication_recor
     db_session.add(event_obj)
     db_session.commit()
     return event_obj
+
+
+# testing schemas
+def test_user_schema(user_record, dose_window_record, medication_record, medication_record_2):
+    user_schema = UserSchema()
+    assert user_schema.dump(user_record) == {
+        "dose_windows": [
+            {
+            "active": True,
+            "end_hour": 18,
+            "end_minute": 0,
+            "id": dose_window_record.id,
+            "start_hour": 16,
+            "start_minute": 0
+            }
+        ],
+        "doses": [
+            {
+                "active": True,
+                "id": medication_record.id,
+                "instructions": None,
+                "medication_name": "Zoloft"
+            },
+            {
+                "active": True,
+                "id": medication_record_2.id,
+                "instructions": None,
+                "medication_name": "Lisinopril"
+            }
+        ],
+        "events": [],
+        "id": user_record.id,
+        "manual_takeover": False,
+        "name": "Peter",
+        "paused": False,
+        "phone_number": "3604508655",
+        "timezone": "US/Pacific"
+    }
+
+def test_dose_window_schema(dose_window_record, medication_record, medication_record_2, user_record):
+    dose_window_schema = DoseWindowSchema()
+    assert dose_window_schema.dump(dose_window_record) == {
+        'events': [],
+        'start_hour': 16,
+        'active': True,
+        'medications': [
+            {
+                'active': True,
+                'id': medication_record.id,
+                'medication_name': 'Zoloft',
+                'instructions': None
+            }, {
+                'active': True,
+                'id': medication_record_2.id,
+                'medication_name': 'Lisinopril',
+                'instructions': None
+            }
+        ],
+        'end_minute': 0,
+        'start_minute': 0,
+        'id': dose_window_record.id,
+        'end_hour': 18,
+        'user': {
+            'name': 'Peter',
+            'manual_takeover': False,
+            'phone_number': '3604508655',
+            'id': user_record.id,
+            'paused': False,
+            'timezone': 'US/Pacific'
+        }
+    }
+
+def test_medication_schema(dose_window_record, medication_record, user_record):
+    medication_schema = MedicationSchema()
+    assert medication_schema.dump(medication_record) == {
+        'instructions': None,
+        'user': {
+            'phone_number': '3604508655',
+            'name': 'Peter',
+            'paused': False,
+            'manual_takeover': False,
+            'id': user_record.id,
+            'timezone': 'US/Pacific'
+        },
+        'events': [],
+        'active': True,
+        'id': medication_record.id,
+        'medication_name': 'Zoloft',
+        'dose_windows': [
+            {
+                'end_minute': 0,
+                'start_minute': 0,
+                'active': True,
+                'id': dose_window_record.id,
+                'start_hour': 16,
+                'end_hour': 18
+            }
+        ]
+    }
+
+
+def test_get_all_data_for_user(
+    user_record, dose_window_record, medication_record,
+    medication_record_2, db_session, client
+):
+    response = client.get("/user/everything", query_string={"userId": user_record.id, "pw": "couchsurfing"})
+    user_schema = UserSchema()
+    assert response.get_json() == user_schema.dump(user_record)
 
 
 @mock.patch("bot.segment_message")

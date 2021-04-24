@@ -59,8 +59,7 @@ class User(db.Model):
 class DoseWindow(db.Model):
     __tablename__ = 'dose_window'
     id = db.Column(db.Integer, primary_key=True)
-    # remmeber, UTC only
-    day_of_week = db.Column(db.Integer, nullable=False)
+    # remember, UTC only
     start_hour = db.Column(db.Integer, nullable=False)
     end_hour = db.Column(db.Integer, nullable=False)
     start_minute = db.Column(db.Integer, nullable=False)
@@ -70,8 +69,11 @@ class DoseWindow(db.Model):
     events = db.relationship("EventLog", backref="dose_window")
     active = db.Column(db.Boolean)
 
-    def __init__(self, day_of_week, start_hour, start_minute, end_hour, end_minute, user_id, medications=[], events=[], active=True):
-        self.day_of_week = day_of_week
+    def __init__(
+        self, start_hour, start_minute, end_hour,
+        end_minute, user_id, medications=[], events=[], active=True,
+        scheduler_tuple=None
+    ):
         self.start_hour = start_hour
         self.start_minute = start_minute
         self.end_hour = end_hour
@@ -79,7 +81,12 @@ class DoseWindow(db.Model):
         self.user_id = user_id
         self.medications = medications
         self.events = events
-        self.active = active
+        self.active = active if active and medications else False
+
+
+        # TODO: integrate scheduler into model side effects
+        if scheduler_tuple and active:
+            pass
 
     @property
     def next_start_date(self):
@@ -261,25 +268,24 @@ class UserSchema(Schema):
     paused = fields.Boolean()
     timezone = fields.String()
     dose_windows = fields.List(fields.Nested(
-        DoseWindowSchema(exclude=("user", "events", "medications"))
+        lambda: DoseWindowSchema(exclude=("user", "events", "medications"))
         ))
     doses = fields.List(fields.Nested(
-        MedicationSchema(exclude=("user", "dose_windows", "events"))
+        lambda: MedicationSchema(exclude=("user", "dose_windows", "events"))
     ))
     events = fields.List(fields.Nested(
-        EventLogSchema(exclude=("user", "dose_window", "medication"))
+        lambda: EventLogSchema(exclude=("user", "dose_window", "medication"))
     ))
 
 class DoseWindowSchema(Schema):
     id = fields.Integer()
-    day_of_week = fields.Integer()
     start_hour = fields.Integer()
     start_minute = fields.Integer()
     end_hour = fields.Integer()
     end_minute = fields.Integer()
     user = fields.Nested(UserSchema(exclude=("dose_windows", "events", "doses")))
-    medications = fields.List(fields.Nested(MedicationSchema(exclude=("dose_windows", "user", "events"))))
-    events = fields.List(fields.Nested(EventLogSchema(exclude=("user", "dose_window", "medication"))))
+    medications = fields.List(fields.Nested(lambda: MedicationSchema(exclude=("dose_windows", "user", "events"))))
+    events = fields.List(fields.Nested(lambda: EventLogSchema(exclude=("user", "dose_window", "medication"))))
     active = fields.Boolean()
 
 
@@ -288,7 +294,7 @@ class MedicationSchema(Schema):
     medication_name = fields.String()
     instructions = fields.String()
     active = fields.Boolean()
-    fields.List(fields.Nested(EventLogSchema(exclude=("user", "dose_window", "medication"))))
+    events = fields.List(fields.Nested(lambda: EventLogSchema(exclude=("user", "dose_window", "medication"))))
     dose_windows = dose_windows = fields.List(fields.Nested(
         DoseWindowSchema(exclude=("user", "events", "medications"))
         ))
