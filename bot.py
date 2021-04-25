@@ -1771,7 +1771,6 @@ PHONE_NUMBERS_TO_PORT = [
 ]
 
 
-# TODO: testing
 def port_legacy_data(phone_numbers_to_port, names, patient_dose_map):
     for phone_number in phone_numbers_to_port:
         # initialize users to paused for now to protect scheduler DB
@@ -1836,6 +1835,14 @@ def port_legacy_data(phone_numbers_to_port, names, patient_dose_map):
             )
             db.session.add(corresponding_event)
     db.session.commit()
+
+
+def drop_all_new_tables():
+    models_to_drop = [
+        User, DoseWindow, Medication, EventLog
+    ]
+    for model in models_to_drop:
+        model.query.delete()
 
 
 scheduler.add_listener(scheduler_error_alert, EVENT_JOB_MISSED | EVENT_JOB_ERROR)

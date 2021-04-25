@@ -12,17 +12,17 @@ def get_time_now(tzaware=True):
 
 # new tables
 dose_medication_linker = db.Table('dose_medication_linker',
-    db.Column('dose_window_id', db.Integer, db.ForeignKey('dose_window.id')),
-    db.Column('medication_id', db.Integer, db.ForeignKey('medication.id'))
+    db.Column('dose_window_id', db.Integer, db.ForeignKey('dose_window.id', ondelete='CASCADE')),
+    db.Column('medication_id', db.Integer, db.ForeignKey('medication.id', ondelete='CASCADE'))
 )
 class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     phone_number = db.Column(db.String(10), nullable=False)
     name = db.Column(db.String, nullable=False)
-    dose_windows = db.relationship("DoseWindow", backref="user")
-    doses = db.relationship("Medication", backref="user")
-    events = db.relationship("EventLog", backref="user")
+    dose_windows = db.relationship("DoseWindow", backref="user", passive_deletes=True)
+    doses = db.relationship("Medication", backref="user", passive_deletes=True)
+    events = db.relationship("EventLog", backref="user", passive_deletes=True)
     manual_takeover = db.Column(db.Boolean, nullable=False)
     paused = db.Column(db.Boolean, nullable=False)
     timezone = db.Column(db.String, nullable=False)
@@ -65,7 +65,7 @@ class DoseWindow(db.Model):
     end_hour = db.Column(db.Integer, nullable=False)
     start_minute = db.Column(db.Integer, nullable=False)
     end_minute = db.Column(db.Integer, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     medications = db.relationship("Medication", secondary=dose_medication_linker, back_populates="dose_windows")
     events = db.relationship("EventLog", backref="dose_window")
     active = db.Column(db.Boolean)  # active dose windows can be interacted in, even if the bot is paused.
@@ -143,7 +143,7 @@ class DoseWindow(db.Model):
 class Medication(db.Model):
     __tablename__ = 'medication'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     medication_name = db.Column(db.String, nullable=False)
     instructions = db.Column(db.String)
     events = db.relationship("EventLog", backref="medication")
@@ -200,7 +200,7 @@ class EventLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     event_type = db.Column(db.String, nullable=False)
     description = db.Column(db.String)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'))
     dose_window_id = db.Column(db.Integer, db.ForeignKey('dose_window.id'))
     medication_id = db.Column(db.Integer, db.ForeignKey('medication.id'))
     event_time = db.Column(db.DateTime, nullable=False)

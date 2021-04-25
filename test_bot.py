@@ -1,4 +1,4 @@
-from bot import port_legacy_data
+from bot import drop_all_new_tables, port_legacy_data
 import pytest
 from unittest import mock
 from datetime import datetime, timedelta
@@ -442,3 +442,8 @@ def test_port_legacy_data(dose_record, take_event_record, reminder_delay_event_r
         'medication': None,
         'event_type': 'conversational'
     }
+
+
+def test_drop_all_new_tables(db_session, user_record, dose_window_record, medication_record):
+    drop_all_new_tables()
+    assert len(db_session.query(User).all()) == 0
