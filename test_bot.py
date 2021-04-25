@@ -1,10 +1,23 @@
+from bot import port_legacy_data
 import pytest
 from unittest import mock
 from datetime import datetime, timedelta
 from pytz import timezone
 import os
 
-from models import Event, Dose, Reminder, ManualTakeover
+from models import (
+    Event, Dose, Reminder, ManualTakeover,
+    # new models
+    DoseWindow,
+    EventLog,
+    Medication,
+    User,
+    # new schemas,
+    DoseWindowSchema,
+    EventLogSchema,
+    MedicationSchema,
+    UserSchema
+)
 
 from freezegun import freeze_time
 
@@ -23,6 +36,43 @@ def dose_record(db_session):
     db_session.add(dose_obj)
     db_session.commit()
     return dose_obj
+
+@pytest.fixture
+def take_event_record(db_session, dose_record):
+    event_obj = Event(
+        event_type="take",
+        event_time=datetime(2012, 1, 1, 13, 23, 15),
+        phone_number=dose_record.phone_number,
+        description=dose_record.id
+    )
+    db_session.add(event_obj)
+    db_session.commit()
+    return event_obj
+
+@pytest.fixture
+def reminder_delay_event_record(db_session, dose_record):
+    event_obj = Event(
+        event_type="reminder_delay",
+        event_time=datetime(2012, 1, 1, 13, 23, 15),
+        phone_number=dose_record.phone_number,
+        description="delayed to 2021-04-25 09:26:20.045841-07:00"
+    )
+    db_session.add(event_obj)
+    db_session.commit()
+    return event_obj
+
+
+@pytest.fixture
+def conversational_event_record(db_session, dose_record):
+    event_obj = Event(
+        event_type="conversational",
+        event_time=datetime(2012, 1, 1, 13, 23, 15),
+        phone_number=dose_record.phone_number
+    )
+    db_session.add(event_obj)
+    db_session.commit()
+    return event_obj
+
 
 @pytest.fixture
 def initial_reminder_record(db_session, dose_record):
@@ -237,3 +287,158 @@ def test_activity_delay(mock_randint, mock_get_current_end_date, segment_message
     scheduled_job = scheduler.get_job(f"{dose_record.id}-followup")
     assert scheduled_job is not None
     assert scheduled_job.next_run_time == timezone("UTC").localize(datetime(2012, 1, 1, 12, 23, 1))
+
+
+@freeze_time("2012-01-1 12:00:01")
+def test_port_legacy_data(dose_record, take_event_record, reminder_delay_event_record, conversational_event_record, db_session):
+    phone_numbers_to_port = ["3604508655"]
+    names = {"+113604508655": "Peter"}
+    patient_dose_map = {"+113604508655": {"morning": [dose_record.id]}}
+    port_legacy_data(phone_numbers_to_port, names, patient_dose_map)
+    users = db_session.query(User).all()
+    assert len(users) == 1
+    medications = db_session.query(Medication).all()
+    assert len(medications) == 1
+    dose_windows = db_session.query(DoseWindow).all()
+    assert len(dose_windows) == 1
+    event_logs = db_session.query(EventLog).all()
+    assert len(event_logs) == 3
+    assert UserSchema().dump(users[0]) == {
+        'events': [
+            {
+                'event_type': 'take', 'id': 1, 'event_time': '2012-01-01T13:23:15', 'description': None
+            },
+            {
+                'event_type': 'reminder_delay', 'id': 2, 'event_time': '2012-01-01T13:23:15', 'description': "delayed to 2021-04-25 09:26:20.045841-07:00"
+            },
+            {
+                'event_type': 'conversational', 'id': 3, 'event_time': '2012-01-01T13:23:15', 'description': None
+            },
+        ],
+        'phone_number': '3604508655',
+        'paused': True,
+        'id': 1,
+        'manual_takeover': False,
+        'name': 'Peter',
+        'doses': [{
+            'instructions': None, 'id': medications[0].id, 'active': True, 'medication_name': 'test med'
+        }],
+        'dose_windows': [{
+            'start_minute': 0,
+            'active': True,
+            'id': dose_windows[0].id,
+            'end_minute': 0,
+            'start_hour': 11,
+            'end_hour': 1
+        }],
+        'timezone': 'US/Pacific'
+    }
+    assert MedicationSchema().dump(medications[0]) == {
+        'medication_name': 'test med',
+        'user': {
+            'phone_number': '3604508655',
+            'timezone': 'US/Pacific',
+            'id': users[0].id,
+            'manual_takeover': False,
+            'name': 'Peter',
+            'paused': True
+        },
+        'instructions': None,
+        'dose_windows': [{
+            'start_minute': 0,
+            'id': dose_windows[0].id,
+            'start_hour': 11,
+            'end_hour': 1,
+            'end_minute': 0,
+            'active': True
+        }],
+        'id': 1,
+        'active': True,
+        'events': [
+            {
+                'event_type': 'take', 'id': 1, 'event_time': '2012-01-01T13:23:15', 'description': None
+            }
+        ],
+    }
+    assert DoseWindowSchema().dump(dose_windows[0]) == {
+        'start_minute': 0,
+        'end_minute': 0,
+        'medications': [{'active': True, 'id': medications[0].id, 'instructions': None, 'medication_name': 'test med'}],
+        'end_hour': 1,
+        'active': True,
+        'user': {
+            'paused': True,
+            'name': 'Peter',
+            'manual_takeover': False,
+            'phone_number': '3604508655',
+            'timezone': 'US/Pacific',
+            'id': users[0].id
+        },
+        'events': [
+            {
+                'event_type': 'take', 'id': 1, 'event_time': '2012-01-01T13:23:15', 'description': None
+            }
+        ],
+        'start_hour': 11,
+        'id': 1
+    }
+    assert EventLogSchema().dump(event_logs[0]) == {
+        'description': None,
+        'dose_window': {
+            'id': dose_windows[0].id,
+            'end_minute': 0,
+            'active': True,
+            'start_minute': 0,
+            'start_hour': 11,
+            'end_hour': 1
+        },
+        'id': 1,
+        'user': {
+            'id': users[0].id,
+            'manual_takeover': False,
+            'phone_number': '3604508655',
+            'timezone': 'US/Pacific',
+            'paused': True,
+            'name': 'Peter'
+        },
+        'event_time': '2012-01-01T13:23:15',
+        'medication': {
+            'medication_name': 'test med',
+            'active': True,
+            'id': medications[0].id,
+            'instructions': None
+        },
+        'event_type': 'take'
+    }
+    assert EventLogSchema().dump(event_logs[1]) == {
+        'description': "delayed to 2021-04-25 09:26:20.045841-07:00",
+        'dose_window': None,
+        'id': 2,
+        'user': {
+            'id': users[0].id,
+            'manual_takeover': False,
+            'phone_number': '3604508655',
+            'timezone': 'US/Pacific',
+            'paused': True,
+            'name': 'Peter'
+        },
+        'event_time': '2012-01-01T13:23:15',
+        'medication': None,
+        'event_type': 'reminder_delay'
+    }
+    assert EventLogSchema().dump(event_logs[2]) == {
+        'description': None,
+        'dose_window': None,
+        'id': 3,
+        'user': {
+            'id': users[0].id,
+            'manual_takeover': False,
+            'phone_number': '3604508655',
+            'timezone': 'US/Pacific',
+            'paused': True,
+            'name': 'Peter'
+        },
+        'event_time': '2012-01-01T13:23:15',
+        'medication': None,
+        'event_type': 'conversational'
+    }

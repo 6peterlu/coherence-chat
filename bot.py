@@ -1774,7 +1774,8 @@ PHONE_NUMBERS_TO_PORT = [
 # TODO: testing
 def port_legacy_data(phone_numbers_to_port, names, patient_dose_map):
     for phone_number in phone_numbers_to_port:
-        user_obj = User(phone_number, names[f"+11{phone_number}"])
+        # initialize users to paused for now to protect scheduler DB
+        user_obj = User(phone_number, names[f"+11{phone_number}"], paused=True)
         db.session.add(user_obj)
         db.session.flush()  # populate user_id
         formatted_phone_number = f"+11{phone_number}"
@@ -1787,20 +1788,23 @@ def port_legacy_data(phone_numbers_to_port, names, patient_dose_map):
                     dose_id_equivalency_list = equivalency_list
             dose_id_equivalency_list_str = [str(x) for x in dose_id_equivalency_list]
             medication_names = dose.medication_name.split(", ")
-            medication_obj_list = []
-            for medication_name in medication_names:
-                medication_obj = Medication(user_obj.id, medication_name)
-                medication_obj_list.append(medication_obj)
-            db.session.flush()
             dose_window_obj = DoseWindow(
                 dose.start_hour,
                 dose.start_minute,
                 dose.end_hour,
                 dose.end_minute,
-                user_obj.id,
-                medications=medication_obj_list
+                user_obj.id
             )
             db.session.add(dose_window_obj)
+            db.session.flush()
+            medication_obj_list = []
+            for medication_name in medication_names:
+                medication_obj = Medication(
+                    user_obj.id, medication_name,
+                    dose_windows=[dose_window_obj]
+                )
+                db.session.add(medication_obj)
+                medication_obj_list.append(medication_obj)
             db.session.flush()
             events_for_dose = filter(
                 lambda event: event.description in dose_id_equivalency_list_str,
@@ -1809,14 +1813,29 @@ def port_legacy_data(phone_numbers_to_port, names, patient_dose_map):
             for event in events_for_dose:
                 for medication in medication_obj_list:
                     corresponding_event = EventLog(
-                        event.type,
+                        event.event_type,
                         user_obj.id,
                         dose_window_obj.id,
                         medication.id,
                         event.event_time,
-                        description=medication.id
+                        description=None
                     )
                     db.session.add(corresponding_event)
+        non_dose_associated_events = filter(
+            lambda event: event.description not in dose_id_equivalency_list_str,
+            events_for_user
+        )
+        for event in non_dose_associated_events:
+            corresponding_event = EventLog(
+                event.event_type,
+                user_obj.id,
+                None,
+                None,
+                event.event_time,
+                description=event.description
+            )
+            db.session.add(corresponding_event)
+    db.session.commit()
 
 
 scheduler.add_listener(scheduler_error_alert, EVENT_JOB_MISSED | EVENT_JOB_ERROR)
