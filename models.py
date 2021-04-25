@@ -12,8 +12,8 @@ def get_time_now(tzaware=True):
 
 # new tables
 dose_medication_linker = db.Table('dose_medication_linker',
-    db.Column('dose_window_id', db.Integer, db.ForeignKey('dose_window.id', ondelete='CASCADE')),
-    db.Column('medication_id', db.Integer, db.ForeignKey('medication.id', ondelete='CASCADE'))
+    db.Column('dose_window_id', db.Integer, db.ForeignKey('dose_window.id', ondelete='CASCADE', name="dose_medication_linker_dose_window_fkey_custom")),
+    db.Column('medication_id', db.Integer, db.ForeignKey('medication.id', ondelete='CASCADE', name="dose_medication_linker_dose_window_fkey_custom"))
 )
 class User(db.Model):
     __tablename__ = 'user'
@@ -65,7 +65,7 @@ class DoseWindow(db.Model):
     end_hour = db.Column(db.Integer, nullable=False)
     start_minute = db.Column(db.Integer, nullable=False)
     end_minute = db.Column(db.Integer, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE', name="dose_window_user_fkey_custom"), nullable=False)
     medications = db.relationship("Medication", secondary=dose_medication_linker, back_populates="dose_windows")
     events = db.relationship("EventLog", backref="dose_window")
     active = db.Column(db.Boolean)  # active dose windows can be interacted in, even if the bot is paused.
@@ -143,7 +143,7 @@ class DoseWindow(db.Model):
 class Medication(db.Model):
     __tablename__ = 'medication'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE', name="medication_user_fkey_custom"), nullable=False)
     medication_name = db.Column(db.String, nullable=False)
     instructions = db.Column(db.String)
     events = db.relationship("EventLog", backref="medication")
@@ -200,7 +200,7 @@ class EventLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     event_type = db.Column(db.String, nullable=False)
     description = db.Column(db.String)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE', name="event_user_fkey_custom"))
     dose_window_id = db.Column(db.Integer, db.ForeignKey('dose_window.id'))
     medication_id = db.Column(db.Integer, db.ForeignKey('medication.id'))
     event_time = db.Column(db.DateTime, nullable=False)

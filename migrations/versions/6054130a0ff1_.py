@@ -1,8 +1,8 @@
-"""new data model
+"""empty message
 
-Revision ID: e0b935b6cdc8
+Revision ID: 6054130a0ff1
 Revises: 412d769b5eef
-Create Date: 2021-04-25 15:12:24.221735
+Create Date: 2021-04-25 16:05:02.097079
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'e0b935b6cdc8'
+revision = '6054130a0ff1'
 down_revision = '412d769b5eef'
 branch_labels = None
 depends_on = None
@@ -21,26 +21,26 @@ def upgrade():
     op.drop_table('dose_medication_association')
     op.drop_constraint('dose_medication_linker_dose_window_id_fkey', 'dose_medication_linker', type_='foreignkey')
     op.drop_constraint('dose_medication_linker_medication_id_fkey', 'dose_medication_linker', type_='foreignkey')
-    op.create_foreign_key(None, 'dose_medication_linker', 'dose_window', ['dose_window_id'], ['id'], ondelete='CASCADE')
-    op.create_foreign_key(None, 'dose_medication_linker', 'medication', ['medication_id'], ['id'], ondelete='CASCADE')
+    op.create_foreign_key('dose_medication_linker_medication_fkey_custom', 'dose_medication_linker', 'medication', ['medication_id'], ['id'], ondelete='CASCADE')
+    op.create_foreign_key('dose_medication_linker_dose_window_fkey_custom', 'dose_medication_linker', 'dose_window', ['dose_window_id'], ['id'], ondelete='CASCADE')
     op.add_column('dose_window', sa.Column('active', sa.Boolean(), nullable=True))
     op.add_column('dose_window', sa.Column('end_hour', sa.Integer(), nullable=False))
     op.add_column('dose_window', sa.Column('end_minute', sa.Integer(), nullable=False))
     op.add_column('dose_window', sa.Column('start_hour', sa.Integer(), nullable=False))
     op.add_column('dose_window', sa.Column('start_minute', sa.Integer(), nullable=False))
     op.add_column('dose_window', sa.Column('user_id', sa.Integer(), nullable=False))
-    op.create_foreign_key(None, 'dose_window', 'user', ['user_id'], ['id'], ondelete='CASCADE')
+    op.create_foreign_key('dose_window_user_fkey_custom', 'dose_window', 'user', ['user_id'], ['id'], ondelete='CASCADE')
     op.add_column('event_log', sa.Column('event_time', sa.DateTime(), nullable=False))
     op.alter_column('event_log', 'event_type',
                existing_type=sa.VARCHAR(),
                nullable=False)
     op.drop_constraint('event_log_user_id_fkey', 'event_log', type_='foreignkey')
-    op.create_foreign_key(None, 'event_log', 'user', ['user_id'], ['id'], ondelete='CASCADE')
+    op.create_foreign_key('event_user_fkey_custom', 'event_log', 'user', ['user_id'], ['id'], ondelete='CASCADE')
     op.add_column('medication', sa.Column('active', sa.Boolean(), nullable=False))
     op.add_column('medication', sa.Column('instructions', sa.String(), nullable=True))
     op.add_column('medication', sa.Column('medication_name', sa.String(), nullable=False))
     op.add_column('medication', sa.Column('user_id', sa.Integer(), nullable=False))
-    op.create_foreign_key(None, 'medication', 'user', ['user_id'], ['id'], ondelete='CASCADE')
+    op.create_foreign_key('medication_user_fkey_custom', 'medication', 'user', ['user_id'], ['id'], ondelete='CASCADE')
     op.add_column('user', sa.Column('manual_takeover', sa.Boolean(), nullable=False))
     op.add_column('user', sa.Column('paused', sa.Boolean(), nullable=False))
     op.add_column('user', sa.Column('phone_number', sa.String(length=10), nullable=False))
@@ -54,26 +54,26 @@ def downgrade():
     op.drop_column('user', 'phone_number')
     op.drop_column('user', 'paused')
     op.drop_column('user', 'manual_takeover')
-    op.drop_constraint(None, 'medication', type_='foreignkey')
+    op.drop_constraint('medication_user_fkey_custom', 'medication', type_='foreignkey')
     op.drop_column('medication', 'user_id')
     op.drop_column('medication', 'medication_name')
     op.drop_column('medication', 'instructions')
     op.drop_column('medication', 'active')
-    op.drop_constraint(None, 'event_log', type_='foreignkey')
+    op.drop_constraint('event_user_fkey_custom', 'event_log', type_='foreignkey')
     op.create_foreign_key('event_log_user_id_fkey', 'event_log', 'user', ['user_id'], ['id'])
     op.alter_column('event_log', 'event_type',
                existing_type=sa.VARCHAR(),
                nullable=True)
     op.drop_column('event_log', 'event_time')
-    op.drop_constraint(None, 'dose_window', type_='foreignkey')
+    op.drop_constraint('dose_window_user_fkey_custom', 'dose_window', type_='foreignkey')
     op.drop_column('dose_window', 'user_id')
     op.drop_column('dose_window', 'start_minute')
     op.drop_column('dose_window', 'start_hour')
     op.drop_column('dose_window', 'end_minute')
     op.drop_column('dose_window', 'end_hour')
     op.drop_column('dose_window', 'active')
-    op.drop_constraint(None, 'dose_medication_linker', type_='foreignkey')
-    op.drop_constraint(None, 'dose_medication_linker', type_='foreignkey')
+    op.drop_constraint('dose_medication_linker_dose_window_fkey_custom', 'dose_medication_linker', type_='foreignkey')
+    op.drop_constraint('dose_medication_linker_medication_fkey_custom', 'dose_medication_linker', type_='foreignkey')
     op.create_foreign_key('dose_medication_linker_medication_id_fkey', 'dose_medication_linker', 'medication', ['medication_id'], ['id'])
     op.create_foreign_key('dose_medication_linker_dose_window_id_fkey', 'dose_medication_linker', 'dose_window', ['dose_window_id'], ['id'])
     op.create_table('dose_medication_association',
