@@ -58,13 +58,13 @@ def downgrade():
     op.drop_column('medication', 'medication_name')
     op.drop_column('medication', 'instructions')
     op.drop_column('medication', 'active')
-    op.drop_constraint('event_user_fkey_custom', 'event_log', type_='foreignkey')
+    # op.drop_constraint('event_user_fkey_custom', 'event_log', type_='foreignkey')
     op.create_foreign_key('event_log_user_id_fkey', 'event_log', 'user', ['user_id'], ['id'])
     op.alter_column('event_log', 'event_type',
                existing_type=sa.VARCHAR(),
                nullable=True)
     op.drop_column('event_log', 'event_time')
-    op.drop_constraint('dose_window_user_fkey_custom', 'dose_window', type_='foreignkey')
+    # op.drop_constraint('dose_window_user_fkey_custom', 'dose_window', type_='foreignkey')
     op.drop_column('dose_window', 'user_id')
     op.drop_column('dose_window', 'start_minute')
     op.drop_column('dose_window', 'start_hour')
