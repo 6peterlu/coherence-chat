@@ -4,7 +4,13 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 import sqlalchemy as sa
 from pytest_postgresql.janitor import DatabaseJanitor
-from models import db
+from models import (
+    db,
+    # tables
+    User,
+    DoseWindow,
+    Medication
+)
 
 from bot import app as prod_app, scheduler as prod_scheduler, scheduler_error_alert as prod_error_alert
 
@@ -65,3 +71,79 @@ def _db(app):
     db.create_all()
 
     return db
+
+
+@pytest.fixture
+def user_record(db_session):
+    user_obj = User(
+        phone_number="3604508655",
+        name="Peter"
+    )
+    db_session.add(user_obj)
+    db_session.commit()
+    return user_obj
+
+@pytest.fixture
+def user_record_with_manual_takeover(db_session):
+    user_obj = User(
+        phone_number="3604508655",
+        name="Peter",
+        manual_takeover=True
+    )
+    db_session.add(user_obj)
+    db_session.commit()
+    return user_obj
+
+@pytest.fixture
+def dose_window_record(db_session, user_record):
+    dose_window_obj = DoseWindow(
+        start_hour=9+7,
+        start_minute=0,
+        end_hour=11+7,
+        end_minute=0,
+        user_id=user_record.id
+    )
+    db_session.add(dose_window_obj)
+    db_session.commit()
+    return dose_window_obj
+
+@pytest.fixture
+def dose_window_record_out_of_range(db_session, user_record):
+    dose_window_obj = DoseWindow(
+        start_hour=13+7,
+        start_minute=0,
+        end_hour=15+7,
+        end_minute=0,
+        user_id=user_record.id
+    )
+    db_session.add(dose_window_obj)
+    db_session.commit()
+    return dose_window_obj
+
+# lol
+def test_scheduled_function(*_):
+    pass
+
+@pytest.fixture
+def medication_record(db_session, dose_window_record, user_record, scheduler):
+    medication_obj = Medication(
+        user_id=user_record.id,
+        medication_name="Zoloft",
+        dose_windows=[dose_window_record],
+        scheduler_tuple=(scheduler, test_scheduled_function)
+    )
+    db_session.add(medication_obj)
+    db_session.commit()
+    return medication_obj
+
+@pytest.fixture
+def medication_record_2(db_session, dose_window_record, user_record, scheduler):
+    medication_obj = Medication(
+        user_id=user_record.id,
+        medication_name="Lisinopril",
+        dose_windows=[dose_window_record],
+        scheduler_tuple=(scheduler, test_scheduled_function)
+    )
+    db_session.add(medication_obj)
+    db_session.commit()
+    return medication_obj

@@ -3,7 +3,6 @@ from datetime import datetime
 from pytz import utc
 from nlp import segment_message
 import os
-os.environ["NEW_DATA_MODEL"] = "blah"
 
 @freeze_time("2000-01-01 18:00:00")
 def test_segment_message():
@@ -34,5 +33,4 @@ def test_segment_message():
     assert segment_message("S :)")[0] == {'type': 'skip', "raw": "S :)"}
     assert segment_message("walking")[0] == {'type': 'activity', 'payload': {'type': 'short', 'response': "Computing ideal reminder time...done. Enjoy your walk! We'll check in later.", 'concept': 'leisure'}, 'raw': 'walking'}
     assert segment_message("dinner")[0] == {'type': 'activity', 'payload': {'type': 'long', 'response': "Computing ideal reminder time...done. Have a great dinner! We'll check in later.", 'concept': 'meal'}, 'raw': 'dinner'}
-
 

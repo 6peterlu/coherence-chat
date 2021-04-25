@@ -1707,7 +1707,7 @@ def update_dose_window():
 
 @app.route("/doseWindow/addMedication", methods=["POST"])
 @auth_required_post_delete
-def associate_medication_with_dose_window():
+def associate_medication_with_dose_window_route():
     incoming_data = request.json
     dose_window_id = int(incoming_data["doseWindowId"])
     medication_id = int(incoming_data["medicationId"])
@@ -1721,7 +1721,7 @@ def associate_medication_with_dose_window():
 
 @app.route("/doseWindow/removeMedication", methods=["POST"])
 @auth_required_post_delete
-def disassociate_medication_with_dose_window():
+def disassociate_medication_with_dose_window_route():
     incoming_data = request.json
     dose_window_id = int(incoming_data["doseWindowId"])
     medication_id = int(incoming_data["medicationId"])

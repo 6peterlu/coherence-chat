@@ -2,6 +2,7 @@ import pytest
 from unittest import mock
 from datetime import datetime, timedelta
 from pytz import timezone
+import os
 
 from models import Event, Dose, Reminder, ManualTakeover
 

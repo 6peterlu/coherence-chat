@@ -2,6 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 from pytz import utc as pytzutc, timezone
 from marshmallow import Schema, fields
+from sqlalchemy import event
 
 db = SQLAlchemy()
 
@@ -67,26 +68,56 @@ class DoseWindow(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     medications = db.relationship("Medication", secondary=dose_medication_linker, back_populates="dose_windows")
     events = db.relationship("EventLog", backref="dose_window")
-    active = db.Column(db.Boolean)
+    active = db.Column(db.Boolean)  # active dose windows can be interacted in, even if the bot is paused.
 
     def __init__(
         self, start_hour, start_minute, end_hour,
-        end_minute, user_id, medications=[], events=[], active=True,
-        scheduler_tuple=None
+        end_minute, user_id
     ):
         self.start_hour = start_hour
         self.start_minute = start_minute
         self.end_hour = end_hour
         self.end_minute = end_minute
         self.user_id = user_id
-        self.medications = medications
-        self.events = events
-        self.active = active if active and medications else False
+        self.medications = []
+        self.events = []
+        self.active = True
 
 
-        # TODO: integrate scheduler into model side effects
-        if scheduler_tuple and active:
-            pass
+    # flip active and schedule or remove jobs appropriately
+    def toggle_active(self, scheduler_tuple=None):
+        self.active = not self.active
+        # need a scheduler object to take actions
+        if scheduler_tuple is not None:
+            scheduler, func_to_schedule = scheduler_tuple
+            if self.active and scheduler_tuple and self.medications:
+                self.schedule_initial_job(scheduler, func_to_schedule)
+            if not self.active and scheduler_tuple:
+                self.remove_jobs(scheduler)
+
+
+    def schedule_initial_job(self, scheduler, func_to_schedule):
+        scheduler.add_job(
+            f"{self.id}-initial-new",
+            func_to_schedule,
+            trigger="interval",
+            start_date=self.next_start_date,
+            days=1,
+            args=[self.id],
+            misfire_grace_time=5*60
+        )
+
+    def remove_jobs(self, scheduler, jobs_list):
+        for job in jobs_list:
+            job_id = f"{self.id}-{job}-new"
+            if scheduler.get_job(job_id):
+                scheduler.remove_job(job_id)
+
+
+    def jobs_scheduled(self, scheduler):
+        job_id = f"{self.id}-initial-new"
+        return scheduler.get_job(job_id) is not None
+
 
     @property
     def next_start_date(self):
@@ -119,13 +150,14 @@ class Medication(db.Model):
     dose_windows = db.relationship("DoseWindow", secondary=dose_medication_linker, back_populates="medications")
     active = db.Column(db.Boolean, nullable=False)
 
-    def __init__(self, user_id, medication_name, instructions=None, events=[], dose_windows=[], active=True):
+    def __init__(self, user_id, medication_name, scheduler_tuple, instructions=None, events=[], dose_windows=[], active=True):
         self.user_id = user_id
         self.medication_name = medication_name
         self.instructions = instructions
         self.events = events
-        self.dose_windows = dose_windows
         self.active = active
+        for dose_window in dose_windows:
+            associate_medication_with_dose_window(scheduler_tuple, self, dose_window)
 
     def is_recorded_for_today(self, dose_window_obj, user_obj):
         start_of_day, end_of_day = user_obj.current_day_bounds
@@ -136,6 +168,31 @@ class Medication(db.Model):
             EventLog.event_time < end_of_day
         ).all()
         return len(relevant_medication_history_records) > 0
+
+
+def deactivate_medication(scheduler, medication):
+    medication.active = False
+    dose_windows = [*medication.dose_windows]
+    medication.dose_windows = []  # dissociate medication from all dose_windows
+    db.session.flush()
+    for dose_window in dose_windows:
+        if dose_window.jobs_scheduled(scheduler) and not dose_window.medications:
+            dose_window.remove_jobs(scheduler, ["initial", "absent", "boundary", "followup"])
+
+
+def associate_medication_with_dose_window(scheduler_tuple, medication, dose_window):
+    scheduler, func_to_schedule = scheduler_tuple
+    medication.dose_windows.append(dose_window)
+    if not dose_window.jobs_scheduled(scheduler):
+        dose_window.schedule_initial_job(scheduler, func_to_schedule)
+
+
+def dissociate_medication_from_dose_window(scheduler, medication, dose_window):
+    medication.dose_windows.remove(dose_window)
+    db.session.flush()
+    if dose_window.jobs_scheduled(scheduler) and not dose_window.medications:
+        dose_window.remove_jobs(scheduler, ["initial", "absent", "boundary", "followup"])
+
 
 class EventLog(db.Model):
     __tablename__ = 'event_log'
