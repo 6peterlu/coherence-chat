@@ -53,7 +53,7 @@ def downgrade():
     op.drop_column('user', 'phone_number')
     op.drop_column('user', 'paused')
     op.drop_column('user', 'manual_takeover')
-    op.drop_constraint('medication_user_fkey_custom', 'medication', type_='foreignkey')
+    # op.drop_constraint('medication_user_fkey_custom', 'medication', type_='foreignkey')
     op.drop_column('medication', 'user_id')
     op.drop_column('medication', 'medication_name')
     op.drop_column('medication', 'instructions')
