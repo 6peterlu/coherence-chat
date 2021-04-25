@@ -13,7 +13,7 @@ def get_time_now(tzaware=True):
 # new tables
 dose_medication_linker = db.Table('dose_medication_linker',
     db.Column('dose_window_id', db.Integer, db.ForeignKey('dose_window.id', ondelete='CASCADE', name="dose_medication_linker_dose_window_fkey_custom")),
-    db.Column('medication_id', db.Integer, db.ForeignKey('medication.id', ondelete='CASCADE', name="dose_medication_linker_dose_window_fkey_custom"))
+    db.Column('medication_id', db.Integer, db.ForeignKey('medication.id', ondelete='CASCADE', name="dose_medication_linker_medication_fkey_custom"))
 )
 class User(db.Model):
     __tablename__ = 'user'
