@@ -820,7 +820,7 @@ def get_all_admin_data():
         }
         for dose_window in user.dose_windows:
             user_dict["dose_windows"].append(DoseWindowSchema().dump(dose_window))
-        for medication in user.medications:
+        for medication in user.doses:
             user_dict["medications"].append(MedicationSchema().dump(medication))
     return jsonify(return_dict)
 
