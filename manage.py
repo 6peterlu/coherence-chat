@@ -1,7 +1,8 @@
 import os
 from flask_script import Manager
 from flask_migrate import Migrate, MigrateCommand
-from bot import app, db, Config
+from bot import app, Config
+from models import db
 
 
 app.config.from_object(Config)

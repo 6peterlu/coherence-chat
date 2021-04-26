@@ -23,7 +23,14 @@ from models import (
     PausedService,
     # new data models
     User,
-    EventLog
+    EventLog,
+    DoseWindow,
+    Medication,
+    # new data schemas
+    UserSchema,
+    DoseWindowSchema,
+    MedicationSchema,
+    EventLogSchema
 )
 
 from models import db
@@ -219,7 +226,8 @@ cal = parsedatetime.Calendar()
 
 
 # initialize tables
-db.create_all()  # are there bad effects from running this every time? edit: I guess not
+# maybe we don't run this?
+# db.create_all()  # are there bad effects from running this every time? edit: I guess not
 
 # twilio objects
 account_sid = os.environ['TWILIO_ACCOUNT_SID']
@@ -1608,6 +1616,235 @@ def scheduler_error_alert(event):
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
             to="+13604508655"
         )
+
+# user methods
+@app.route("/user/create", methods=["POST"])
+@auth_required_post_delete
+def create_user():
+    incoming_data = request.json
+    new_user = User(
+        phone_number=incoming_data["phoneNumber"],
+        name=incoming_data["name"],
+    )
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify()
+
+@app.route("/user/everything", methods=["GET"])
+@auth_required_get
+def get_all_data_for_user():
+    user = User.query.get(int(request.args.get("userId")))
+    if user is None:
+        return jsonify(), 400
+    user_schema = UserSchema()
+    return jsonify(user_schema.dump(user))
+
+@app.route("/user/togglePause", methods=["POST"])
+@auth_required_post_delete
+def pause_user():
+    incoming_data = request.json
+    user = User.query.get(incoming_data["userId"])
+    if user is None:
+        return jsonify(), 400
+    user.paused = not user.paused
+    db.session.commit()
+    return jsonify()
+
+
+@app.route("/user/manualTakeover", methods=["POST"])
+@auth_required_post_delete
+def toggle_manual_takeover_user():
+    incoming_data = request.json
+    user = User.query.get(incoming_data["userId"])
+    if user is None:
+        return jsonify(), 400
+    user.manual_takeover = not user.manual_takeover
+    db.session.commit()
+    return jsonify()
+
+# dose window methods
+@app.route("/doseWindow/create", methods=["POST"])
+@auth_required_post_delete
+def create_dose_window():
+    incoming_data = request.json
+    create_for_all_days = "createForAllDays" in request.json
+    if create_for_all_days:
+        for i in range(7):
+            new_dose_window = DoseWindow(
+                i,
+                int(incoming_data["startHour"]),
+                int(incoming_data["startMinute"]),
+                int(incoming_data["endHour"]),
+                int(incoming_data["endMinute"]),
+                int(incoming_data["userId"])
+            )
+            db.session.add(new_dose_window)
+    else:
+        new_dose_window = DoseWindow(
+            int(incoming_data["dayOfWeek"]),
+            int(incoming_data["startHour"]),
+            int(incoming_data["startMinute"]),
+            int(incoming_data["endHour"]),
+            int(incoming_data["endMinute"]),
+            int(incoming_data["userId"])
+        )
+        db.session.add(new_dose_window)
+    db.session.commit()
+    return jsonify()
+
+@app.route("/doseWindow/update", methods=["POST"])
+@auth_required_post_delete
+def update_dose_window():
+    incoming_data = request.json
+    dose_window_id = int(incoming_data["doseWindowId"])
+    dose_window = DoseWindow.query.get(dose_window_id)
+    if dose_window is None:
+        return jsonify(), 400
+    dose_window.start_hour = int(incoming_data["startHour"])
+    dose_window.start_minute = int(incoming_data["startMinute"])
+    dose_window.end_hour = int(incoming_data["endHour"])
+    dose_window.end_minute = int(incoming_data["endMinute"])
+    db.session.commit()
+
+@app.route("/doseWindow/addMedication", methods=["POST"])
+@auth_required_post_delete
+def associate_medication_with_dose_window_route():
+    incoming_data = request.json
+    dose_window_id = int(incoming_data["doseWindowId"])
+    medication_id = int(incoming_data["medicationId"])
+    dose_window = DoseWindow.query.get(dose_window_id)
+    medication = Medication.query.get(medication_id)
+    if dose_window is None or medication is None:
+        return jsonify(), 400
+    dose_window.medications.append(medication)
+    db.session.commit()
+    return jsonify()
+
+@app.route("/doseWindow/removeMedication", methods=["POST"])
+@auth_required_post_delete
+def disassociate_medication_with_dose_window_route():
+    incoming_data = request.json
+    dose_window_id = int(incoming_data["doseWindowId"])
+    medication_id = int(incoming_data["medicationId"])
+    dose_window = DoseWindow.query.get(dose_window_id)
+    medication = Medication.query.get(medication_id)
+    if dose_window is None or medication is None:
+        return jsonify(), 400
+    dose_window.medications.append(medication)
+    db.session.commit()
+    return jsonify()
+
+# medication methods
+@app.route("/medication/create", methods=["POST"])
+@auth_required_post_delete
+def create_medication():
+    incoming_data = request.json
+    dose_window_id = int(incoming_data["doseWindowId"])
+    dose_window = DoseWindow.query.get(dose_window_id)
+    if dose_window is None:
+        return jsonify(), 400
+    new_medication = Medication(
+        int(incoming_data["userId"]),
+        incoming_data["medicationName"],
+        incoming_data.get("instructions"),
+        dose_windows=[dose_window]  # initialize with a dose window
+    )
+    db.session.add(new_medication)
+    db.session.commit()
+    return jsonify()
+
+@app.route("/medication/update", methods=["POST"])
+@auth_required_post_delete
+def update_medication():
+    incoming_data = request.json
+    medication_id = int(incoming_data["medicationId"])
+    medication = Medication.query.get(medication_id)
+    if medication is None:
+        return jsonify(), 400
+    medication.name = incoming_data["medicationName"]
+    medication.instructions = incoming_data["medicationInstructions"]
+    db.session.commit()
+    return jsonify()
+
+
+PHONE_NUMBERS_TO_PORT = [
+    "3604508655"
+]
+
+
+def port_legacy_data(phone_numbers_to_port, names, patient_dose_map):
+    for phone_number in phone_numbers_to_port:
+        # initialize users to paused for now to protect scheduler DB
+        user_obj = User(phone_number, names[f"+11{phone_number}"], paused=True)
+        db.session.add(user_obj)
+        db.session.flush()  # populate user_id
+        formatted_phone_number = f"+11{phone_number}"
+        doses = Dose.query.filter(Dose.phone_number == formatted_phone_number, Dose.active == True).all()
+        events_for_user = Event.query.filter(Event.phone_number == formatted_phone_number).all()
+        for dose in doses:
+            dose_id_equivalency_list = []
+            for _, equivalency_list in patient_dose_map[formatted_phone_number].items():
+                if dose.id in equivalency_list:
+                    dose_id_equivalency_list = equivalency_list
+            dose_id_equivalency_list_str = [str(x) for x in dose_id_equivalency_list]
+            medication_names = dose.medication_name.split(", ")
+            dose_window_obj = DoseWindow(
+                dose.start_hour,
+                dose.start_minute,
+                dose.end_hour,
+                dose.end_minute,
+                user_obj.id
+            )
+            db.session.add(dose_window_obj)
+            db.session.flush()
+            medication_obj_list = []
+            for medication_name in medication_names:
+                medication_obj = Medication(
+                    user_obj.id, medication_name,
+                    dose_windows=[dose_window_obj]
+                )
+                db.session.add(medication_obj)
+                medication_obj_list.append(medication_obj)
+            db.session.flush()
+            events_for_dose = filter(
+                lambda event: event.description in dose_id_equivalency_list_str,
+                events_for_user
+            )
+            for event in events_for_dose:
+                for medication in medication_obj_list:
+                    corresponding_event = EventLog(
+                        event.event_type,
+                        user_obj.id,
+                        dose_window_obj.id,
+                        medication.id,
+                        event.event_time,
+                        description=None
+                    )
+                    db.session.add(corresponding_event)
+        non_dose_associated_events = filter(
+            lambda event: event.description not in dose_id_equivalency_list_str,
+            events_for_user
+        )
+        for event in non_dose_associated_events:
+            corresponding_event = EventLog(
+                event.event_type,
+                user_obj.id,
+                None,
+                None,
+                event.event_time,
+                description=event.description
+            )
+            db.session.add(corresponding_event)
+    db.session.commit()
+
+
+def drop_all_new_tables():
+    models_to_drop = [
+        User, DoseWindow, Medication, EventLog
+    ]
+    for model in models_to_drop:
+        model.query.delete()
+
 
 scheduler.add_listener(scheduler_error_alert, EVENT_JOB_MISSED | EVENT_JOB_ERROR)
 scheduler.init_app(app)

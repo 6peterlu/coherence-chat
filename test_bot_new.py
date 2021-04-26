@@ -8,86 +8,10 @@ import tzlocal
 
 
 from models import (
-    DoseWindow,
     EventLog,
-    User,
-    Medication
+    # schemas
+    UserSchema,
 )
-
-# turn on new bot
-os.environ["NEW_DATA_MODEL"] = "blah"
-
-@pytest.fixture
-def user_record(db_session):
-    user_obj = User(
-        phone_number="3604508655",
-        name="Peter"
-    )
-    db_session.add(user_obj)
-    db_session.commit()
-    return user_obj
-
-@pytest.fixture
-def user_record_with_manual_takeover(db_session):
-    user_obj = User(
-        phone_number="3604508655",
-        name="Peter",
-        manual_takeover=True
-    )
-    db_session.add(user_obj)
-    db_session.commit()
-    return user_obj
-
-@pytest.fixture
-def dose_window_record(db_session, user_record):
-    dose_window_obj = DoseWindow(
-        day_of_week=2,  # wednesday
-        start_hour=9+7,
-        start_minute=0,
-        end_hour=11+7,
-        end_minute=0,
-        user_id=user_record.id
-    )
-    db_session.add(dose_window_obj)
-    db_session.commit()
-    return dose_window_obj
-
-@pytest.fixture
-def dose_window_record_out_of_range(db_session, user_record):
-    dose_window_obj = DoseWindow(
-        day_of_week=2,  # wednesday
-        start_hour=13+7,
-        start_minute=0,
-        end_hour=15+7,
-        end_minute=0,
-        user_id=user_record.id
-    )
-    db_session.add(dose_window_obj)
-    db_session.commit()
-    return dose_window_obj
-
-@pytest.fixture
-def medication_record(db_session, dose_window_record, user_record):
-    medication_obj = Medication(
-        user_id=user_record.id,
-        medication_name="Zoloft",
-        dose_windows = [dose_window_record]
-    )
-    db_session.add(medication_obj)
-    db_session.commit()
-    return medication_obj
-
-@pytest.fixture
-def medication_record_2(db_session, dose_window_record, user_record):
-    medication_obj = Medication(
-        user_id=user_record.id,
-        medication_name="Lisinopril",
-        dose_windows = [dose_window_record]
-    )
-    db_session.add(medication_obj)
-    db_session.commit()
-    return medication_obj
-
 
 @pytest.fixture
 def medication_take_event_record_in_dose_window(db_session, medication_record, dose_window_record, user_record):
@@ -104,6 +28,15 @@ def medication_take_event_record_not_in_dose_window(db_session, medication_recor
     db_session.add(event_obj)
     db_session.commit()
     return event_obj
+
+
+def test_get_all_data_for_user(
+    user_record, dose_window_record, medication_record,
+    medication_record_2, db_session, client
+):
+    response = client.get("/user/everything", query_string={"userId": user_record.id, "pw": "couchsurfing"})
+    user_schema = UserSchema()
+    assert response.get_json() == user_schema.dump(user_record)
 
 
 @mock.patch("bot.segment_message")

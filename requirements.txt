@@ -18,6 +18,7 @@ idna==2.10
 itsdangerous==1.1.0
 Jinja2==2.11.3
 MarkupSafe==1.1.1
+marshmallow==3.11.1
 murmurhash==1.0.5
 numpy==1.20.2
 packaging==20.9
