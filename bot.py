@@ -820,6 +820,12 @@ def port_phone_number():
     port_legacy_data([phone_number_to_port], PATIENT_NAME_MAP, PATIENT_DOSE_MAP)
     return jsonify()
 
+
+@app.route("/admin/dropNewTables", methods=["POST"])
+def drop_new_tables():
+    drop_all_new_tables()
+    return jsonify()
+
 @app.route('/bot', methods=['POST'])
 def bot():
     incoming_msg_list = segment_message(request.values.get('Body', ''))
@@ -1894,7 +1900,7 @@ def port_legacy_data(phone_numbers_to_port, names, patient_dose_map):
         db.session.flush()  # populate user_id
         formatted_phone_number = f"+11{phone_number}"
         doses = Dose.query.filter(Dose.phone_number == formatted_phone_number, Dose.active == True).all()
-        events_for_user = Event.query.filter(Event.phone_number == formatted_phone_number).all()
+        events_for_user = Event.query.filter(Event.phone_number == formatted_phone_number).order_by(Event.event_time.asc()).all()
         for dose in doses:
             dose_id_equivalency_list = []
             for _, equivalency_list in patient_dose_map[formatted_phone_number].items():
