@@ -1964,6 +1964,7 @@ def drop_all_new_tables():
     ]
     for model in models_to_drop:
         model.query.delete()
+    db.session.commit()
 
 
 scheduler.add_listener(scheduler_error_alert, EVENT_JOB_MISSED | EVENT_JOB_ERROR)
