@@ -1,4 +1,4 @@
-from bot import drop_all_new_tables, port_legacy_data
+from bot import drop_all_new_tables, port_legacy_data, send_followup_text
 import pytest
 from unittest import mock
 from datetime import datetime, timedelta
@@ -118,6 +118,25 @@ def manual_takeover_number(db_session):
 #     )
 #     db_session.add(reminder_obj)
 #     db_session.commit()
+
+@freeze_time("2012-01-1 17:00:01")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.maybe_schedule_absent")
+@mock.patch("bot.remove_jobs_helper")
+def test_send_followup_text_live_port(
+    remove_jobs_mock, schedule_absent_mock, create_messages_mock,
+    dose_record, user_record, dose_window_record, medication_record,
+    medication_record_2, db_session
+):
+    send_followup_text(dose_record.id)
+    assert remove_jobs_mock.called
+    assert schedule_absent_mock.called
+    all_events = db_session.query(Event).all()
+    assert len(all_events) == 1
+    all_event_logs = db_session.query(EventLog).all()
+    assert len(all_event_logs) == 2
+
+
 
 @mock.patch("bot.segment_message")
 @mock.patch("bot.text_fallback")

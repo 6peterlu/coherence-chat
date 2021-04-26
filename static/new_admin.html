@@ -7,7 +7,7 @@
     <button onclick="portDataForPhone()">Port data for phone</button>
     <button onclick="dropAllNewTables()">Drop all new tables</button>
     <p>Ported users:</p>
-    <p id="portedUserList"></p>
+    <div id="portedUserList"></div>
     <script defer>
         const initDetails = {
             method: 'get',
@@ -42,6 +42,15 @@
                 body: JSON.stringify(body)
             };
             return await fetch(`${apiURL}/${route}`, initDetails);
+        }
+
+        const renderUser = (userData) => {
+            let htmlOut = "<div>";
+            htmlOut += "<p style='font-weight:bold;'>Name</p>";
+            htmlOut += `<p>${userData.user.name}</p>`;
+            htmlOut += "<p style='font-weight:bold;'>Dose windows</p>";
+            htmlOut += `<p>${1}`;
+            htmlOut += "</div>";
         }
 
         var apiURL = "https://coherence-chat.herokuapp.com";

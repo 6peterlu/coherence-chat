@@ -353,7 +353,6 @@ def round_date(dt, delta=ACTIVITY_BUCKET_SIZE_MINUTES, round_up=False):
         return dt - (dt - datetime.min) % timedelta(minutes=delta)
 
 
-
 # NOTE: Not currently used.
 # def generate_activity_analytics(user_events):
 #     day_stripped_events = [event.event_time.replace(day=1, month=1, year=1, microsecond=0) for event in user_events]
@@ -415,6 +414,16 @@ def generate_behavior_learning_scores(user_behavior_events, active_doses):
             starting_buffer -= 1
     return output_scores
 
+
+def get_current_user_and_dose_window(truncated_phone_number):
+    user = None
+    current_dose_window = None
+    user = User.query.filter(User.phone_number == truncated_phone_number).one_or_none()
+    if user is not None:
+        for dose_window in user.dose_windows:
+            if dose_window.within_dosing_period():
+                current_dose_window = dose_window
+    return user, current_dose_window
 
 # TODO: rewrite
 @app.route("/patientData", methods=["GET"])
@@ -1115,13 +1124,7 @@ def bot():
                     )
     else:
         # new data model objects
-        user = None
-        current_dose_window = None
-        user = User.query.filter(User.phone_number == incoming_phone_number[2:]).one_or_none()
-        if user is not None:
-            for dose_window in user.dose_windows:
-                if dose_window.within_dosing_period():
-                    current_dose_window = dose_window
+        user, current_dose_window = get_current_user_and_dose_window(incoming_phone_number[2:])
 
         # we weren't able to parse any part of the message
         if len(incoming_msg_list) == 0:
@@ -1609,7 +1612,8 @@ def send_followup_text(dose_id):
     # remove absent jobs, if exist
     remove_jobs_helper(dose_id, ["absent", "followup"])
     maybe_schedule_absent(dose_id)
-    log_event("followup", dose_obj.phone_number, description=dose_id)
+    user, current_dose_window = get_current_user_and_dose_window(dose_obj.phone_number[3:])
+    log_event("followup", dose_obj.phone_number, description=dose_id, user=user, dose_window=current_dose_window)
 
 # NEW
 def send_followup_text_new(dose_window_obj, user_obj):
@@ -1631,6 +1635,7 @@ def send_followup_text_new(dose_window_obj, user_obj):
     maybe_schedule_absent_new(dose_window_obj)
     log_event_new("followup", user_obj.id, dose_window_obj.id, medication_id=None)
 
+
 def send_absent_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
@@ -1642,7 +1647,8 @@ def send_absent_text(dose_id):
     db.session.add(reminder_record)
     db.session.commit()
     remove_jobs_helper(dose_id, ["absent", "followup"])
-    log_event("absent", dose_obj.phone_number, description=dose_id)
+    user, current_dose_window = get_current_user_and_dose_window(dose_obj.phone_number[3:])
+    log_event("absent", dose_obj.phone_number, description=dose_id, user=user, dose_window=current_dose_window)
     maybe_schedule_absent(dose_id)
 
 # NEW
@@ -1677,7 +1683,8 @@ def send_boundary_text(dose_id):
     db.session.commit()
     # this shouldn't be needed, but followups sent manually leave absent artifacts
     remove_jobs_helper(dose_id, ["absent", "followup"])
-    log_event("boundary", dose_obj.phone_number, description=dose_id)
+    user, current_dose_window = get_current_user_and_dose_window(dose_obj.phone_number[3:])
+    log_event("boundary", dose_obj.phone_number, description=dose_id, user=user, dose_window=current_dose_window)
 
 # NEW
 def send_boundary_text_new(dose_window_obj, user_obj):
@@ -1715,7 +1722,9 @@ def send_intro_text(dose_id, manual=False, welcome_back=False):
         misfire_grace_time=5*60
     )
     maybe_schedule_absent(dose_id)
-    log_event("initial", dose_obj.phone_number, description=dose_id)
+    user, current_dose_window = get_current_user_and_dose_window(dose_obj.phone_number[3:])
+    log_event("initial", dose_obj.phone_number, description=dose_id, user=user, dose_window=current_dose_window)
+
 
 # NEW
 def send_intro_text_new(dose_window_obj, user_obj, manual=False, welcome_back=False):
