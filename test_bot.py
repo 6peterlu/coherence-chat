@@ -351,6 +351,7 @@ def test_not_interpretable_live_port(text_fallback_mock, segment_message_mock, c
     assert all_event_logs[0].medication is None
 
 
+@freeze_time("2012-01-1 17:00:01")
 @mock.patch("bot.client.messages.create")
 @mock.patch("bot.segment_message")
 @mock.patch("bot.get_thanks_message")
