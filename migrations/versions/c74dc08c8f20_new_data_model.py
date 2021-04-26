@@ -73,6 +73,6 @@ def downgrade():
     # op.drop_column('dose_window', 'active')
     # op.drop_constraint('dose_medication_linker_dose_window_fkey_custom', 'dose_medication_linker', type_='foreignkey')
     # op.drop_constraint('dose_medication_linker_medication_fkey_custom', 'dose_medication_linker', type_='foreignkey')
-    op.create_foreign_key('dose_medication_linker_medication_id_fkey', 'dose_medication_linker', 'medication', ['medication_id'], ['id'])
-    op.create_foreign_key('dose_medication_linker_dose_window_id_fkey', 'dose_medication_linker', 'dose_window', ['dose_window_id'], ['id'])
+    # op.create_foreign_key('dose_medication_linker_medication_id_fkey', 'dose_medication_linker', 'medication', ['medication_id'], ['id'])
+    # op.create_foreign_key('dose_medication_linker_dose_window_id_fkey', 'dose_medication_linker', 'dose_window', ['dose_window_id'], ['id'])
     # ### end Alembic commands ###
