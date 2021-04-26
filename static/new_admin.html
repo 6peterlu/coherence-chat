@@ -6,6 +6,8 @@
     <input id="phoneNumberEntry" type="tel" placeholder="phone"/>
     <button onclick="portDataForPhone()">Port data for phone</button>
     <button onclick="dropAllNewTables()">Drop all new tables</button>
+    <p>Ported users:</p>
+    <p id="portedUserList"></p>
     <script defer>
         const initDetails = {
             method: 'get',
@@ -46,6 +48,11 @@
         const refreshData = () => {
             get("admin/everything", {}).then(response => response.json()).then(result => {
                 console.log(result);
+                const portedUsers = [];
+                for (const userData of result.users) {
+                    portedUsers.push(userData.user.name);
+                }
+                document.getElementById("portedUserList").innerHTML = portedUsers.join(", ");
             });
         }
 
@@ -60,5 +67,6 @@
                 refreshData();
             });
         }
+        refreshData();
     </script>
 </body>
