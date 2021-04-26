@@ -6,7 +6,7 @@ During development, test with a dev flask server: `NOALERTS=1 python bot.py`.
 
 Unit tests:
 
-`NOALERTS=1 LIVE_PORT_ON=1 pytest -vv test_bot.py`
+`NOALERTS=1 pytest -vv test_bot.py`
 
 `NOALERTS=1 NEW_DATA_MODEL=1 pytest -vv test_nlp.py`
 
