@@ -226,7 +226,7 @@ cal = parsedatetime.Calendar()
 
 
 # initialize tables
-db.create_all()  # are there bad effects from running this every time? edit: I guess not
+# db.create_all()  # are there bad effects from running this every time? edit: I guess not
 
 # twilio objects
 account_sid = os.environ['TWILIO_ACCOUNT_SID']
