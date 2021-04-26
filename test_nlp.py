@@ -2,7 +2,6 @@ from freezegun import freeze_time
 from datetime import datetime
 from pytz import utc
 from nlp import segment_message
-import os
 
 @freeze_time("2000-01-01 18:00:00")
 def test_segment_message():

@@ -8,55 +8,6 @@
         <h2 id="onlineStatus" style="display:inline"></h2>
         <button id="onlineToggle" onclick="onlineToggle()"></button>
     </div>
-    <button id="getJobs" onclick="retrieveJobs()">Refresh</button>
-    <button id="getBasicInfo" onclick="getBasicInfo()">Test connection</button>
-    <div>
-        <input id="phoneNumberEntry" type="tel" placeholder="phone"/>
-        <input id="medicationNameEntry" type="text" placeholder="medication name"/>
-        <input id="patientNameEntry" type="text" placeholder = "patient name"/>
-        <input id="startTimeEntry" type="time"/>
-        <input id="endTimeEntry" type="time"/>
-        <button id="createJob" onclick="createJob()">Create job</button>
-    </div>
-    <div>
-        <input id="doseId" type="number" placeholder="dose id"/>
-        <select name="reminderType" id="reminderType">
-            <option value="absent">absent</option>
-            <option value="followup">followup</option>
-            <option value="initial">initial</option>
-        </select>
-        <input id="manualEventTime" type="datetime-local" />
-        <button id="sendManual" onclick="sendManual()">Send manual</button>
-    </div>
-
-    <p>Job list:</p>
-    <div class="jobList"></div>
-    <p>Dose list:</p>
-    <div class="doseList"></div>
-    <p>Reminder list:</p>
-    <div class="reminderList" style="overflow: scroll; max-height: 500px;"></div>
-    <div class="manualChat">
-        <input id="messageSearchPhoneNumber" type="number" placeholder="phone number"/>
-        <input id="daysToPull" type="number" placeholder="days to pull"/>
-        <button id="searchForConversation" onclick="searchForConversation()">Retrieve conversation</button>
-        <button id="getEventsForPhoneNumber" onclick="getEventsForPhoneNumber()">Retrieve events</button>
-        <button id="manuallyTakeover" style="visibility:hidden" onclick="manualTakeover()">Manually takeover</button>
-        <p id="takeoverList" style="visibility:hidden"></p>
-        <div id="customChat" style="visibility:hidden">
-            <textarea id="customTextMessage" placeholder="custom text message"></textarea>
-            <button id="searchForConversation" onclick="sendCustomText()">Send custom text</button>
-        </div>
-        <div id="addEventDiv">
-            <input id="eventDoseId" type="number" placeholder="dose id"/>
-            <input id="eventTime" type="datetime-local" />
-            <select name="eventType" id="eventType">
-                <option value="take">take</option>
-                <option value="skip">skip</option>
-            </select>
-            <button id="addEventButton" onclick="addEvent()">Manually add event</button>
-        </div>
-    </div>
-    <div class="messageList"></div>
     <script defer>
         const jobListDiv = document.querySelector('.jobList');
         const doseListDiv = document.querySelector('.doseList');

@@ -1083,12 +1083,11 @@ def bot():
         # new data model objects
         user = None
         current_dose_window = None
-        if "LIVE_PORT_ON" in os.environ:
-            user = User.query.filter(User.phone_number == incoming_phone_number[2:]).one_or_none()
-            if user is not None:
-                for dose_window in user.dose_windows:
-                    if dose_window.within_dosing_period():
-                        current_dose_window = dose_window
+        user = User.query.filter(User.phone_number == incoming_phone_number[2:]).one_or_none()
+        if user is not None:
+            for dose_window in user.dose_windows:
+                if dose_window.within_dosing_period():
+                    current_dose_window = dose_window
 
         # we weren't able to parse any part of the message
         if len(incoming_msg_list) == 0:
