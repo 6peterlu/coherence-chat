@@ -226,6 +226,7 @@ cal = parsedatetime.Calendar()
 
 
 # initialize tables
+# maybe we don't run this?
 # db.create_all()  # are there bad effects from running this every time? edit: I guess not
 
 # twilio objects
@@ -1778,7 +1779,7 @@ def port_legacy_data(phone_numbers_to_port, names, patient_dose_map):
         db.session.add(user_obj)
         db.session.flush()  # populate user_id
         formatted_phone_number = f"+11{phone_number}"
-        doses = Dose.query.filter(Dose.phone_number == formatted_phone_number).all()
+        doses = Dose.query.filter(Dose.phone_number == formatted_phone_number, Dose.active == True).all()
         events_for_user = Event.query.filter(Event.phone_number == formatted_phone_number).all()
         for dose in doses:
             dose_id_equivalency_list = []

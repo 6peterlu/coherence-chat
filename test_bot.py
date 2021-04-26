@@ -38,6 +38,22 @@ def dose_record(db_session):
     return dose_obj
 
 @pytest.fixture
+def inactive_dose_record(db_session):
+    dose_obj = Dose(
+        start_hour=11,
+        end_hour=1,
+        start_minute=0,
+        end_minute=0,
+        patient_name="Peter",
+        phone_number="+113604508655",
+        medication_name="test med",
+        active=False
+    )
+    db_session.add(dose_obj)
+    db_session.commit()
+    return dose_obj
+
+@pytest.fixture
 def take_event_record(db_session, dose_record):
     event_obj = Event(
         event_type="take",
@@ -290,10 +306,10 @@ def test_activity_delay(mock_randint, mock_get_current_end_date, segment_message
 
 
 @freeze_time("2012-01-1 12:00:01")
-def test_port_legacy_data(dose_record, take_event_record, reminder_delay_event_record, conversational_event_record, db_session):
+def test_port_legacy_data(dose_record, inactive_dose_record, take_event_record, reminder_delay_event_record, conversational_event_record, db_session):
     phone_numbers_to_port = ["3604508655"]
     names = {"+113604508655": "Peter"}
-    patient_dose_map = {"+113604508655": {"morning": [dose_record.id]}}
+    patient_dose_map = {"+113604508655": {"morning": [dose_record.id, inactive_dose_record.id]}}
     port_legacy_data(phone_numbers_to_port, names, patient_dose_map)
     users = db_session.query(User).all()
     assert len(users) == 1
