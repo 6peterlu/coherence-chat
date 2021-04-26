@@ -66,6 +66,7 @@ def downgrade():
     op.drop_column('event_log', 'event_time')
     op.drop_constraint('dose_window_user_fkey_custom', 'dose_window', type_='foreignkey')
     op.drop_column('dose_window', 'user_id')
+    op.drop_column('dose_window', 'day_of_week')
     op.drop_column('dose_window', 'start_minute')
     op.drop_column('dose_window', 'start_hour')
     op.drop_column('dose_window', 'end_minute')
