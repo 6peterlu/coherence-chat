@@ -30,7 +30,7 @@ def dose_record(db_session):
         end_minute=0,
         patient_name="Peter",
         phone_number="+113604508655",
-        medication_name="test med",
+        medication_name="Keppra, Glipizide",
         active=True
     )
     db_session.add(dose_obj)
@@ -46,7 +46,7 @@ def inactive_dose_record(db_session):
         end_minute=0,
         patient_name="Peter",
         phone_number="+113604508655",
-        medication_name="test med",
+        medication_name="Keppra, Glipizide",
         active=False
     )
     db_session.add(dose_obj)
@@ -314,21 +314,24 @@ def test_port_legacy_data(dose_record, inactive_dose_record, take_event_record, 
     users = db_session.query(User).all()
     assert len(users) == 1
     medications = db_session.query(Medication).all()
-    assert len(medications) == 1
+    assert len(medications) == 2
     dose_windows = db_session.query(DoseWindow).all()
     assert len(dose_windows) == 1
     event_logs = db_session.query(EventLog).all()
-    assert len(event_logs) == 3
+    assert len(event_logs) == 4
     assert UserSchema().dump(users[0]) == {
         'events': [
             {
                 'event_type': 'take', 'id': 1, 'event_time': '2012-01-01T13:23:15', 'description': None
             },
             {
-                'event_type': 'reminder_delay', 'id': 2, 'event_time': '2012-01-01T13:23:15', 'description': "delayed to 2021-04-25 09:26:20.045841-07:00"
+                'event_type': 'take', 'id': 2, 'event_time': '2012-01-01T13:23:15', 'description': None
             },
             {
-                'event_type': 'conversational', 'id': 3, 'event_time': '2012-01-01T13:23:15', 'description': None
+                'event_type': 'reminder_delay', 'id': 3, 'event_time': '2012-01-01T13:23:15', 'description': "delayed to 2021-04-25 09:26:20.045841-07:00"
+            },
+            {
+                'event_type': 'conversational', 'id': 4, 'event_time': '2012-01-01T13:23:15', 'description': None
             },
         ],
         'phone_number': '3604508655',
@@ -336,9 +339,14 @@ def test_port_legacy_data(dose_record, inactive_dose_record, take_event_record, 
         'id': 1,
         'manual_takeover': False,
         'name': 'Peter',
-        'doses': [{
-            'instructions': None, 'id': medications[0].id, 'active': True, 'medication_name': 'test med'
-        }],
+        'doses': [
+            {
+                'instructions': None, 'id': medications[0].id, 'active': True, 'medication_name': 'Keppra'
+            },
+            {
+                'instructions': None, 'id': medications[1].id, 'active': True, 'medication_name': 'Glipizide'
+            }
+        ],
         'dose_windows': [{
             'start_minute': 0,
             'active': True,
@@ -350,7 +358,7 @@ def test_port_legacy_data(dose_record, inactive_dose_record, take_event_record, 
         'timezone': 'US/Pacific'
     }
     assert MedicationSchema().dump(medications[0]) == {
-        'medication_name': 'test med',
+        'medication_name': 'Keppra',
         'user': {
             'phone_number': '3604508655',
             'timezone': 'US/Pacific',
@@ -376,10 +384,40 @@ def test_port_legacy_data(dose_record, inactive_dose_record, take_event_record, 
             }
         ],
     }
+    assert MedicationSchema().dump(medications[1]) == {
+        'medication_name': 'Glipizide',
+        'user': {
+            'phone_number': '3604508655',
+            'timezone': 'US/Pacific',
+            'id': users[0].id,
+            'manual_takeover': False,
+            'name': 'Peter',
+            'paused': True
+        },
+        'instructions': None,
+        'dose_windows': [{
+            'start_minute': 0,
+            'id': dose_windows[0].id,
+            'start_hour': 11,
+            'end_hour': 1,
+            'end_minute': 0,
+            'active': True
+        }],
+        'id': 2,
+        'active': True,
+        'events': [
+            {
+                'event_type': 'take', 'id': 2, 'event_time': '2012-01-01T13:23:15', 'description': None
+            }
+        ],
+    }
     assert DoseWindowSchema().dump(dose_windows[0]) == {
         'start_minute': 0,
         'end_minute': 0,
-        'medications': [{'active': True, 'id': medications[0].id, 'instructions': None, 'medication_name': 'test med'}],
+        'medications': [
+            {'active': True, 'id': medications[0].id, 'instructions': None, 'medication_name': 'Keppra'},
+            {'active': True, 'id': medications[1].id, 'instructions': None, 'medication_name': 'Glipizide'}
+        ],
         'end_hour': 1,
         'active': True,
         'user': {
@@ -393,6 +431,9 @@ def test_port_legacy_data(dose_record, inactive_dose_record, take_event_record, 
         'events': [
             {
                 'event_type': 'take', 'id': 1, 'event_time': '2012-01-01T13:23:15', 'description': None
+            },
+            {
+                'event_type': 'take', 'id': 2, 'event_time': '2012-01-01T13:23:15', 'description': None
             }
         ],
         'start_hour': 11,
@@ -419,7 +460,7 @@ def test_port_legacy_data(dose_record, inactive_dose_record, take_event_record, 
         },
         'event_time': '2012-01-01T13:23:15',
         'medication': {
-            'medication_name': 'test med',
+            'medication_name': 'Keppra',
             'active': True,
             'id': medications[0].id,
             'instructions': None
@@ -427,9 +468,37 @@ def test_port_legacy_data(dose_record, inactive_dose_record, take_event_record, 
         'event_type': 'take'
     }
     assert EventLogSchema().dump(event_logs[1]) == {
+        'description': None,
+        'dose_window': {
+            'id': dose_windows[0].id,
+            'end_minute': 0,
+            'active': True,
+            'start_minute': 0,
+            'start_hour': 11,
+            'end_hour': 1
+        },
+        'id': 2,
+        'user': {
+            'id': users[0].id,
+            'manual_takeover': False,
+            'phone_number': '3604508655',
+            'timezone': 'US/Pacific',
+            'paused': True,
+            'name': 'Peter'
+        },
+        'event_time': '2012-01-01T13:23:15',
+        'medication': {
+            'medication_name': 'Glipizide',
+            'active': True,
+            'id': medications[1].id,
+            'instructions': None
+        },
+        'event_type': 'take'
+    }
+    assert EventLogSchema().dump(event_logs[2]) == {
         'description': "delayed to 2021-04-25 09:26:20.045841-07:00",
         'dose_window': None,
-        'id': 2,
+        'id': 3,
         'user': {
             'id': users[0].id,
             'manual_takeover': False,
@@ -442,10 +511,10 @@ def test_port_legacy_data(dose_record, inactive_dose_record, take_event_record, 
         'medication': None,
         'event_type': 'reminder_delay'
     }
-    assert EventLogSchema().dump(event_logs[2]) == {
+    assert EventLogSchema().dump(event_logs[3]) == {
         'description': None,
         'dose_window': None,
-        'id': 3,
+        'id': 4,
         'user': {
             'id': users[0].id,
             'manual_takeover': False,
