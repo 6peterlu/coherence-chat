@@ -63,7 +63,7 @@ def downgrade():
     op.alter_column('event_log', 'event_type',
                existing_type=sa.VARCHAR(),
                nullable=True)
-    op.drop_column('event_log', 'event_time')
+    # op.drop_column('event_log', 'event_time')
     # op.drop_constraint('dose_window_user_fkey_custom', 'dose_window', type_='foreignkey')
     # op.drop_column('dose_window', 'user_id')
     # op.drop_column('dose_window', 'start_minute')
