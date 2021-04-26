@@ -594,6 +594,10 @@ def logout():
 def admin_page():
     return app.send_static_file('admin.html')
 
+@app.route("/admin/new", methods=["GET"])
+def new_admin_page():
+    return app.send_static_file('new_admin.html')
+
 # TODO: rewrite
 # add a dose
 @app.route("/dose", methods=["POST"])
@@ -802,6 +806,19 @@ def extract_integer(message):
 def convert_to_user_local_time(user_obj, dt):
     user_tz = timezone(user_obj.timezone)
     return user_tz.localize(dt.replace(tzinfo=None))
+
+
+@app.route("/admin/everything", methods=["GET"])
+def get_all_admin_data():
+    all_users_in_system = User.query.all()
+    return jsonify({"users": [UserSchema().dump(user) for user in all_users_in_system]})
+
+
+@app.route("/admin/portData", methods=["POST"])
+def port_phone_number():
+    phone_number_to_port = request.json["phoneNumber"]
+    port_legacy_data([phone_number_to_port], PATIENT_NAME_MAP, PATIENT_DOSE_MAP)
+    return jsonify()
 
 @app.route('/bot', methods=['POST'])
 def bot():
