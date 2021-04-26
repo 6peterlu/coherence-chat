@@ -2,7 +2,6 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 from pytz import utc as pytzutc, timezone
 from marshmallow import Schema, fields
-from sqlalchemy import event
 
 db = SQLAlchemy()
 
