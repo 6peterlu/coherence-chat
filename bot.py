@@ -822,6 +822,7 @@ def get_all_admin_data():
             user_dict["dose_windows"].append(DoseWindowSchema().dump(dose_window))
         for medication in user.doses:
             user_dict["medications"].append(MedicationSchema().dump(medication))
+        return_dict["users"].append(user_dict)
     return jsonify(return_dict)
 
 
