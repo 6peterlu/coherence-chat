@@ -838,7 +838,23 @@ def get_all_admin_data():
 @app.route("/admin/portData", methods=["POST"])
 def port_phone_number():
     phone_number_to_port = request.json["phoneNumber"]
-    port_legacy_data([phone_number_to_port], PATIENT_NAME_MAP, PATIENT_DOSE_MAP)
+    numbers_to_port = [
+        "3604508655",
+        "3609010956",
+        "3607738908",
+        "3609049085",
+        "8587761377",
+        "3607738908",
+        "5038871884",
+        "3605214193",
+        "3605131225",
+        "3609042210",
+        "3606064445",
+        "4152142478"
+    ]
+    if phone_number_to_port:
+        numbers_to_port = [phone_number_to_port]
+    port_legacy_data(numbers_to_port, PATIENT_NAME_MAP, PATIENT_DOSE_MAP)
     return jsonify()
 
 
