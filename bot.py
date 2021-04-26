@@ -284,9 +284,9 @@ def log_event(event_type, phone_number, event_time=None, description=None, user=
         if dose_window is not None:
             if event_type in ["not_interpretable", "manually_silenced", "requested_time_delay", "reminder_delay", "activity", "conversational"]:
                 log_event_new(event_type, user.id, dose_window.id, medication_id=None, description=description, event_time=event_time)
-            print(dose_window.medications)
-            for medication in dose_window.medications:
-                log_event_new(event_type, user.id, dose_window.id, medication_id=medication.id, description=description, event_time=event_time)
+            else:
+                for medication in dose_window.medications:
+                    log_event_new(event_type, user.id, dose_window.id, medication_id=medication.id, description=description, event_time=event_time)
         else:
             print("dose window was none")
             log_event_new(event_type, user.id, None, medication_id=None, description=description, event_time=event_time)
