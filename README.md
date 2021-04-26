@@ -4,7 +4,13 @@ Chatservice for Coherence
 ## Deployment pattern
 During development, test with a dev flask server: `NOALERTS=1 python bot.py`.
 
-Run pytest with `NOALERTS=1 pytest` and ensure all is passing.
+Unit tests:
+
+`NOALERTS=1 LIVE_PORT_ON=1 pytest -vv test_bot.py`
+
+`NOALERTS=1 NEW_DATA_MODEL=1 pytest -vv test_nlp.py`
+
+`NOALERTS=1 NEW_DATA_MODEL=1 pytest -vv test_bot_new.py`
 
 Before pushing to prod, test with gunicorn locally: `NOALERTS=1 gunicorn -b 0.0.0.0:5000 bot:app --workers 1`
 
