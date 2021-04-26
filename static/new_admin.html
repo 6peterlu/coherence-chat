@@ -4,7 +4,7 @@
     <h1 id="header"></h1>
     <button onclick="refreshData()">Pull data</button>
     <input id="phoneNumberEntry" type="tel" placeholder="phone"/>
-    <button onclick="portData()">Port data for phone</button>
+    <button onclick="portDataForPhone()">Port data for phone</button>
     <button onclick="dropAllNewTables()">Drop all new tables</button>
     <script defer>
         const initDetails = {
@@ -50,7 +50,7 @@
         }
 
         const portDataForPhone = () => {
-            const phoneNumber = document.getElementById("phoneNumber").value;
+            const phoneNumber = document.getElementById("phoneNumberEntry").value;
             post("admin/portData", { phoneNumber }).then(response => response.json()).then(result => {
                 refreshData();
             });

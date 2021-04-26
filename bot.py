@@ -811,7 +811,18 @@ def convert_to_user_local_time(user_obj, dt):
 @app.route("/admin/everything", methods=["GET"])
 def get_all_admin_data():
     all_users_in_system = User.query.all()
-    return jsonify({"users": [UserSchema().dump(user) for user in all_users_in_system]})
+    return_dict = {"users": []}
+    for user in all_users_in_system:
+        user_dict = {
+            "user": UserSchema().dump(user),
+            "dose_windows": [],
+            "medications": []
+        }
+        for dose_window in user.dose_windows:
+            user_dict["dose_windows"].append(DoseWindowSchema().dump(dose_window))
+        for medication in user.medications:
+            user_dict["medications"].append(MedicationSchema().dump(medication))
+    return jsonify(return_dict)
 
 
 @app.route("/admin/portData", methods=["POST"])
