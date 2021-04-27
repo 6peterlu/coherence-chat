@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from pytz import utc as pytzutc, timezone
 from marshmallow import Schema, fields
 
@@ -367,7 +367,7 @@ class EventLogSchema(Schema):
     id = fields.Integer()
     event_type = fields.String()
     description = fields.String()
-    event_time = fields.AwareDateTime("UTC")
+    event_time = fields.AwareDateTime(dt_timezone.utc)
     user = fields.Nested(UserSchema(exclude=("dose_windows", "events", "doses")))
     medication = fields.Nested(MedicationSchema(exclude=("dose_windows", "user", "events")))
     dose_window = fields.Nested(DoseWindowSchema(exclude=("user", "events", "medications")))
