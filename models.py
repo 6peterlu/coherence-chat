@@ -60,6 +60,7 @@ class User(db.Model):
         for dose_window in self.dose_windows:
             if dose_window.active:
                 if self.paused:
+                    print("removing jobs")
                     dose_window.remove_jobs(scheduler_tuple[0], ["initial", "followup", "boundary", "absent"])
                 else:
                     dose_window.schedule_initial_job(*scheduler_tuple)
@@ -118,7 +119,9 @@ class DoseWindow(db.Model):
     def remove_jobs(self, scheduler, jobs_list):
         for job in jobs_list:
             job_id = f"{self.id}-{job}-new"
+            print(job_id)
             if scheduler.get_job(job_id):
+                print("removing")
                 scheduler.remove_job(job_id)
 
 
