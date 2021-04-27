@@ -21,6 +21,7 @@
             },
             mode: "cors"
         };
+        const apiURL = "https://coherence-chat.herokuapp.com";
         // HTTP helpers
         const get = async (route, queryArgs) => {
             const queryArgsList = [];
@@ -128,8 +129,6 @@
             htmlOut += "</div>";
             return htmlOut;
         }
-
-        var apiURL = "https://coherence-chat.herokuapp.com";
         const refreshData = () => {
             get("admin/everything", {}).then(response => response.json()).then(result => {
                 const userDetailedDataDiv = document.getElementById("userDetailedData");
