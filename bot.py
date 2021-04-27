@@ -488,7 +488,7 @@ def patient_data():
         response = jsonify({"error": "The secret code was incorrect. Please double-check that you've entered it correctly."})
         response.set_cookie("phoneNumber", "", expires=0)
         return response
-    user, _ = get_current_user_and_dose_window(recovered_cookie)
+    user, dose_window = get_current_user_and_dose_window(recovered_cookie)
     if user is not None:
         # grab data from user object
         take_record_events = [
@@ -521,6 +521,7 @@ def patient_data():
             event_data_by_time[get_time_of_day(dose_window)]["dose"] = DoseWindowSchema().dump(dose_window)
         paused_service = user.paused
         behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
+        dose_to_take_now = dose_window is not None and not dose_window.already_recorded()
     else:
         patient_dose_times = PATIENT_DOSE_MAP[phone_number]
         relevant_dose_ids = list(chain.from_iterable(patient_dose_times.values()))
