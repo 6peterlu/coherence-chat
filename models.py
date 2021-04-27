@@ -367,7 +367,7 @@ class EventLogSchema(Schema):
     id = fields.Integer()
     event_type = fields.String()
     description = fields.String()
-    event_time = fields.DateTime()
+    event_time = fields.AwareDateTime()
     user = fields.Nested(UserSchema(exclude=("dose_windows", "events", "doses")))
     medication = fields.Nested(MedicationSchema(exclude=("dose_windows", "user", "events")))
     dose_window = fields.Nested(DoseWindowSchema(exclude=("user", "events", "medications")))
