@@ -955,7 +955,8 @@ def port_phone_number():
     for phone_number in numbers_to_port:
         toggle_pause_service_for_phone_number(phone_number, silent=True)
         new_user, _ = get_current_user_and_dose_window(phone_number)
-        new_user.toggle_pause((scheduler, send_intro_text_new))
+        if new_user.paused:
+            new_user.toggle_pause((scheduler, send_intro_text_new))
     return jsonify()
 
 
@@ -966,6 +967,9 @@ def drop_new_tables():
         toggle_pause_service_for_phone_number(user.phone_number, silent=True)
         if not user.paused:
             user.toggle_pause((scheduler, None))
+            for dose_window in user.dose_windows:
+                if dose_window.active:
+                    remove_jobs_helper(dose_window.id, ["initial", "absent", "boundary", "followup"])
     drop_all_new_tables()
     return jsonify()
 
