@@ -17,7 +17,7 @@ dose_medication_linker = db.Table('dose_medication_linker',
 class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
-    phone_number = db.Column(db.String(10), nullable=False)
+    phone_number = db.Column(db.String(10), nullable=False, unique=True)
     name = db.Column(db.String, nullable=False)
     dose_windows = db.relationship("DoseWindow", backref="user", passive_deletes=True)
     doses = db.relationship("Medication", backref="user", passive_deletes=True)

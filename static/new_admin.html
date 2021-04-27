@@ -8,6 +8,8 @@
     <button onclick="dropAllNewTables()">Drop all new tables</button>
     <p>Ported users:</p>
     <div id="portedUserList"></div>
+    <div id="jobListDiv"></div>
+    <div id="userDetailedData"></div>
     <script defer>
         const initDetails = {
             method: 'get',
@@ -43,26 +45,106 @@
             };
             return await fetch(`${apiURL}/${route}`, initDetails);
         }
+        // we can't use delete, its reserved.
+        async function httpDelete(route, body) {
+            const initDetails = {
+                method: 'delete',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "DELETE",
+                    "Access-Control_Allow_Headers": "*",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors",
+                body: JSON.stringify(body)
+            };
+            return await fetch(`${apiURL}/${route}`, initDetails);
+        }
+        function checkTime(i) {
+            if (i < 10) {
+                i = "0" + i;
+            }
+            return i;
+        }
+
+        function convertTZ(date, tzString) {
+            return new Date((typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: tzString}));
+        }
+
+        function renderJobs(jobData) {
+            const jobComparator = (job1, job2) => {
+                if (job1.name > job2.name) {
+                    return 1;
+                }
+                if (job2.name > job1.name) {
+                    return -1;
+                }
+                return 0;
+            }
+            const sortedJobList = jobData.sort(jobComparator);
+            const rows = sortedJobList.map(job => {
+                if (job.trigger === "interval") {
+                    return `
+                        <li>
+                            <p style="display:inline">${job.name}:${job.trigger}:${convertTZ(job.start_date, "US/Pacific")}</p>
+                            <button onclick="deleteJob(\'${job.id}\')">delete job</button>
+                        </li>
+                    `
+                } else {
+                    return `
+                        <li>
+                            <p style="display:inline">${job.name}:${job.trigger}:${convertTZ(job.run_date)}</p>
+                            <button onclick="deleteJob(\'${job.id}\')">delete job</button>
+                        </li>
+                    `
+                }
+            });
+            const html = `<ul>${rows.join("")}</ul>`;
+            const jobListDiv = document.getElementById("jobListDiv");
+            jobListDiv.innerHTML = `<p>Job list: </p>${html}`;
+        }
+
+        function deleteJob(id) {
+            httpDelete(`scheduler/jobs/${id}`, {}).then(() => {
+                refreshData();
+            })
+        }
+
 
         const renderUser = (userData) => {
-            let htmlOut = "<div>";
+            let htmlOut = "<div style='margin: 10px; padding: 10px; background-color: #8ad1c2;'>";
             htmlOut += "<p style='font-weight:bold;'>Name</p>";
-            htmlOut += `<p>${userData.user.name}</p>`;
+            htmlOut += `<p style="padding-left: 20px;">${userData.user.name}</p>`;
             htmlOut += "<p style='font-weight:bold;'>Dose windows</p>";
-            htmlOut += `<p>${1}`;
+            for (const doseWindow of userData.dose_windows) {
+                let doseStartTime = new Date();
+                let doseEndTime = new Date();
+                doseStartTime.setUTCHours(doseWindow.start_hour, doseWindow.start_minute)
+                doseEndTime.setUTCHours(doseWindow.end_hour, doseWindow.end_minute)
+                htmlOut += `<p style="padding-left: 20px;">${doseStartTime.getHours()}:${checkTime(doseStartTime.getMinutes())}->${doseEndTime.getHours()}:${checkTime(doseEndTime.getMinutes())}</p>`
+                htmlOut += `<p style="padding-left: 40px;">Medications: ${doseWindow.medications.map((medication) => {return medication.medication_name != "" ? medication.medication_name : "No name provided"}).join(", ")}`
+            }
             htmlOut += "</div>";
+            return htmlOut;
         }
 
         var apiURL = "https://coherence-chat.herokuapp.com";
         const refreshData = () => {
             get("admin/everything", {}).then(response => response.json()).then(result => {
+                const userDetailedDataDiv = document.getElementById("userDetailedData");
                 console.log(result);
                 const portedUsers = [];
                 for (const userData of result.users) {
                     portedUsers.push(userData.user.name);
+                    userDetailedDataDiv.innerHTML += renderUser(userData);
                 }
                 document.getElementById("portedUserList").innerHTML = portedUsers.join(", ");
             });
+            get("scheduler/jobs", {}).then(response => response.json()).then(result => {
+                console.log(result);
+                renderJobs(result);
+            })
         }
 
         const portDataForPhone = () => {
