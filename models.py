@@ -157,7 +157,7 @@ class Medication(db.Model):
         self.active = active
         for dose_window in dose_windows:
             associate_medication_with_dose_window(self, dose_window, scheduler_tuple=scheduler_tuple)
-
+    # TODO: unit test this
     def is_recorded_for_today(self, dose_window_obj, user_obj):
         start_of_day, end_of_day = user_obj.current_day_bounds
         relevant_medication_history_records = EventLog.query.filter(
@@ -367,7 +367,7 @@ class EventLogSchema(Schema):
     id = fields.Integer()
     event_type = fields.String()
     description = fields.String()
-    event_time = fields.DateTime(format='%Y-%m-%dT%H:%M:%S+00:00')
+    event_time = fields.DateTime(format='%Y-%m-%dT%H:%M:%S+00:00')  # UTC time
     user = fields.Nested(UserSchema(exclude=("dose_windows", "events", "doses")))
     medication = fields.Nested(MedicationSchema(exclude=("dose_windows", "user", "events")))
     dose_window = fields.Nested(DoseWindowSchema(exclude=("user", "events", "medications")))
