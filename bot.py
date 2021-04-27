@@ -518,7 +518,7 @@ def patient_data():
                 event_data_by_time[time_of_day] = {"events": []}
             event_data_by_time[time_of_day]["events"].append(EventLogSchema().dump(event))
         for dose_window in user.dose_windows:
-            event_data_by_time[get_time_of_day(dose_window)]["dose"] = DoseWindowSchema.dump(dose_window)
+            event_data_by_time[get_time_of_day(dose_window)]["dose"] = DoseWindowSchema().dump(dose_window)
         paused_service = user.paused
         behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
     else:
