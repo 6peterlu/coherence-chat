@@ -134,6 +134,7 @@
                 const userDetailedDataDiv = document.getElementById("userDetailedData");
                 console.log(result);
                 const portedUsers = [];
+                userDetailedDataDiv.innerHTML = '';
                 for (const userData of result.users) {
                     portedUsers.push(userData.user.name);
                     userDetailedDataDiv.innerHTML += renderUser(userData);
