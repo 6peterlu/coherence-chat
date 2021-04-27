@@ -968,8 +968,7 @@ def drop_new_tables():
         if not user.paused:
             user.toggle_pause((scheduler, None))
             for dose_window in user.dose_windows:
-                if dose_window.active:
-                    remove_jobs_helper(dose_window.id, ["initial", "absent", "boundary", "followup"], new=True)
+                remove_jobs_helper(dose_window.id, ["initial", "absent", "boundary", "followup"], new=True)
     drop_all_new_tables()
     return jsonify()
 
