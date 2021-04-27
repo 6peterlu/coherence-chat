@@ -94,6 +94,7 @@ def user_record_with_manual_takeover(db_session):
     db_session.commit()
     return user_obj
 
+
 @pytest.fixture
 def dose_window_record(db_session, user_record):
     dose_window_obj = DoseWindow(
@@ -106,6 +107,7 @@ def dose_window_record(db_session, user_record):
     db_session.add(dose_window_obj)
     db_session.commit()
     return dose_window_obj
+
 
 @pytest.fixture
 def dose_window_record_out_of_range(db_session, user_record):
