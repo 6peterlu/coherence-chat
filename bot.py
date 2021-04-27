@@ -516,7 +516,7 @@ def patient_data():
             time_of_day = get_time_of_day(event.dose_window)
             if time_of_day not in event_data_by_time:
                 event_data_by_time[time_of_day] = {"events": []}
-            event_data_by_time[time_of_day]["events"].append(event.as_dict())
+            event_data_by_time[time_of_day]["events"].append(EventLogSchema().dump(event))
         for dose_window in user.dose_windows:
             event_data_by_time[get_time_of_day(dose_window)]["dose"] = DoseWindowSchema.dump(dose_window)
         paused_service = user.paused
