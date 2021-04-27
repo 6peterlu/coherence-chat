@@ -522,9 +522,9 @@ def patient_data():
         paused_service = user.paused
         behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
         dose_to_take_now = False
-        if dose_window:
+        if dose_window and dose_window.within_dosing_period():
             for medication in dose_window.medications:
-                if not medication.is_recorded_for_today(dose_window, user):
+                if not medication.is_recorded_for_today(dose_window):
                     dose_to_take_now = True
                     break
 

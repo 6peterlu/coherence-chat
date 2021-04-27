@@ -158,8 +158,8 @@ class Medication(db.Model):
         for dose_window in dose_windows:
             associate_medication_with_dose_window(self, dose_window, scheduler_tuple=scheduler_tuple)
     # TODO: unit test this
-    def is_recorded_for_today(self, dose_window_obj, user_obj):
-        start_of_day, end_of_day = user_obj.current_day_bounds
+    def is_recorded_for_today(self, dose_window_obj):
+        start_of_day, end_of_day = self.user.current_day_bounds
         relevant_medication_history_records = EventLog.query.filter(
             EventLog.dose_window_id == dose_window_obj.id,
             EventLog.medication_id == self.id,
