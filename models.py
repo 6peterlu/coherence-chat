@@ -212,6 +212,10 @@ class EventLog(db.Model):
         self.event_time = get_time_now() if event_time is None else event_time
         self.description = description
 
+    @property
+    def aware_event_time(self):
+        return self.event_time.replace(tzinfo=datetime.now().astimezone().tzinfo)
+
 
 # old tables
 class Dose(db.Model):
