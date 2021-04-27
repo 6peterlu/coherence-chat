@@ -601,11 +601,12 @@ def toggle_pause_service_for_phone_number(phone_number, silent=False):
         for dose in relevant_doses:
             remove_jobs_helper(dose.id, ["initial", "absent", "boundary", "followup"])
         # send pause message
-        client.messages.create(
-            body=PAUSE_MESSAGE,
-            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-            to=formatted_phone_number
-        )
+        if not silent:
+            client.messages.create(
+                body=PAUSE_MESSAGE,
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=formatted_phone_number
+            )
         log_event("paused", formatted_phone_number)
     else:
         db.session.delete(paused_service)
