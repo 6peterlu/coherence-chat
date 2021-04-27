@@ -16,6 +16,18 @@ from models import (
     dissociate_medication_from_dose_window
 )
 
+@pytest.fixture
+def take_event_record(db_session, dose_window_record, medication_record):
+    event_obj = EventLog(
+        event_type="take",
+        user_id=dose_window_record.user.id,
+        event_time=datetime(2012, 1, 1, 10+7, 23, 15),
+        medication_id=medication_record.id,
+        dose_window_id=dose_window_record.id
+    )
+    db_session.add(event_obj)
+    db_session.commit()
+    return event_obj
 
 # testing schemas
 def test_user_schema(user_record, dose_window_record, medication_record, medication_record_2):
@@ -115,6 +127,30 @@ def test_medication_schema(dose_window_record, medication_record, user_record):
         ]
     }
 
+def test_medication_is_not_recorded(dose_window_record, medication_record):
+    assert not medication_record.is_recorded_for_today(dose_window_record)
+
+
+@freeze_time("2012-01-01 17:00:00")
+def test_medication_is_recorded(dose_window_record, medication_record, take_event_record):
+    assert medication_record.is_recorded_for_today(dose_window_record)
+
+
+@freeze_time("2012-01-02 17:00:00")
+def test_medication_is_recorded_out_of_range(dose_window_record, medication_record, take_event_record):
+    assert not medication_record.is_recorded_for_today(dose_window_record)
+
+
+@freeze_time("2012-01-02 17:00:00")
+def test_within_dosing_period(dose_window_record):
+    assert dose_window_record.within_dosing_period()
+
+
+@freeze_time("2012-01-02 15:00:00")
+def test_not_within_dosing_period(dose_window_record):
+    assert not dose_window_record.within_dosing_period()
+
+
 def test_function(*_):
     pass
 
@@ -144,7 +180,7 @@ def test_associating_medication_scheduler_status(dose_window_record, medication_
     dissociate_medication_from_dose_window(scheduler, medication_record, dose_window_record)
     scheduled_job = scheduler.get_job(f"{dose_window_record.id}-initial-new")
     assert scheduled_job is None
-    associate_medication_with_dose_window((scheduler, test_function), medication_record, dose_window_record)
+    associate_medication_with_dose_window(medication_record, dose_window_record, scheduler_tuple=(scheduler, test_function))
     scheduled_job = scheduler.get_job(f"{dose_window_record.id}-initial-new")
     assert scheduled_job is not None
 

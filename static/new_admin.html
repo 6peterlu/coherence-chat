@@ -21,6 +21,7 @@
             },
             mode: "cors"
         };
+        const apiURL = "https://coherence-chat.herokuapp.com";
         // HTTP helpers
         const get = async (route, queryArgs) => {
             const queryArgsList = [];
@@ -115,7 +116,7 @@
         const renderUser = (userData) => {
             let htmlOut = "<div style='margin: 10px; padding: 10px; background-color: #8ad1c2;'>";
             htmlOut += "<p style='font-weight:bold;'>Name</p>";
-            htmlOut += `<p style="padding-left: 20px;">${userData.user.name}</p>`;
+            htmlOut += `<p style="padding-left: 20px;">${userData.user.name}: ${userData.user.phone_number}</p>`;
             htmlOut += "<p style='font-weight:bold;'>Dose windows</p>";
             for (const doseWindow of userData.dose_windows) {
                 let doseStartTime = new Date();
@@ -128,13 +129,12 @@
             htmlOut += "</div>";
             return htmlOut;
         }
-
-        var apiURL = "https://coherence-chat.herokuapp.com";
         const refreshData = () => {
             get("admin/everything", {}).then(response => response.json()).then(result => {
                 const userDetailedDataDiv = document.getElementById("userDetailedData");
                 console.log(result);
                 const portedUsers = [];
+                userDetailedDataDiv.innerHTML = '';
                 for (const userData of result.users) {
                     portedUsers.push(userData.user.name);
                     userDetailedDataDiv.innerHTML += renderUser(userData);

@@ -155,7 +155,7 @@ PATIENT_DOSE_MAP = { "+113604508655": {"morning": [153, 154, 173], "afternoon": 
     "+118587761377": {"morning": [29]},
     "+113607738908": {"morning": [68, 87], "evening": [69, 81]},
     "+115038871884": {"morning": [70], "afternoon": [71]},
-    "+113605214193": {"morning": [72], "evening": [74]},
+    "+113605214193": {"morning": [72], "evening": [74, 103]},
     "+113605131225": {"morning": [75], "afternoon": [76], "evening": [77]},
     "+113606064445": {"afternoon": [78, 88]},
     "+113609010956": {"evening": [86]}
@@ -415,6 +415,42 @@ def generate_behavior_learning_scores(user_behavior_events, active_doses):
     return output_scores
 
 
+def generate_behavior_learning_scores_new(user_behavior_events, user):
+    # end time is end of yesterday.
+    end_time = get_time_now().astimezone(timezone(user.timezone)).replace(hour=0, minute=0, second=0, microsecond=0)
+    user_behavior_events_until_today = list(filter(lambda event: event.aware_event_time < end_time, user_behavior_events))
+    if len(user_behavior_events_until_today) == 0 or len(user.doses) == 0:
+        return {}
+    behavior_scores_by_day = {}
+    # starts at earliest day
+    current_day_bucket = user_behavior_events_until_today[0].aware_event_time.astimezone(timezone(user.timezone)).replace(hour=0, minute=0, second=0, microsecond=0)
+    # latest_day = user_behavior_events_until_today[len(user_behavior_events_until_today) - 1].aware_event_time.astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
+    while current_day_bucket < end_time:
+        current_day_events = list(filter(lambda event: event.aware_event_time < current_day_bucket + timedelta(days=1) and event.aware_event_time > current_day_bucket, user_behavior_events_until_today))
+        current_day_take_skip = list(filter(lambda event: event.event_type in ["take", "skip"], current_day_events))
+        unique_time_buckets = []
+        for k, _ in groupby([event.event_time for event in current_day_events], round_date):
+            unique_time_buckets.append(k)
+        behavior_score_for_day = len(current_day_take_skip) * 3 / len(user.doses) + len(unique_time_buckets) * 2 / len (user.doses) - 3
+        behavior_scores_by_day[current_day_bucket] = behavior_score_for_day
+        current_day_bucket += timedelta(days=1)
+    score_sum = 0
+    starting_buffer = len(behavior_scores_by_day) - 7  # combine all data before last 7 days
+    output_scores = []
+    for day in behavior_scores_by_day:
+        score_sum += behavior_scores_by_day[day]
+        if score_sum < 0:
+            score_sum = 0
+        elif score_sum > 100:
+            score_sum = 100
+        if starting_buffer <= 0:
+            output_scores.append((day.strftime('%a'), int(score_sum)))
+        else:
+            starting_buffer -= 1
+    return output_scores
+
+
+
 def get_current_user_and_dose_window(truncated_phone_number):
     user = None
     current_dose_window = None
@@ -424,6 +460,18 @@ def get_current_user_and_dose_window(truncated_phone_number):
             if dose_window.within_dosing_period():
                 current_dose_window = dose_window
     return user, current_dose_window
+
+
+def get_time_of_day(dose_window_obj):
+    if dose_window_obj is None:
+        return None
+    user = dose_window_obj.user
+    local_start_date = dose_window_obj.next_start_date.astimezone(timezone(user.timezone))
+    if local_start_date.hour > 2 and local_start_date.hour < 12:
+        return "morning"
+    elif local_start_date.hour >= 12 and local_start_date.hour < 6:
+        return "afternoon"
+    return "evening"
 
 # TODO: rewrite
 @app.route("/patientData", methods=["GET"])
@@ -440,56 +488,97 @@ def patient_data():
         response = jsonify({"error": "The secret code was incorrect. Please double-check that you've entered it correctly."})
         response.set_cookie("phoneNumber", "", expires=0)
         return response
-    patient_dose_times = PATIENT_DOSE_MAP[phone_number]
-    relevant_dose_ids = list(chain.from_iterable(patient_dose_times.values()))
-    relevant_dose_ids_as_str = [str(x) for x in relevant_dose_ids]
-    relevant_doses = Dose.query.filter(Dose.id.in_(relevant_dose_ids), Dose.active.is_(True)).all()
-    take_record_events = [
-        "take",
-        "skip",
-        "boundary"
-    ]
-    user_driven_events = [
-        "take",
-        "skip",
-        "paused",
-        "resumed",
-        "user_reported_error",
-        "out_of_range",
-        "not_interpretable",
-        "requested_time_delay",
-        "activity"
-    ]
-    combined_list = list(set(take_record_events) | set(user_driven_events))
-    # rules
-    # ignore: reminder_delay
-    # reminders from us: followup, absent, boundary, initial, manual_text
-    # best user activity: take, skip
-    # moderate user activity: paused, resumed, user_reported_error, out_of_range, not_interpretable
-    # worst user activity: requested_time_delay, activity
-    relevant_events = Event.query.filter(Event.event_type.in_(combined_list), Event.phone_number == phone_number).order_by(Event.event_time.asc()).all()
-    dose_history_events = list(filter(lambda event: event.event_type in take_record_events and event.description in relevant_dose_ids_as_str, relevant_events))
-    user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
-    # NOTE: add back in later (but maybe post-react world)
-    # activity_analytics = generate_activity_analytics(user_behavior_events)
-    event_data_by_time = {}
-    for time in patient_dose_times:
-        event_data_by_time[time] = {"events": []}
-        dose_ids = patient_dose_times[time]
+    user, dose_window = get_current_user_and_dose_window(recovered_cookie)
+    if user is not None:
+        # grab data from user object
+        take_record_events = [
+            "take",
+            "skip",
+            "boundary"
+        ]
+        user_driven_events = [
+            "take",
+            "skip",
+            "paused",
+            "resumed",
+            "user_reported_error",
+            "out_of_range",
+            "not_interpretable",
+            "requested_time_delay",
+            "activity"
+        ]
+        combined_list = list(set(take_record_events) | set(user_driven_events))
+        relevant_events = EventLog.query.filter(EventLog.event_type.in_(combined_list), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
+        dose_history_events = list(filter(lambda event: event.event_type in take_record_events and event.medication in user.doses, relevant_events))
+        user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
+        event_data_by_time = {}
         for event in dose_history_events:
-            if int(event.description) in dose_ids:
-                event_data_by_time[time]["events"].append(event.as_dict())
+            time_of_day = get_time_of_day(event.dose_window)
+            if time_of_day not in event_data_by_time:
+                event_data_by_time[time_of_day] = {"events": []}
+            event_data_by_time[time_of_day]["events"].append(EventLogSchema().dump(event))
+        for dose_window in user.dose_windows:
+            event_data_by_time[get_time_of_day(dose_window)]["dose"] = DoseWindowSchema().dump(dose_window)
+        paused_service = PausedService.query.get(phone_number)
+        behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
+        dose_to_take_now = False
+        if dose_window and dose_window.within_dosing_period():
+            for medication in dose_window.medications:
+                if not medication.is_recorded_for_today(dose_window):
+                    dose_to_take_now = True
+                    break
+
+    else:
+        patient_dose_times = PATIENT_DOSE_MAP[phone_number]
+        relevant_dose_ids = list(chain.from_iterable(patient_dose_times.values()))
+        relevant_dose_ids_as_str = [str(x) for x in relevant_dose_ids]
+        relevant_doses = Dose.query.filter(Dose.id.in_(relevant_dose_ids), Dose.active.is_(True)).all()
+        take_record_events = [
+            "take",
+            "skip",
+            "boundary"
+        ]
+        user_driven_events = [
+            "take",
+            "skip",
+            "paused",
+            "resumed",
+            "user_reported_error",
+            "out_of_range",
+            "not_interpretable",
+            "requested_time_delay",
+            "activity"
+        ]
+        combined_list = list(set(take_record_events) | set(user_driven_events))
+        # rules
+        # ignore: reminder_delay
+        # reminders from us: followup, absent, boundary, initial, manual_text
+        # best user activity: take, skip
+        # moderate user activity: paused, resumed, user_reported_error, out_of_range, not_interpretable
+        # worst user activity: requested_time_delay, activity
+        relevant_events = Event.query.filter(Event.event_type.in_(combined_list), Event.phone_number == phone_number).order_by(Event.event_time.asc()).all()
+        dose_history_events = list(filter(lambda event: event.event_type in take_record_events and event.description in relevant_dose_ids_as_str, relevant_events))
+        user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
+        # NOTE: add back in later (but maybe post-react world)
+        # activity_analytics = generate_activity_analytics(user_behavior_events)
+        event_data_by_time = {}
+        for time in patient_dose_times:
+            event_data_by_time[time] = {"events": []}
+            dose_ids = patient_dose_times[time]
+            for event in dose_history_events:
+                if int(event.description) in dose_ids:
+                    event_data_by_time[time]["events"].append(event.as_dict())
+            for dose in relevant_doses:
+                if dose.id in dose_ids:
+                    event_data_by_time[time]["dose"] = dose.as_dict()
+                    break
+        dose_to_take_now = False
         for dose in relevant_doses:
-            if dose.id in dose_ids:
-                event_data_by_time[time]["dose"] = dose.as_dict()
+            if dose.within_dosing_period() and not dose.already_recorded():
+                dose_to_take_now = True
                 break
-    dose_to_take_now = False
-    for dose in relevant_doses:
-        if dose.within_dosing_period() and not dose.already_recorded():
-            dose_to_take_now = True
-            break
-    paused_service = PausedService.query.get(phone_number)
-    behavior_learning_scores = generate_behavior_learning_scores(user_behavior_events, relevant_doses)
+        paused_service = PausedService.query.get(phone_number)
+        behavior_learning_scores = generate_behavior_learning_scores(user_behavior_events, relevant_doses)
     return jsonify({
         "phoneNumber": recovered_cookie,
         "eventData": event_data_by_time,
@@ -498,6 +587,9 @@ def patient_data():
         "pausedService": bool(paused_service),
         "behaviorLearningScores": behavior_learning_scores
     })
+
+
+
 
 
 # TODO: rewrite

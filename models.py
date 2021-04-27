@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from pytz import utc as pytzutc, timezone
 from marshmallow import Schema, fields
 
@@ -157,9 +157,9 @@ class Medication(db.Model):
         self.active = active
         for dose_window in dose_windows:
             associate_medication_with_dose_window(self, dose_window, scheduler_tuple=scheduler_tuple)
-
-    def is_recorded_for_today(self, dose_window_obj, user_obj):
-        start_of_day, end_of_day = user_obj.current_day_bounds
+    # TODO: unit test this
+    def is_recorded_for_today(self, dose_window_obj):
+        start_of_day, end_of_day = self.user.current_day_bounds
         relevant_medication_history_records = EventLog.query.filter(
             EventLog.dose_window_id == dose_window_obj.id,
             EventLog.medication_id == self.id,
@@ -211,6 +211,10 @@ class EventLog(db.Model):
         self.medication_id = medication_id
         self.event_time = get_time_now() if event_time is None else event_time
         self.description = description
+
+    @property
+    def aware_event_time(self):
+        return self.event_time.replace(tzinfo=datetime.now().astimezone().tzinfo)
 
 
 # old tables
@@ -363,7 +367,7 @@ class EventLogSchema(Schema):
     id = fields.Integer()
     event_type = fields.String()
     description = fields.String()
-    event_time = fields.DateTime()
+    event_time = fields.DateTime(format='%Y-%m-%dT%H:%M:%S+00:00')  # UTC time
     user = fields.Nested(UserSchema(exclude=("dose_windows", "events", "doses")))
     medication = fields.Nested(MedicationSchema(exclude=("dose_windows", "user", "events")))
     dose_window = fields.Nested(DoseWindowSchema(exclude=("user", "events", "medications")))
