@@ -16,6 +16,9 @@ from models import (
     dissociate_medication_from_dose_window
 )
 
+def test_function(*_):
+    pass
+
 @pytest.fixture
 def take_event_record(db_session, dose_window_record, medication_record):
     event_obj = EventLog(
@@ -99,6 +102,14 @@ def test_dose_window_schema(dose_window_record, medication_record, medication_re
         }
     }
 
+def test_dose_window_scheduler(dose_window_record, medication_record, scheduler):
+    # assert scheduler.get_job(f"{dose_window_record.id}-initial-new") is None
+    dose_window_record.schedule_initial_job(scheduler, test_function)
+    assert scheduler.get_job(f"{dose_window_record.id}-initial-new") is not None
+    dose_window_record.remove_jobs(scheduler, ["initial", "absent", "boundary", "followup"])
+    assert scheduler.get_job(f"{dose_window_record.id}-initial-new") is None
+
+
 def test_medication_schema(dose_window_record, medication_record, user_record):
     medication_schema = MedicationSchema()
     assert medication_schema.dump(medication_record) == {
@@ -150,9 +161,6 @@ def test_within_dosing_period(dose_window_record):
 def test_not_within_dosing_period(dose_window_record):
     assert not dose_window_record.within_dosing_period()
 
-
-def test_function(*_):
-    pass
 
 @freeze_time("2012-01-01 17:00:00")  # HACK: needed to invalidate scheduler jobs at end of test run because we're using prod scheduler.
 def test_create_dose_record_scheduler_status(dose_window_record, scheduler):

@@ -590,15 +590,8 @@ def patient_data():
 
 
 
-
-
-# TODO: rewrite
-@app.route("/pauseService", methods=["POST"])
-def pause_service():
-    recovered_cookie = request.cookies.get("phoneNumber")
-    if recovered_cookie is None:
-        return jsonify(), 401  # empty response if no cookie
-    formatted_phone_number = f"+11{recovered_cookie}"
+def toggle_pause_service_for_phone_number(phone_number, silent=False):
+    formatted_phone_number = f"+11{phone_number}"
     relevant_doses = Dose.query.filter(Dose.phone_number == formatted_phone_number, Dose.active.is_(True)).all()
     relevant_doses = sorted(relevant_doses, key=lambda dose: dose.next_start_date)
     paused_service = PausedService.query.get(formatted_phone_number)
@@ -618,25 +611,34 @@ def pause_service():
         db.session.delete(paused_service)
         for idx, dose in enumerate(relevant_doses):
             if idx == 0:
-                resume_dose(dose, next_dose=True)
+                resume_dose(dose, next_dose=True, silent=silent)
             else:
-                resume_dose(dose)
+                resume_dose(dose, silent=silent)
         log_event("resumed", formatted_phone_number)
     db.session.commit()
+
+
+@app.route("/pauseService", methods=["POST"])
+def pause_service():
+    recovered_cookie = request.cookies.get("phoneNumber")
+    if recovered_cookie is None:
+        return jsonify(), 401  # empty response if no cookie
+    toggle_pause_service_for_phone_number(recovered_cookie)
     return jsonify()
 
-# TODO: rewrite
-def resume_dose(dose_obj, next_dose=False):
-    if dose_obj.within_dosing_period() and not dose_obj.already_recorded():
-        # send initial reminder text immediately
-        send_intro_text(dose_obj.id, welcome_back=True)
-    elif next_dose:
-        # send welcome message immediately, but no reminder
-        client.messages.create(
-            body=f"{random.choice(WELCOME_BACK_MESSAGES)} {random.choice(FUTURE_MESSAGE_SUFFIXES).substitute(time=dose_obj.next_start_date.astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M %p'))}",
-            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-            to=dose_obj.phone_number
-        )
+
+def resume_dose(dose_obj, next_dose=False, silent=False):
+    if not silent:
+        if dose_obj.within_dosing_period() and not dose_obj.already_recorded():
+            # send initial reminder text immediately
+            send_intro_text(dose_obj.id, welcome_back=True)
+        elif next_dose:
+            # send welcome message immediately, but no reminder
+            client.messages.create(
+                body=f"{random.choice(WELCOME_BACK_MESSAGES)} {random.choice(FUTURE_MESSAGE_SUFFIXES).substitute(time=dose_obj.next_start_date.astimezone(timezone(USER_TIMEZONE)).strftime('%I:%M %p'))}",
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=dose_obj.phone_number
+            )
     # set up recurring job
     scheduler.add_job(f"{dose_obj.id}-initial", send_intro_text,
         trigger="interval",
@@ -947,11 +949,21 @@ def port_phone_number():
     if phone_number_to_port:
         numbers_to_port = [phone_number_to_port]
     port_legacy_data(numbers_to_port, PATIENT_NAME_MAP, PATIENT_DOSE_MAP)
+    # user activation stuff here
+    # pause legacy user service
+    for phone_number in numbers_to_port:
+        toggle_pause_service_for_phone_number(phone_number)
+        new_user, _ = get_current_user_and_dose_window(phone_number)
+        new_user.toggle_pause()
     return jsonify()
 
 
 @app.route("/admin/dropNewTables", methods=["POST"])
 def drop_new_tables():
+    users = User.query.all()
+    for user in users:
+        toggle_pause_service_for_phone_number(user.phone_number)
+        user.toggle_pause()
     drop_all_new_tables()
     return jsonify()
 

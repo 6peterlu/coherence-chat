@@ -55,6 +55,14 @@ class User(db.Model):
         end_of_day = start_of_day + timedelta(days=1)
         return start_of_day, end_of_day
 
+    def toggle_pause(self, scheduler_tuple):
+        self.paused = not self.paused
+        for dose_window in self.dose_windows:
+            if dose_window.active:
+                if self.paused:
+                    dose_window.remove_jobs(scheduler_tuple[0], ["initial", "followup", "boundary", "absent"])
+                else:
+                    dose_window.schedule_initial_job(*scheduler_tuple)
 
 class DoseWindow(db.Model):
     __tablename__ = 'dose_window'
@@ -89,22 +97,23 @@ class DoseWindow(db.Model):
         # need a scheduler object to take actions
         if scheduler_tuple is not None:
             scheduler, func_to_schedule = scheduler_tuple
-            if self.active and scheduler_tuple and self.medications:
+            if self.active and scheduler_tuple and self.medications and not self.user.paused:
                 self.schedule_initial_job(scheduler, func_to_schedule)
             if not self.active and scheduler_tuple:
-                self.remove_jobs(scheduler)
+                self.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
 
 
     def schedule_initial_job(self, scheduler, func_to_schedule):
-        scheduler.add_job(
-            f"{self.id}-initial-new",
-            func_to_schedule,
-            trigger="interval",
-            start_date=self.next_start_date,
-            days=1,
-            args=[self.id],
-            misfire_grace_time=5*60
-        )
+        if scheduler.get_job(f"{self.id}-initial-new") is None:
+            scheduler.add_job(
+                f"{self.id}-initial-new",
+                func_to_schedule,
+                trigger="interval",
+                start_date=self.next_start_date,
+                days=1,
+                args=[self.id],
+                misfire_grace_time=5*60
+            )
 
     def remove_jobs(self, scheduler, jobs_list):
         for job in jobs_list:
