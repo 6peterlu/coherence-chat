@@ -17,11 +17,11 @@ dose_medication_linker = db.Table('dose_medication_linker',
 class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
-    phone_number = db.Column(db.String(10), nullable=False)
+    phone_number = db.Column(db.String(10), nullable=False, unique=True)
     name = db.Column(db.String, nullable=False)
     dose_windows = db.relationship("DoseWindow", backref="user", passive_deletes=True)
     doses = db.relationship("Medication", backref="user", passive_deletes=True)
-    events = db.relationship("EventLog", backref="user", passive_deletes=True)
+    events = db.relationship("EventLog", backref="user", order_by="EventLog.event_time.asc()", passive_deletes=True)
     manual_takeover = db.Column(db.Boolean, nullable=False)
     paused = db.Column(db.Boolean, nullable=False)
     timezone = db.Column(db.String, nullable=False)
@@ -66,7 +66,7 @@ class DoseWindow(db.Model):
     end_minute = db.Column(db.Integer, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE', name="dose_window_user_fkey_custom"), nullable=False)
     medications = db.relationship("Medication", secondary=dose_medication_linker, back_populates="dose_windows")
-    events = db.relationship("EventLog", backref="dose_window")
+    events = db.relationship("EventLog", backref="dose_window", order_by="EventLog.event_time.asc()")
     active = db.Column(db.Boolean)  # active dose windows can be interacted in, even if the bot is paused.
 
     def __init__(
@@ -145,7 +145,7 @@ class Medication(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE', name="medication_user_fkey_custom"), nullable=False)
     medication_name = db.Column(db.String, nullable=False)
     instructions = db.Column(db.String)
-    events = db.relationship("EventLog", backref="medication")
+    events = db.relationship("EventLog", backref="medication", order_by="EventLog.event_time.asc()")
     dose_windows = db.relationship("DoseWindow", secondary=dose_medication_linker, back_populates="medications")
     active = db.Column(db.Boolean, nullable=False)
 

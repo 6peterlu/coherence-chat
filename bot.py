@@ -353,7 +353,6 @@ def round_date(dt, delta=ACTIVITY_BUCKET_SIZE_MINUTES, round_up=False):
         return dt - (dt - datetime.min) % timedelta(minutes=delta)
 
 
-
 # NOTE: Not currently used.
 # def generate_activity_analytics(user_events):
 #     day_stripped_events = [event.event_time.replace(day=1, month=1, year=1, microsecond=0) for event in user_events]
@@ -415,6 +414,16 @@ def generate_behavior_learning_scores(user_behavior_events, active_doses):
             starting_buffer -= 1
     return output_scores
 
+
+def get_current_user_and_dose_window(truncated_phone_number):
+    user = None
+    current_dose_window = None
+    user = User.query.filter(User.phone_number == truncated_phone_number).one_or_none()
+    if user is not None:
+        for dose_window in user.dose_windows:
+            if dose_window.within_dosing_period():
+                current_dose_window = dose_window
+    return user, current_dose_window
 
 # TODO: rewrite
 @app.route("/patientData", methods=["GET"])
@@ -593,6 +602,10 @@ def logout():
 @app.route("/admin", methods=["GET"])
 def admin_page():
     return app.send_static_file('admin.html')
+
+@app.route("/admin/new", methods=["GET"])
+def new_admin_page():
+    return app.send_static_file('new_admin.html')
 
 # TODO: rewrite
 # add a dose
@@ -802,6 +815,53 @@ def extract_integer(message):
 def convert_to_user_local_time(user_obj, dt):
     user_tz = timezone(user_obj.timezone)
     return user_tz.localize(dt.replace(tzinfo=None))
+
+
+@app.route("/admin/everything", methods=["GET"])
+def get_all_admin_data():
+    all_users_in_system = User.query.all()
+    return_dict = {"users": []}
+    for user in all_users_in_system:
+        user_dict = {
+            "user": UserSchema().dump(user),
+            "dose_windows": [],
+            "medications": []
+        }
+        for dose_window in user.dose_windows:
+            user_dict["dose_windows"].append(DoseWindowSchema().dump(dose_window))
+        for medication in user.doses:
+            user_dict["medications"].append(MedicationSchema().dump(medication))
+        return_dict["users"].append(user_dict)
+    return jsonify(return_dict)
+
+
+@app.route("/admin/portData", methods=["POST"])
+def port_phone_number():
+    phone_number_to_port = request.json["phoneNumber"]
+    numbers_to_port = [
+        "3604508655",
+        "3609010956",
+        "3607738908",
+        "3609049085",
+        "8587761377",
+        "6502690598",
+        "5038871884",
+        "3605214193",
+        "3605131225",
+        "3609042210",
+        "3606064445",
+        "4152142478"
+    ]
+    if phone_number_to_port:
+        numbers_to_port = [phone_number_to_port]
+    port_legacy_data(numbers_to_port, PATIENT_NAME_MAP, PATIENT_DOSE_MAP)
+    return jsonify()
+
+
+@app.route("/admin/dropNewTables", methods=["POST"])
+def drop_new_tables():
+    drop_all_new_tables()
+    return jsonify()
 
 @app.route('/bot', methods=['POST'])
 def bot():
@@ -1080,13 +1140,7 @@ def bot():
                     )
     else:
         # new data model objects
-        user = None
-        current_dose_window = None
-        user = User.query.filter(User.phone_number == incoming_phone_number[2:]).one_or_none()
-        if user is not None:
-            for dose_window in user.dose_windows:
-                if dose_window.within_dosing_period():
-                    current_dose_window = dose_window
+        user, current_dose_window = get_current_user_and_dose_window(incoming_phone_number[2:])
 
         # we weren't able to parse any part of the message
         if len(incoming_msg_list) == 0:
@@ -1574,7 +1628,8 @@ def send_followup_text(dose_id):
     # remove absent jobs, if exist
     remove_jobs_helper(dose_id, ["absent", "followup"])
     maybe_schedule_absent(dose_id)
-    log_event("followup", dose_obj.phone_number, description=dose_id)
+    user, current_dose_window = get_current_user_and_dose_window(dose_obj.phone_number[3:])
+    log_event("followup", dose_obj.phone_number, description=dose_id, user=user, dose_window=current_dose_window)
 
 # NEW
 def send_followup_text_new(dose_window_obj, user_obj):
@@ -1596,6 +1651,7 @@ def send_followup_text_new(dose_window_obj, user_obj):
     maybe_schedule_absent_new(dose_window_obj)
     log_event_new("followup", user_obj.id, dose_window_obj.id, medication_id=None)
 
+
 def send_absent_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
     client.messages.create(
@@ -1607,7 +1663,8 @@ def send_absent_text(dose_id):
     db.session.add(reminder_record)
     db.session.commit()
     remove_jobs_helper(dose_id, ["absent", "followup"])
-    log_event("absent", dose_obj.phone_number, description=dose_id)
+    user, current_dose_window = get_current_user_and_dose_window(dose_obj.phone_number[3:])
+    log_event("absent", dose_obj.phone_number, description=dose_id, user=user, dose_window=current_dose_window)
     maybe_schedule_absent(dose_id)
 
 # NEW
@@ -1642,7 +1699,8 @@ def send_boundary_text(dose_id):
     db.session.commit()
     # this shouldn't be needed, but followups sent manually leave absent artifacts
     remove_jobs_helper(dose_id, ["absent", "followup"])
-    log_event("boundary", dose_obj.phone_number, description=dose_id)
+    user, current_dose_window = get_current_user_and_dose_window(dose_obj.phone_number[3:])
+    log_event("boundary", dose_obj.phone_number, description=dose_id, user=user, dose_window=current_dose_window)
 
 # NEW
 def send_boundary_text_new(dose_window_obj, user_obj):
@@ -1680,7 +1738,9 @@ def send_intro_text(dose_id, manual=False, welcome_back=False):
         misfire_grace_time=5*60
     )
     maybe_schedule_absent(dose_id)
-    log_event("initial", dose_obj.phone_number, description=dose_id)
+    user, current_dose_window = get_current_user_and_dose_window(dose_obj.phone_number[3:])
+    log_event("initial", dose_obj.phone_number, description=dose_id, user=user, dose_window=current_dose_window)
+
 
 # NEW
 def send_intro_text_new(dose_window_obj, user_obj, manual=False, welcome_back=False):
@@ -1877,7 +1937,7 @@ def port_legacy_data(phone_numbers_to_port, names, patient_dose_map):
         db.session.flush()  # populate user_id
         formatted_phone_number = f"+11{phone_number}"
         doses = Dose.query.filter(Dose.phone_number == formatted_phone_number, Dose.active == True).all()
-        events_for_user = Event.query.filter(Event.phone_number == formatted_phone_number).all()
+        events_for_user = Event.query.filter(Event.phone_number == formatted_phone_number).order_by(Event.event_time.asc()).all()
         for dose in doses:
             dose_id_equivalency_list = []
             for _, equivalency_list in patient_dose_map[formatted_phone_number].items():
@@ -1941,6 +2001,7 @@ def drop_all_new_tables():
     ]
     for model in models_to_drop:
         model.query.delete()
+    db.session.commit()
 
 
 scheduler.add_listener(scheduler_error_alert, EVENT_JOB_MISSED | EVENT_JOB_ERROR)
