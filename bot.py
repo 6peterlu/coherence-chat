@@ -519,7 +519,7 @@ def patient_data():
             event_data_by_time[time_of_day]["events"].append(EventLogSchema().dump(event))
         for dose_window in user.dose_windows:
             event_data_by_time[get_time_of_day(dose_window)]["dose"] = DoseWindowSchema().dump(dose_window)
-        paused_service = user.paused
+        paused_service = PausedService.query.get(phone_number)
         behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
         dose_to_take_now = False
         if dose_window and dose_window.within_dosing_period():
