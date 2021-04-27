@@ -110,6 +110,15 @@ def test_dose_window_scheduler(dose_window_record, medication_record, scheduler)
     assert scheduler.get_job(f"{dose_window_record.id}-initial-new") is None
 
 
+def test_toggle_user_pause(dose_window_record_for_paused_user, user_record_paused, medication_record_for_paused_user, scheduler):
+    assert scheduler.get_job(f"{dose_window_record_for_paused_user.id}-initial-new") is None
+    user_record_paused.toggle_pause((scheduler, test_function))
+    assert scheduler.get_job(f"{dose_window_record_for_paused_user.id}-initial-new") is not None
+    user_record_paused.toggle_pause((scheduler, None))
+    assert scheduler.get_job(f"{dose_window_record_for_paused_user.id}-initial-new") is None
+
+
+
 def test_medication_schema(dose_window_record, medication_record, user_record):
     medication_schema = MedicationSchema()
     assert medication_schema.dump(medication_record) == {

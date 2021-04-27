@@ -105,7 +105,7 @@ class DoseWindow(db.Model):
 
 
     def schedule_initial_job(self, scheduler, func_to_schedule):
-        if scheduler.get_job(f"{self.id}-initial-new") is None:
+        if scheduler.get_job(f"{self.id}-initial-new") is None and not self.user.paused:
             scheduler.add_job(
                 f"{self.id}-initial-new",
                 func_to_schedule,
@@ -119,9 +119,7 @@ class DoseWindow(db.Model):
     def remove_jobs(self, scheduler, jobs_list):
         for job in jobs_list:
             job_id = f"{self.id}-{job}-new"
-            print(job_id)
             if scheduler.get_job(job_id):
-                print("removing")
                 scheduler.remove_job(job_id)
 
 
@@ -195,8 +193,8 @@ def associate_medication_with_dose_window(medication, dose_window, scheduler_tup
     medication.dose_windows.append(dose_window)
     if scheduler_tuple:
         scheduler, func_to_schedule = scheduler_tuple
-        if not dose_window.jobs_scheduled(scheduler):
-            dose_window.schedule_initial_job(scheduler, func_to_schedule)
+        print("calling schedule initial job")
+        dose_window.schedule_initial_job(scheduler, func_to_schedule)
 
 
 def dissociate_medication_from_dose_window(scheduler, medication, dose_window):
