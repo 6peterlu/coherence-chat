@@ -1092,7 +1092,7 @@ def bot():
                                 )
                                 remove_jobs_helper(dose_window.id, ["followup", "absent"], new=True)
                                 scheduler.add_job(f"{dose_window.id}-followup-new", send_followup_text_new,
-                                    args=[dose_window, user],
+                                    args=[dose_window.id],
                                     trigger="date",
                                     run_date=next_alarm_time,
                                     misfire_grace_time=5*60
@@ -1133,7 +1133,7 @@ def bot():
                             )
                             remove_jobs_helper(dose_window.id, ["followup", "absent"], new=True)
                             scheduler.add_job(f"{dose_window.id}-followup-new", send_followup_text_new,
-                                args=[dose_window, user],
+                                args=[dose_window.id],
                                 trigger="date",
                                 run_date=next_alarm_time,
                                 misfire_grace_time=5*60
@@ -1172,7 +1172,7 @@ def bot():
                             )
                             remove_jobs_helper(dose_window.id, ["followup", "absent"], new=True)
                             scheduler.add_job(f"{dose_window.id}-followup-new", send_followup_text_new,
-                                args=[dose_window, user],
+                                args=[dose_window.id],
                                 trigger="date",
                                 run_date=next_alarm_time,
                                 misfire_grace_time=5*60
@@ -1210,7 +1210,7 @@ def bot():
                             )
                             remove_jobs_helper(dose_window.id, ["followup", "absent"], new=True)
                             scheduler.add_job(f"{dose_window.id}-followup-new", send_followup_text_new,
-                                args=[dose_window, user],
+                                args=[dose_window.id],
                                 trigger="date",
                                 run_date=next_alarm_time,
                                 misfire_grace_time=5*60
@@ -1684,7 +1684,7 @@ def maybe_schedule_absent_new(dose_window_obj):
     desired_absent_reminder = min(get_time_now() + timedelta(minutes=random.randint(45,75)), end_date - timedelta(minutes=BUFFER_TIME_MINS))
     # room to schedule absent
     if desired_absent_reminder > get_time_now():
-        scheduler.add_job(f"{dose_window_obj.id}-absent", send_absent_text,
+        scheduler.add_job(f"{dose_window_obj.id}-absent-new", send_absent_text_new,
             args=[dose_window_obj.id],
             trigger="date",
             run_date=desired_absent_reminder,
@@ -1730,16 +1730,17 @@ def send_followup_text(dose_id):
     log_event("followup", dose_obj.phone_number, description=dose_id, user=user, dose_window=current_dose_window)
 
 # NEW
-def send_followup_text_new(dose_window_obj, user_obj):
+def send_followup_text_new(dose_window_obj_id):
+    dose_window_obj = DoseWindow.query.get(dose_window_obj_id)
     if "NOALERTS" not in os.environ:
         client.messages.create(
             body=get_followup_message(),
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-            to=f"+11{user_obj.phone_number}"
+            to=f"+11{dose_window_obj.user.phone_number}"
         )
     reminder_record = EventLog(
         event_type="followup",
-        user_id=user_obj.id,
+        user_id=dose_window_obj.user.id,
         dose_window_id=dose_window_obj.id,
         medication_id=None,
         event_time=get_time_now()
@@ -1748,7 +1749,7 @@ def send_followup_text_new(dose_window_obj, user_obj):
     db.session.commit()
     remove_jobs_helper(dose_window_obj.id, ["absent", "followup"], new=True)
     maybe_schedule_absent_new(dose_window_obj)
-    log_event_new("followup", user_obj.id, dose_window_obj.id, medication_id=None)
+    log_event_new("followup", dose_window_obj.user.id, dose_window_obj.id, medication_id=None)
 
 
 def send_absent_text(dose_id):
@@ -1767,15 +1768,16 @@ def send_absent_text(dose_id):
     maybe_schedule_absent(dose_id)
 
 # NEW
-def send_absent_text_new(dose_window_obj, user_obj):
+def send_absent_text_new(dose_window_obj_id):
+    dose_window_obj = DoseWindow.query.get(dose_window_obj_id)
     client.messages.create(
         body=get_absent_message(),
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-        to=f"+11{user_obj.phone_number}"
+        to=f"+11{dose_window_obj.user.phone_number}"
     )
     reminder_record = EventLog(
         event_type="absent",
-        user_id=user_obj.id,
+        user_id=dose_window_obj.user.id,
         dose_window_id=dose_window_obj.id,
         medication_id=None,
         event_time=get_time_now()
@@ -1784,7 +1786,7 @@ def send_absent_text_new(dose_window_obj, user_obj):
     db.session.commit()
     remove_jobs_helper(dose_window_obj.id, ["absent", "followup"], new=True)
     maybe_schedule_absent_new(dose_window_obj)
-    log_event_new("absent", user_obj.id, dose_window_obj.id, medication_id=None)
+    log_event_new("absent", dose_window_obj.user.id, dose_window_obj.id, medication_id=None)
 
 def send_boundary_text(dose_id):
     dose_obj = Dose.query.get(dose_id)
@@ -1802,15 +1804,16 @@ def send_boundary_text(dose_id):
     log_event("boundary", dose_obj.phone_number, description=dose_id, user=user, dose_window=current_dose_window)
 
 # NEW
-def send_boundary_text_new(dose_window_obj, user_obj):
+def send_boundary_text_new(dose_window_obj_id):
+    dose_window_obj = DoseWindow.query.get(dose_window_obj_id)
     client.messages.create(
-        body=CLINICAL_BOUNDARY_MSG.substitute(time=get_time_now().astimezone(timezone(user_obj.timezone)).strftime('%I:%M')) if user_obj.phone_number in CLINICAL_BOUNDARY_PHONE_NUMBERS else BOUNDARY_MSG,
+        body=CLINICAL_BOUNDARY_MSG.substitute(time=get_time_now().astimezone(timezone(dose_window_obj.user.timezone)).strftime('%I:%M')) if dose_window_obj.user.phone_number in CLINICAL_BOUNDARY_PHONE_NUMBERS else BOUNDARY_MSG,
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-        to=f"+11{user_obj.phone_number}"
+        to=f"+11{dose_window_obj.user.phone_number}"
     )
     reminder_record = EventLog(
         event_type="boundary",
-        user_id=user_obj.id,
+        user_id=dose_window_obj.user.id,
         dose_window_id=dose_window_obj.id,
         medication_id=None,
         event_time=get_time_now()
@@ -1818,7 +1821,7 @@ def send_boundary_text_new(dose_window_obj, user_obj):
     db.session.add(reminder_record)
     db.session.commit()
     remove_jobs_helper(dose_window_obj.id, ["absent", "followup"], new=True)
-    log_event_new("boundary", user_obj.id, dose_window_obj.id, medication_id=None)
+    log_event_new("boundary", dose_window_obj.user.id, dose_window_obj.id, medication_id=None)
 
 def send_intro_text(dose_id, manual=False, welcome_back=False):
     dose_obj = Dose.query.get(dose_id)
@@ -1842,15 +1845,16 @@ def send_intro_text(dose_id, manual=False, welcome_back=False):
 
 
 # NEW
-def send_intro_text_new(dose_window_obj, user_obj, manual=False, welcome_back=False):
+def send_intro_text_new(dose_window_obj_id, manual=False, welcome_back=False):
+    dose_window_obj = DoseWindow.query.get(dose_window_obj_id)
     client.messages.create(
-        body=f"{get_initial_message(dose_window_obj.id, get_time_now().astimezone(timezone(user_obj.timezone)).strftime('%I:%M'), welcome_back, user_obj.phone_number)}{ACTION_MENU}",
+        body=f"{get_initial_message(dose_window_obj.id, get_time_now().astimezone(timezone(dose_window_obj.user.timezone)).strftime('%I:%M'), welcome_back, dose_window_obj.user.phone_number)}{ACTION_MENU}",
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-        to=f"+11{user_obj.phone_number}"
+        to=f"+11{dose_window_obj.user.phone_number}"
     )
     reminder_record = EventLog(
         event_type="initial",
-        user_id=user_obj.id,
+        user_id=dose_window_obj.user.id,
         dose_window_id=dose_window_obj.id,
         medication_id=None,
         event_time=get_time_now()
@@ -1858,7 +1862,7 @@ def send_intro_text_new(dose_window_obj, user_obj, manual=False, welcome_back=Fa
     db.session.add(reminder_record)
     db.session.commit()
     scheduler.add_job(f"{dose_window_obj.id}-boundary", send_boundary_text_new,
-        args=[dose_window_obj, user_obj],
+        args=[dose_window_obj.id],
         trigger="date",
         run_date=dose_window_obj.next_end_date if manual else dose_window_obj.next_end_date - timedelta(days=1),  # HACK, assumes this executes after start_date
         misfire_grace_time=5*60
