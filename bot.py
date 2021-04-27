@@ -623,7 +623,7 @@ def pause_service():
     recovered_cookie = request.cookies.get("phoneNumber")
     if recovered_cookie is None:
         return jsonify(), 401  # empty response if no cookie
-    toggle_pause_service_for_phone_number(recovered_cookie)
+    toggle_pause_service_for_phone_number(recovered_cookie, silent=True)
     return jsonify()
 
 
@@ -952,9 +952,9 @@ def port_phone_number():
     # user activation stuff here
     # pause legacy user service
     for phone_number in numbers_to_port:
-        toggle_pause_service_for_phone_number(phone_number)
+        toggle_pause_service_for_phone_number(phone_number, silent=True)
         new_user, _ = get_current_user_and_dose_window(phone_number)
-        new_user.toggle_pause()
+        new_user.toggle_pause((scheduler, send_intro_text_new))
     return jsonify()
 
 
@@ -962,8 +962,8 @@ def port_phone_number():
 def drop_new_tables():
     users = User.query.all()
     for user in users:
-        toggle_pause_service_for_phone_number(user.phone_number)
-        user.toggle_pause()
+        toggle_pause_service_for_phone_number(user.phone_number, silent=True)
+        user.toggle_pause((scheduler, None))
     drop_all_new_tables()
     return jsonify()
 
