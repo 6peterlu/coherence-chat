@@ -509,7 +509,7 @@ def patient_data():
             "activity"
         ]
         combined_list = list(set(take_record_events) | set(user_driven_events))
-        relevant_events = EventLog.query.filter(EventLog.event_type.in_(combined_list), EventLog.user == user).order_by(Event.event_time.asc()).all()
+        relevant_events = EventLog.query.filter(EventLog.event_type.in_(combined_list), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
         dose_history_events = list(filter(lambda event: event.event_type in take_record_events and event.medication in user.doses, relevant_events))
         user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
         event_data_by_time = {}
