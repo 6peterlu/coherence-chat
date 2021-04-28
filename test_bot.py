@@ -109,6 +109,7 @@ def manual_takeover_number(db_session):
     db_session.commit()
     return manual_obj
 
+
 # @pytest.fixture
 # def boundary_reminder_record(db_session, dose_record):
 #     reminder_obj = Reminder(
@@ -125,8 +126,8 @@ def manual_takeover_number(db_session):
 @mock.patch("bot.remove_jobs_helper")
 def test_send_followup_text_live_port(
     remove_jobs_mock, schedule_absent_mock, create_messages_mock,
-    dose_record, user_record, dose_window_record, medication_record,
-    medication_record_2, db_session
+    dose_record, user_record_paused, dose_window_record_for_paused_user, medication_record_for_paused_user,
+    medication_record_for_paused_user_2, db_session
 ):
     send_followup_text(dose_record.id)
     assert remove_jobs_mock.called
@@ -337,7 +338,7 @@ def test_activity_delay(
 @freeze_time("2012-01-1 17:00:01")
 @mock.patch("bot.segment_message")
 @mock.patch("bot.text_fallback")
-def test_not_interpretable_live_port(text_fallback_mock, segment_message_mock, client, db_session, user_record, dose_window_record):
+def test_not_interpretable_live_port(text_fallback_mock, segment_message_mock, client, db_session, user_record_paused, dose_window_record_for_paused_user):
     segment_message_mock.return_value = []
     client.post("/bot", query_string={"From": "+13604508655"})
     assert text_fallback_mock.called
@@ -347,7 +348,7 @@ def test_not_interpretable_live_port(text_fallback_mock, segment_message_mock, c
     all_event_logs = db_session.query(EventLog).all()
     assert len(all_event_logs) == 1
     assert all_event_logs[0].event_type == "not_interpretable"
-    assert all_event_logs[0].dose_window.id is dose_window_record.id
+    assert all_event_logs[0].dose_window.id is dose_window_record_for_paused_user.id
     assert all_event_logs[0].medication is None
 
 
@@ -355,7 +356,7 @@ def test_not_interpretable_live_port(text_fallback_mock, segment_message_mock, c
 @mock.patch("bot.client.messages.create")
 @mock.patch("bot.segment_message")
 @mock.patch("bot.get_thanks_message")
-def test_thanks_live_port(thanks_message_mock, segment_message_mock, create_messages_mock, client, db_session, user_record, dose_window_record):
+def test_thanks_live_port(thanks_message_mock, segment_message_mock, create_messages_mock, client, db_session, user_record_paused, dose_window_record_for_paused_user):
     segment_message_mock.return_value = [{'modifiers': {'emotion': 'excited'}, 'type': 'thanks', "raw": "T. Thanks!"}]
     client.post("/bot", query_string={"From": "+13604508655"})
     assert create_messages_mock.called
@@ -367,7 +368,7 @@ def test_thanks_live_port(thanks_message_mock, segment_message_mock, create_mess
     all_event_logs = db_session.query(EventLog).all()
     assert len(all_event_logs) == 1
     assert all_event_logs[0].event_type == "conversational"
-    assert all_event_logs[0].dose_window.id == dose_window_record.id
+    assert all_event_logs[0].dose_window.id == dose_window_record_for_paused_user.id
     assert all_event_logs[0].medication is None
 
 
@@ -375,7 +376,7 @@ def test_thanks_live_port(thanks_message_mock, segment_message_mock, create_mess
 @mock.patch("bot.segment_message")
 def test_take_without_dose_live_port(
     segment_message_mock, create_messages_mock, client,
-    db_session, user_record
+    db_session, user_record_paused
 ):
     segment_message_mock.return_value = [{'type': 'take', 'modifiers': {'emotion': 'neutral'}, "raw": "T"}]
     client.post("/bot", query_string={"From": "+13604508655"})
@@ -398,7 +399,7 @@ def test_take_without_dose_live_port(
 def test_take_with_dose_live_port(
     take_message_mock, segment_message_mock, create_messages_mock,
     client, db_session, dose_record, initial_reminder_record,
-    user_record, dose_window_record, medication_record, medication_record_2
+    user_record_paused, dose_window_record_for_paused_user, medication_record_for_paused_user, medication_record_for_paused_user_2
 ):
     local_tz = tzlocal.get_localzone()
     segment_message_mock.return_value = [{'type': 'take', 'modifiers': {'emotion': 'neutral'}, "raw": "T"}]
@@ -412,11 +413,11 @@ def test_take_with_dose_live_port(
     all_event_logs = db_session.query(EventLog).all()
     assert len(all_event_logs) == 2
     assert all_event_logs[0].event_type == "take"
-    assert all_event_logs[0].dose_window.id == dose_window_record.id
-    assert all_event_logs[0].medication.id == medication_record.id
+    assert all_event_logs[0].dose_window.id == dose_window_record_for_paused_user.id
+    assert all_event_logs[0].medication.id == medication_record_for_paused_user.id
     assert all_event_logs[1].event_type == "take"
-    assert all_event_logs[1].dose_window.id == dose_window_record.id
-    assert all_event_logs[1].medication.id == medication_record_2.id
+    assert all_event_logs[1].dose_window.id == dose_window_record_for_paused_user.id
+    assert all_event_logs[1].medication.id == medication_record_for_paused_user_2.id
 
 
 # within time range of dose
@@ -427,7 +428,7 @@ def test_take_with_dose_live_port(
 def test_option_3_near_boundary_live_port(
     mock_get_current_end_date, segment_message_mock, create_messages_mock,
     client, db_session, dose_record, initial_reminder_record, scheduler,
-    user_record, dose_window_record, medication_record
+    user_record_paused, dose_window_record_for_paused_user, medication_record_for_paused_user
 ):
     segment_message_mock.return_value = [{'type': 'special', 'payload': '3', "raw": "1"}]
     mock_get_current_end_date.return_value = datetime(2012, 1, 1, 18, tzinfo=utc)
@@ -445,10 +446,10 @@ def test_option_3_near_boundary_live_port(
     all_event_logs = db_session.query(EventLog).all()
     assert len(all_event_logs) == 2
     assert all_event_logs[0].event_type == "requested_time_delay"
-    assert all_event_logs[0].dose_window.id == dose_window_record.id
+    assert all_event_logs[0].dose_window.id == dose_window_record_for_paused_user.id
     assert all_event_logs[0].medication == None
     assert all_event_logs[1].event_type == "reminder_delay"
-    assert all_event_logs[1].dose_window.id == dose_window_record.id
+    assert all_event_logs[1].dose_window.id == dose_window_record_for_paused_user.id
     assert all_event_logs[1].medication == None
 
 # within time range of dose
@@ -460,8 +461,8 @@ def test_option_3_near_boundary_live_port(
 def test_1_hr_delay_live_port(
     mock_get_current_end_date, mock_followup_text, segment_message_mock,
     create_messages_mock, client, db_session, dose_record,
-    initial_reminder_record, scheduler, user_record, dose_window_record,
-    medication_record
+    initial_reminder_record, scheduler, user_record_paused, dose_window_record_for_paused_user,
+    medication_record_for_paused_user
 ):
     segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': datetime(2012, 1, 1, 18, tzinfo=utc), "raw": "1hr"}]
     mock_get_current_end_date.return_value = datetime(2012, 1, 1, 19, tzinfo=utc)
@@ -477,7 +478,7 @@ def test_1_hr_delay_live_port(
     all_event_logs = db_session.query(EventLog).all()
     assert len(all_event_logs) == 1
     assert all_event_logs[0].event_type == "reminder_delay"
-    assert all_event_logs[0].dose_window.id == dose_window_record.id
+    assert all_event_logs[0].dose_window.id == dose_window_record_for_paused_user.id
     assert all_event_logs[0].medication == None
 
 
@@ -489,7 +490,7 @@ def test_1_hr_delay_live_port(
 def test_1_hr_delay_near_boundary_live_port(
     mock_get_current_end_date, mock_followup_text, segment_message_mock,
     create_messages_mock, client, db_session, dose_record,
-    initial_reminder_record, scheduler, user_record, dose_window_record, medication_record
+    initial_reminder_record, scheduler, user_record_paused, dose_window_record_for_paused_user, medication_record_for_paused_user
 ):
     segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': datetime(2012, 1, 1, 18, 0, 1, tzinfo=utc), "raw": "1hr"}]
     mock_get_current_end_date.return_value = datetime(2012, 1, 1, 18, tzinfo=utc)
@@ -505,7 +506,7 @@ def test_1_hr_delay_near_boundary_live_port(
     all_event_logs = db_session.query(EventLog).all()
     assert len(all_event_logs) == 1
     assert all_event_logs[0].event_type == "reminder_delay"
-    assert all_event_logs[0].dose_window.id == dose_window_record.id
+    assert all_event_logs[0].dose_window.id == dose_window_record_for_paused_user.id
     assert all_event_logs[0].medication == None
 
 
@@ -518,7 +519,7 @@ def test_1_hr_delay_near_boundary_live_port(
 def test_activity_delay_live_port(
     mock_randint, mock_get_current_end_date, segment_message_mock,
     create_messages_mock, client, db_session, dose_record,
-    initial_reminder_record, scheduler, user_record, dose_window_record, medication_record
+    initial_reminder_record, scheduler, user_record_paused, dose_window_record_for_paused_user, medication_record_for_paused_user
 ):
     segment_message_mock.return_value = [{'type': 'activity', 'payload': {'type': 'short', 'response': "Computing ideal reminder time...done. Enjoy your walk! We'll check in later.", 'concept': 'leisure'}, 'raw': 'walking'}]
     mock_get_current_end_date.return_value = datetime(2012, 1, 1, 18, tzinfo=utc)
@@ -538,10 +539,10 @@ def test_activity_delay_live_port(
     assert len(all_event_logs) == 2
     assert all_event_logs[0].event_type == "activity"
     assert all_events[0].description == "walking"
-    assert all_event_logs[0].dose_window.id == dose_window_record.id
+    assert all_event_logs[0].dose_window.id == dose_window_record_for_paused_user.id
     assert all_event_logs[0].medication == None
     assert all_event_logs[1].event_type == "reminder_delay"
-    assert all_event_logs[1].dose_window.id == dose_window_record.id
+    assert all_event_logs[1].dose_window.id == dose_window_record_for_paused_user.id
     assert all_event_logs[1].medication == None
 
 
@@ -553,7 +554,7 @@ def test_activity_delay_live_port(
 def test_delay_minutes_live_port(
     mock_get_current_end_date, segment_message_mock, create_messages_mock,
     client, db_session, dose_record, initial_reminder_record, scheduler,
-    user_record, dose_window_record, medication_record
+    user_record_paused, dose_window_record_for_paused_user, medication_record_for_paused_user
 ):
     segment_message_mock.return_value = [{'type': 'delay_minutes', 'payload': 20, "raw": "20"}]
     mock_get_current_end_date.return_value = datetime(2012, 1, 1, 18, tzinfo=utc)
@@ -571,10 +572,10 @@ def test_delay_minutes_live_port(
     all_event_logs = db_session.query(EventLog).all()
     assert len(all_event_logs) == 2
     assert all_event_logs[0].event_type == "requested_time_delay"
-    assert all_event_logs[0].dose_window.id == dose_window_record.id
+    assert all_event_logs[0].dose_window.id == dose_window_record_for_paused_user.id
     assert all_event_logs[0].medication == None
     assert all_event_logs[1].event_type == "reminder_delay"
-    assert all_event_logs[1].dose_window.id == dose_window_record.id
+    assert all_event_logs[1].dose_window.id == dose_window_record_for_paused_user.id
     assert all_event_logs[1].medication == None
 
 
@@ -598,16 +599,16 @@ def test_port_legacy_data(
     assert UserSchema().dump(users[0]) == {
         'events': [
             {
-                'event_type': 'take', 'id': event_logs[0].id, 'event_time': '2012-01-01T17:23:15', 'description': None
+                'event_type': 'take', 'id': event_logs[0].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
             },
             {
-                'event_type': 'take', 'id': event_logs[1].id, 'event_time': '2012-01-01T17:23:15', 'description': None
+                'event_type': 'take', 'id': event_logs[1].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
             },
             {
-                'event_type': 'reminder_delay', 'id': event_logs[2].id, 'event_time': '2012-01-01T17:23:15', 'description': "delayed to 2021-04-25 09:26:20.045841-07:00"
+                'event_type': 'reminder_delay', 'id': event_logs[2].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': "delayed to 2021-04-25 09:26:20.045841-07:00"
             },
             {
-                'event_type': 'conversational', 'id': event_logs[3].id, 'event_time': '2012-01-01T17:23:15', 'description': None
+                'event_type': 'conversational', 'id': event_logs[3].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
             },
         ],
         'phone_number': '3604508655',
@@ -656,7 +657,7 @@ def test_port_legacy_data(
         'active': True,
         'events': [
             {
-                'event_type': 'take', 'id': event_logs[0].id, 'event_time': '2012-01-01T17:23:15', 'description': None
+                'event_type': 'take', 'id': event_logs[0].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
             }
         ],
     }
@@ -683,7 +684,7 @@ def test_port_legacy_data(
         'active': True,
         'events': [
             {
-                'event_type': 'take', 'id': event_logs[1].id, 'event_time': '2012-01-01T17:23:15', 'description': None
+                'event_type': 'take', 'id': event_logs[1].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
             }
         ],
     }
@@ -706,10 +707,10 @@ def test_port_legacy_data(
         },
         'events': [
             {
-                'event_type': 'take', 'id': event_logs[0].id, 'event_time': '2012-01-01T17:23:15', 'description': None
+                'event_type': 'take', 'id': event_logs[0].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
             },
             {
-                'event_type': 'take', 'id': event_logs[1].id, 'event_time': '2012-01-01T17:23:15', 'description': None
+                'event_type': 'take', 'id': event_logs[1].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
             }
         ],
         'start_hour': 16,
@@ -734,7 +735,7 @@ def test_port_legacy_data(
             'paused': True,
             'name': 'Peter'
         },
-        'event_time': '2012-01-01T17:23:15',
+        'event_time': '2012-01-01T17:23:15+00:00',
         'medication': {
             'medication_name': 'Keppra',
             'active': True,
@@ -762,7 +763,7 @@ def test_port_legacy_data(
             'paused': True,
             'name': 'Peter'
         },
-        'event_time': '2012-01-01T17:23:15',
+        'event_time': '2012-01-01T17:23:15+00:00',
         'medication': {
             'medication_name': 'Glipizide',
             'active': True,
@@ -783,7 +784,7 @@ def test_port_legacy_data(
             'paused': True,
             'name': 'Peter'
         },
-        'event_time': '2012-01-01T17:23:15',
+        'event_time': '2012-01-01T17:23:15+00:00',
         'medication': None,
         'event_type': 'reminder_delay'
     }
@@ -799,12 +800,12 @@ def test_port_legacy_data(
             'paused': True,
             'name': 'Peter'
         },
-        'event_time': '2012-01-01T17:23:15',
+        'event_time': '2012-01-01T17:23:15+00:00',
         'medication': None,
         'event_type': 'conversational'
     }
 
 
-def test_drop_all_new_tables(db_session, user_record, dose_window_record, medication_record):
+def test_drop_all_new_tables(db_session, user_record_paused, dose_window_record_for_paused_user, medication_record_for_paused_user):
     drop_all_new_tables()
     assert len(db_session.query(User).all()) == 0

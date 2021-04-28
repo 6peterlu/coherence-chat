@@ -55,6 +55,16 @@ class User(db.Model):
         end_of_day = start_of_day + timedelta(days=1)
         return start_of_day, end_of_day
 
+    def resume(self, scheduler, func_to_schedule):
+        self.paused = False
+        for dose_window in self.dose_windows:
+            if dose_window.active:
+                dose_window.schedule_initial_job(scheduler, func_to_schedule)
+
+    def pause(self, scheduler):
+        self.paused = True
+        for dose_window in self.dose_windows:
+            dose_window.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
 
 class DoseWindow(db.Model):
     __tablename__ = 'dose_window'
@@ -89,22 +99,23 @@ class DoseWindow(db.Model):
         # need a scheduler object to take actions
         if scheduler_tuple is not None:
             scheduler, func_to_schedule = scheduler_tuple
-            if self.active and scheduler_tuple and self.medications:
+            if self.active and scheduler_tuple and self.medications and not self.user.paused:
                 self.schedule_initial_job(scheduler, func_to_schedule)
             if not self.active and scheduler_tuple:
-                self.remove_jobs(scheduler)
+                self.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
 
 
     def schedule_initial_job(self, scheduler, func_to_schedule):
-        scheduler.add_job(
-            f"{self.id}-initial-new",
-            func_to_schedule,
-            trigger="interval",
-            start_date=self.next_start_date,
-            days=1,
-            args=[self.id],
-            misfire_grace_time=5*60
-        )
+        if scheduler.get_job(f"{self.id}-initial-new") is None and not self.user.paused:
+            scheduler.add_job(
+                f"{self.id}-initial-new",
+                func_to_schedule,
+                trigger="interval",
+                start_date=self.next_start_date,
+                days=1,
+                args=[self.id],
+                misfire_grace_time=5*60
+            )
 
     def remove_jobs(self, scheduler, jobs_list):
         for job in jobs_list:
@@ -183,8 +194,8 @@ def associate_medication_with_dose_window(medication, dose_window, scheduler_tup
     medication.dose_windows.append(dose_window)
     if scheduler_tuple:
         scheduler, func_to_schedule = scheduler_tuple
-        if not dose_window.jobs_scheduled(scheduler):
-            dose_window.schedule_initial_job(scheduler, func_to_schedule)
+        print("calling schedule initial job")
+        dose_window.schedule_initial_job(scheduler, func_to_schedule)
 
 
 def dissociate_medication_from_dose_window(scheduler, medication, dose_window):

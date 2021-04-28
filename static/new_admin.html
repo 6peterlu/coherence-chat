@@ -123,7 +123,7 @@
                 let doseEndTime = new Date();
                 doseStartTime.setUTCHours(doseWindow.start_hour, doseWindow.start_minute)
                 doseEndTime.setUTCHours(doseWindow.end_hour, doseWindow.end_minute)
-                htmlOut += `<p style="padding-left: 20px;">${doseStartTime.getHours()}:${checkTime(doseStartTime.getMinutes())}->${doseEndTime.getHours()}:${checkTime(doseEndTime.getMinutes())}</p>`
+                htmlOut += `<p style="padding-left: 20px;">${doseWindow.id} | ${doseStartTime.getHours()}:${checkTime(doseStartTime.getMinutes())}->${doseEndTime.getHours()}:${checkTime(doseEndTime.getMinutes())}</p>`
                 htmlOut += `<p style="padding-left: 40px;">Medications: ${doseWindow.medications.map((medication) => {return medication.medication_name != "" ? medication.medication_name : "No name provided"}).join(", ")}`
             }
             htmlOut += "</div>";

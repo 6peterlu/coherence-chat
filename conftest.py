@@ -94,6 +94,7 @@ def user_record_with_manual_takeover(db_session):
     db_session.commit()
     return user_obj
 
+
 @pytest.fixture
 def dose_window_record(db_session, user_record):
     dose_window_obj = DoseWindow(
@@ -106,6 +107,7 @@ def dose_window_record(db_session, user_record):
     db_session.add(dose_window_obj)
     db_session.commit()
     return dose_window_obj
+
 
 @pytest.fixture
 def dose_window_record_out_of_range(db_session, user_record):
@@ -142,6 +144,60 @@ def medication_record_2(db_session, dose_window_record, user_record, scheduler):
         user_id=user_record.id,
         medication_name="Lisinopril",
         dose_windows=[dose_window_record],
+        scheduler_tuple=(scheduler, test_scheduled_function)
+    )
+    db_session.add(medication_obj)
+    db_session.commit()
+    return medication_obj
+
+
+
+@pytest.fixture
+def user_record_paused(db_session):
+    user_obj = User(
+        phone_number="3604508655",
+        name="Peter",
+        paused=True
+    )
+    db_session.add(user_obj)
+    db_session.commit()
+    return user_obj
+
+
+@pytest.fixture
+def dose_window_record_for_paused_user(db_session, user_record_paused):
+    dose_window_obj = DoseWindow(
+        start_hour=9+7,
+        start_minute=0,
+        end_hour=11+7,
+        end_minute=0,
+        user_id=user_record_paused.id
+    )
+    db_session.add(dose_window_obj)
+    db_session.commit()
+    return dose_window_obj
+
+def test_scheduled_function(*_):
+    pass
+
+@pytest.fixture
+def medication_record_for_paused_user(db_session, dose_window_record_for_paused_user, user_record_paused, scheduler):
+    medication_obj = Medication(
+        user_id=user_record_paused.id,
+        medication_name="Zoloft",
+        dose_windows=[dose_window_record_for_paused_user],
+        scheduler_tuple=(scheduler, test_scheduled_function)
+    )
+    db_session.add(medication_obj)
+    db_session.commit()
+    return medication_obj
+
+@pytest.fixture
+def medication_record_for_paused_user_2(db_session, dose_window_record_for_paused_user, user_record_paused, scheduler):
+    medication_obj = Medication(
+        user_id=user_record_paused.id,
+        medication_name="Lisinopril",
+        dose_windows=[dose_window_record_for_paused_user],
         scheduler_tuple=(scheduler, test_scheduled_function)
     )
     db_session.add(medication_obj)

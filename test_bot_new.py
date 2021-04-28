@@ -40,21 +40,13 @@ def test_get_all_data_for_user(
 
 
 @mock.patch("bot.segment_message")
-def test_unexpected_phone_number(segment_message_mock, client, db_session):
-    segment_message_mock.return_value = []
-    client.post("/bot", query_string={"From": "+13604508655"})
-    all_events = db_session.query(EventLog).all()
-    assert len(all_events) == 1
-    assert all_events[0].event_type == "unexpected_phone_number"
-    assert all_events[0].description == "3604508655"
-
-
-@mock.patch("bot.segment_message")
 @mock.patch("bot.text_fallback")
+# @mock.patch("bot.client.messages.create")
 def test_not_interpretable(text_fallback_mock, segment_message_mock, client, db_session, user_record):
     segment_message_mock.return_value = []
     client.post("/bot", query_string={"From": "+13604508655", "Body": "blah"})
     assert text_fallback_mock.called
+    # assert create_messages_mock.called
     all_events = db_session.query(EventLog).all()
     assert len(all_events) == 1
     assert all_events[0].event_type == "not_interpretable"
