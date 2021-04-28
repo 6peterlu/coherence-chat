@@ -969,6 +969,7 @@ def drop_new_tables():
             print("pausing user")
             user.toggle_pause((scheduler, None))
         for dose_window in user.dose_windows:
+            print(dose_window.active)
             if scheduler.get_job(f"{dose_window.id}-initial-new") is not None:
                 scheduler.remove_job(f"{dose_window.id}-initial-new")
     drop_all_new_tables()
