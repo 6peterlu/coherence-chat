@@ -962,12 +962,19 @@ def port_phone_number():
 
 @app.route("/admin/dropNewTables", methods=["POST"])
 def drop_new_tables():
-    users = User.query.all()
-    for user in users:
-        if PausedService.query.filter(PausedService.phone_number == f"+11{user.phone_number}").one_or_none() is not None:
-            toggle_pause_service_for_phone_number(user.phone_number, silent=True)
+    phone_number_to_port = request.json["phoneNumber"]
+    if phone_number_to_port:
+        if PausedService.query.filter(PausedService.phone_number == f"+11{phone_number_to_port}").one_or_none() is not None:
+            toggle_pause_service_for_phone_number(phone_number_to_port, silent=True)
+        user, _ = get_current_user_and_dose_window(phone_number_to_port)
         user.pause(scheduler)
-    drop_all_new_tables()
+    else:
+        users = User.query.all()
+        for user in users:
+            if PausedService.query.filter(PausedService.phone_number == f"+11{user.phone_number}").one_or_none() is not None:
+                toggle_pause_service_for_phone_number(user.phone_number, silent=True)
+            user.pause(scheduler)
+    drop_all_new_tables(phone_number=phone_number_to_port)
     return jsonify()
 
 @app.route('/bot', methods=['POST'])
@@ -1682,7 +1689,7 @@ def maybe_schedule_absent(dose_id):
 
 # NEW
 def maybe_schedule_absent_new(dose_window_obj):
-    end_date = dose_window_obj.id.next_end_date - timedelta(days=1)
+    end_date = dose_window_obj.next_end_date - timedelta(days=1)
     desired_absent_reminder = min(get_time_now() + timedelta(minutes=random.randint(45,75)), end_date - timedelta(minutes=BUFFER_TIME_MINS))
     # room to schedule absent
     if desired_absent_reminder > get_time_now():
@@ -1740,15 +1747,6 @@ def send_followup_text_new(dose_window_obj_id):
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
             to=f"+11{dose_window_obj.user.phone_number}"
         )
-    reminder_record = EventLog(
-        event_type="followup",
-        user_id=dose_window_obj.user.id,
-        dose_window_id=dose_window_obj.id,
-        medication_id=None,
-        event_time=get_time_now()
-    )
-    db.session.add(reminder_record)
-    db.session.commit()
     remove_jobs_helper(dose_window_obj.id, ["absent", "followup"], new=True)
     maybe_schedule_absent_new(dose_window_obj)
     log_event_new("followup", dose_window_obj.user.id, dose_window_obj.id, medication_id=None)
@@ -1777,15 +1775,6 @@ def send_absent_text_new(dose_window_obj_id):
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=f"+11{dose_window_obj.user.phone_number}"
     )
-    reminder_record = EventLog(
-        event_type="absent",
-        user_id=dose_window_obj.user.id,
-        dose_window_id=dose_window_obj.id,
-        medication_id=None,
-        event_time=get_time_now()
-    )
-    db.session.add(reminder_record)
-    db.session.commit()
     remove_jobs_helper(dose_window_obj.id, ["absent", "followup"], new=True)
     maybe_schedule_absent_new(dose_window_obj)
     log_event_new("absent", dose_window_obj.user.id, dose_window_obj.id, medication_id=None)
@@ -1813,15 +1802,6 @@ def send_boundary_text_new(dose_window_obj_id):
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=f"+11{dose_window_obj.user.phone_number}"
     )
-    reminder_record = EventLog(
-        event_type="boundary",
-        user_id=dose_window_obj.user.id,
-        dose_window_id=dose_window_obj.id,
-        medication_id=None,
-        event_time=get_time_now()
-    )
-    db.session.add(reminder_record)
-    db.session.commit()
     remove_jobs_helper(dose_window_obj.id, ["absent", "followup"], new=True)
     log_event_new("boundary", dose_window_obj.user.id, dose_window_obj.id, medication_id=None)
 
@@ -1854,15 +1834,6 @@ def send_intro_text_new(dose_window_obj_id, manual=False, welcome_back=False):
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=f"+11{dose_window_obj.user.phone_number}"
     )
-    reminder_record = EventLog(
-        event_type="initial",
-        user_id=dose_window_obj.user.id,
-        dose_window_id=dose_window_obj.id,
-        medication_id=None,
-        event_time=get_time_now()
-    )
-    db.session.add(reminder_record)
-    db.session.commit()
     scheduler.add_job(f"{dose_window_obj.id}-boundary", send_boundary_text_new,
         args=[dose_window_obj.id],
         trigger="date",
@@ -1870,6 +1841,7 @@ def send_intro_text_new(dose_window_obj_id, manual=False, welcome_back=False):
         misfire_grace_time=5*60
     )
     maybe_schedule_absent_new(dose_window_obj)
+    log_event_new("initial", dose_window_obj.user.id, dose_window_obj.id)
 
 def scheduler_error_alert(event):
     if "NOALERTS" not in os.environ:
@@ -2101,12 +2073,16 @@ def port_legacy_data(phone_numbers_to_port, names, patient_dose_map):
     db.session.commit()
 
 
-def drop_all_new_tables():
-    models_to_drop = [
-        User, DoseWindow, Medication, EventLog
-    ]
-    for model in models_to_drop:
-        model.query.delete()
+def drop_all_new_tables(user=None):
+    # drop only records for this user
+    if user:
+        db.session.delete(user)
+    else:
+        models_to_drop = [
+            User, DoseWindow, Medication, EventLog
+        ]
+        for model in models_to_drop:
+            model.query.delete()
     db.session.commit()
 
 

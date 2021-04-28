@@ -1,3 +1,4 @@
+from bot import maybe_schedule_absent_new, send_absent_text_new, send_followup_text_new, send_intro_text_new
 import pytest
 from unittest import mock
 import os
@@ -690,3 +691,47 @@ def test_activity_out_of_range(
     assert all_events[0].dose_window_id is None
     assert all_events[0].medication_id is None
     assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 17, tzinfo=utc)
+
+
+@mock.patch("bot.remove_jobs_helper")
+@mock.patch("bot.maybe_schedule_absent_new")
+def test_send_followup_text_new(mock_remove_jobs, mock_maybe_schedule_absent, dose_window_record, db_session):
+    send_followup_text_new(dose_window_record.id)
+    assert mock_remove_jobs.called
+    assert mock_maybe_schedule_absent.called
+    all_event_logs = db_session.query(EventLog).all()
+    assert len(all_event_logs) == 1
+    assert all_event_logs[0].event_type == "followup"
+
+@mock.patch("bot.remove_jobs_helper")
+@mock.patch("bot.client.messages.create")
+def test_send_intro_text_new(mock_message_create, mock_remove_jobs, dose_window_record, db_session):
+    send_intro_text_new(dose_window_record.id)
+    assert mock_message_create.called
+    all_event_logs = db_session.query(EventLog).all()
+    assert len(all_event_logs) == 1
+    assert all_event_logs[0].event_type == "initial"
+
+@mock.patch("bot.remove_jobs_helper")
+@mock.patch("bot.maybe_schedule_absent_new")
+@mock.patch("bot.client.messages.create")
+def test_send_absent_text_new(
+    mock_message_create, mock_maybe_schedule_absent,
+    mock_remove_jobs, dose_window_record, db_session
+):
+    send_absent_text_new(dose_window_record.id)
+    assert mock_message_create.called
+    assert mock_maybe_schedule_absent.called
+    all_event_logs = db_session.query(EventLog).all()
+    assert len(all_event_logs) == 1
+    assert all_event_logs[0].event_type == "absent"
+
+@freeze_time("2012-01-01 17:00:00")
+@mock.patch("bot.random.randint")
+def test_maybe_schedule_absent_new(mock_randint, dose_window_record, db_session, scheduler):
+    mock_randint.return_value = 45
+    maybe_schedule_absent_new(dose_window_record)
+    scheduled_job = scheduler.get_job(f"{dose_window_record.id}-absent-new")
+    assert scheduled_job is not None
+    assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 45, tzinfo=utc)
+

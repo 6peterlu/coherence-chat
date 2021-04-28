@@ -154,7 +154,8 @@
             });
         }
         const dropAllNewTables = () => {
-            post("admin/dropNewTables", {}).then(response => response.json()).then(result => {
+            const phoneNumber = document.getElementById("phoneNumberEntry").value;
+            post("admin/dropNewTables", { phoneNumber }).then(response => response.json()).then(result => {
                 refreshData();
             });
         }
