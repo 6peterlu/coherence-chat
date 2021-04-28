@@ -965,9 +965,8 @@ def drop_new_tables():
     users = User.query.all()
     for user in users:
         toggle_pause_service_for_phone_number(user.phone_number, silent=True)
-        if not user.paused:
-            print("pausing user")
-            user.toggle_pause((scheduler, None))
+        print("pausing user")
+        user.toggle_pause((scheduler, None))
         for dose_window in user.dose_windows:
             print(dose_window.active)
             if scheduler.get_job(f"{dose_window.id}-initial-new") is not None:
