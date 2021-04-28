@@ -1651,7 +1651,7 @@ def end_manual_takeover():
         db.session.commit()
     return jsonify()
 
-# TODO: rewrite
+# TODO: start here
 @app.route("/manual/text", methods=["POST"])
 @auth_required_post_delete
 def manual_send_text():
