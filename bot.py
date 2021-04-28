@@ -517,8 +517,8 @@ def patient_data():
             if time_of_day not in event_data_by_time:
                 event_data_by_time[time_of_day] = {"events": []}
             event_data_by_time[time_of_day]["events"].append(EventLogSchema().dump(event))
-        for dose_window in user.dose_windows:
-            event_data_by_time[get_time_of_day(dose_window)]["dose"] = DoseWindowSchema().dump(dose_window)
+        for current_dose_window in user.dose_windows:
+            event_data_by_time[get_time_of_day(current_dose_window)]["dose"] = DoseWindowSchema().dump(current_dose_window)
         paused_service = PausedService.query.get(phone_number)
         behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
         dose_to_take_now = False
