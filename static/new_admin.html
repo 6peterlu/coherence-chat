@@ -132,7 +132,7 @@
                             <option value="followup">followup</option>
                             <option value="initial">initial</option>
                         </select>
-                        <input id="manualEventTime" type="datetime-local" style="margin: 5px;"/>
+                        <input id="manualEventTime-${doseWindow.id}" type="datetime-local" style="margin: 5px;"/>
                         <button id="scheduleManualReminder" onclick="scheduleManualReminder(\'${doseWindow.id}\')" style="margin: 5px;">Send manual reminder</button>
                     </div>
                 `;
@@ -205,6 +205,15 @@
                     document.getElementById(`conversationHistory-${userId}`).innerHTML = html;
                 });
             };
+        }
+        const sendManualReminder = (doseWindowId) => {
+            const reminderType = document.getElementById(`reminderType-${doseWindow.id}`).value;
+            const manualTime = document.getElementById(`manualEventTime-${doseWindow.id}`).value;
+            post("manual", { reminderType, doseWindowId, manualTime }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
         }
         refreshData();
     </script>

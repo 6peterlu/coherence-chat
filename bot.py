@@ -1656,6 +1656,48 @@ def manual_send():
             )
     return jsonify()
 
+
+# TODO: unit test
+@app.route("/admin/manual", methods=["POST"])
+def manual_send():
+    incoming_data = request.json
+    dose_window_id = int(incoming_data["doseWindowId"])
+    reminder_type = incoming_data["reminderType"]
+    manual_time = incoming_data["manualTime"]
+    if not manual_time:
+        if reminder_type == "absent":
+            send_absent_text_new(dose_window_id)
+        elif reminder_type == "followup":
+            send_followup_text_new(dose_window_id)
+        elif reminder_type == "initial":
+            send_intro_text_new(dose_window_id)
+    else:
+        event_time_obj = datetime.strptime(manual_time, "%Y-%m-%dT%H:%M")
+        if os.environ["FLASK_ENV"] != "local":
+            event_time_obj += timedelta(hours=7)  # HACK to transform to UTC
+        if reminder_type == "absent":
+            scheduler.add_job(f"{dose_window_id}-absent", send_absent_text_new,
+                args=[dose_window_id],
+                trigger="date",
+                run_date=event_time_obj,  # HACK, assumes this executes after start_date
+                misfire_grace_time=5*60
+            )
+        elif reminder_type == "followup":
+            scheduler.add_job(f"{dose_window_id}-followup", send_followup_text_new,
+                args=[dose_window_id],
+                trigger="date",
+                run_date=event_time_obj,  # HACK, assumes this executes after start_date
+                misfire_grace_time=5*60
+            )
+        elif reminder_type == "initial":
+            scheduler.add_job(f"{dose_window_id}-initial", send_intro_text_new,
+                args=[dose_window_id],
+                trigger="date",
+                run_date=event_time_obj,  # HACK, assumes this executes after start_date
+                misfire_grace_time=5*60
+            )
+    return jsonify()
+
 # TODO: rewrite
 @app.route("/manual/takeover", methods=["POST"])
 @auth_required_post_delete
