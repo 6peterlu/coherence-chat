@@ -522,6 +522,7 @@ def patient_data():
         paused_service = PausedService.query.get(phone_number)
         behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
         dose_to_take_now = False
+        print(dose_window.within_dosing_period())
         if dose_window and dose_window.within_dosing_period():
             for medication in dose_window.medications:
                 if not medication.is_recorded_for_today(dose_window):

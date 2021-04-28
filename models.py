@@ -146,6 +146,9 @@ class DoseWindow(db.Model):
 
     def within_dosing_period(self, time=None):
         time_to_compare = get_time_now() if time is None else time
+        print(self.next_start_date - timedelta(days=1))
+        print(time_to_compare)
+        print(self.next_end_date - timedelta(days=1))
         # boundary condition
         return self.next_end_date - timedelta(days=1) > time_to_compare and self.next_start_date - timedelta(days=1) < time_to_compare
 
