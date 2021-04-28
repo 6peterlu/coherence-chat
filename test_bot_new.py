@@ -735,3 +735,13 @@ def test_maybe_schedule_absent_new(mock_randint, dose_window_record, db_session,
     assert scheduled_job is not None
     assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 45, tzinfo=utc)
 
+
+# /admin tests
+# TODO: finish this
+# @freeze_time("2012-01-01 17:00:00")
+# def test_manual_send_reminder(dose_window_record, db_session, scheduler, client):
+#     client.post("/admin/manual", body={
+#         "doseWindowId": str(dose_window_record.id),
+#         "reminderType": "initial",
+#         "manual_time": datetime
+#     })

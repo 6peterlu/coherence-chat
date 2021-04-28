@@ -164,7 +164,7 @@ def test_send_followup_text_live_port(
     assert len(all_event_logs) == 2
 
 
-
+# /bot tests
 @mock.patch("bot.segment_message")
 @mock.patch("bot.text_fallback")
 def test_not_interpretable(text_fallback_mock, segment_message_mock, client, db_session):

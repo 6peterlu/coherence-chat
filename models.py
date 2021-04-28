@@ -174,6 +174,9 @@ class Medication(db.Model):
 
     def is_recorded_for_today(self, dose_window_obj):
         start_of_day, end_of_day = self.user.current_day_bounds
+        print("is recorded for today")
+        print(start_of_day)
+        print(end_of_day)
         relevant_medication_history_records = EventLog.query.filter(
             EventLog.dose_window_id == dose_window_obj.id,
             EventLog.medication_id == self.id,

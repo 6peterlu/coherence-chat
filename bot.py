@@ -1659,7 +1659,7 @@ def manual_send():
 
 # TODO: unit test
 @app.route("/admin/manual", methods=["POST"])
-def manual_send():
+def manual_send_reminder():
     incoming_data = request.json
     dose_window_id = int(incoming_data["doseWindowId"])
     reminder_type = incoming_data["reminderType"]
