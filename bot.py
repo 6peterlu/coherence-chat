@@ -964,7 +964,7 @@ def port_phone_number():
 def drop_new_tables():
     users = User.query.all()
     for user in users:
-        if PausedService.query.filter(PausedService.phone_number == f"+11{phone_number}").one_or_none() is not None:
+        if PausedService.query.filter(PausedService.phone_number == f"+11{user.phone_number}").one_or_none() is not None:
             toggle_pause_service_for_phone_number(user.phone_number, silent=True)
         user.pause(scheduler)
         # for dose_window in user.dose_windows:
