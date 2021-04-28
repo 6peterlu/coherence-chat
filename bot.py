@@ -469,7 +469,7 @@ def get_time_of_day(dose_window_obj):
     local_start_date = dose_window_obj.next_start_date.astimezone(timezone(user.timezone))
     if local_start_date.hour > 2 and local_start_date.hour < 12:
         return "morning"
-    elif local_start_date.hour >= 12 and local_start_date.hour < 6:
+    elif local_start_date.hour >= 12 and local_start_date.hour < 18:
         return "afternoon"
     return "evening"
 
