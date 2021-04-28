@@ -59,8 +59,8 @@ class User(db.Model):
         self.paused = not self.paused
         for dose_window in self.dose_windows:
             # TODO: this causes a breakage, figure out why
-            if self.paused:
-                dose_window.remove_jobs(scheduler_tuple[0], ["initial", "followup", "boundary", "absent"])
+            # if self.paused:
+            dose_window.remove_jobs(scheduler_tuple[0], ["initial", "followup", "boundary", "absent"])
             if dose_window.active:
                 if self.paused:
                     print("removing jobs")

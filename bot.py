@@ -968,6 +968,8 @@ def drop_new_tables():
         if not user.paused:
             print("pausing user")
             user.toggle_pause((scheduler, None))
+        for dose_window in user.dose_windows:
+            scheduler.remove_job(f"{dose_window.id}-initial-new")
     drop_all_new_tables()
     return jsonify()
 
