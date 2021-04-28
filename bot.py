@@ -955,7 +955,7 @@ def port_phone_number():
     for phone_number in numbers_to_port:
         toggle_pause_service_for_phone_number(phone_number, silent=True)
         new_user, _ = get_current_user_and_dose_window(phone_number)
-        new_user.resume()
+        new_user.resume(scheduler, send_intro_text_new)
     return jsonify()
 
 
