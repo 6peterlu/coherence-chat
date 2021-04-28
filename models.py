@@ -55,21 +55,16 @@ class User(db.Model):
         end_of_day = start_of_day + timedelta(days=1)
         return start_of_day, end_of_day
 
-    def toggle_pause(self, scheduler_tuple):
-        print("toggle pause")
-        print(self.paused)
-        self.paused = not self.paused
-        print(self.dose_windows)
-        print(self.paused)
-        print("end toggle pause")
+    def resume(self, scheduler, func_to_schedule):
+        self.paused = False
         for dose_window in self.dose_windows:
-            # putting it here causes breakage
             if dose_window.active:
-                if self.paused:
-                    dose_window.remove_jobs(scheduler_tuple[0], ["initial", "followup", "boundary", "absent"])
-                    print("removing jobs")
-                else:
-                    dose_window.schedule_initial_job(*scheduler_tuple)
+                dose_window.schedule_initial_job(scheduler, func_to_schedule)
+
+    def pause(self, scheduler):
+        self.paused = True
+        for dose_window in self.dose_windows:
+            dose_window.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
 
 class DoseWindow(db.Model):
     __tablename__ = 'dose_window'

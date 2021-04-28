@@ -112,9 +112,9 @@ def test_dose_window_scheduler(dose_window_record, medication_record, scheduler)
 
 def test_toggle_user_pause(dose_window_record_for_paused_user, user_record_paused, medication_record_for_paused_user, scheduler):
     assert scheduler.get_job(f"{dose_window_record_for_paused_user.id}-initial-new") is None
-    user_record_paused.toggle_pause((scheduler, test_function))
+    user_record_paused.resume(scheduler, test_function)
     assert scheduler.get_job(f"{dose_window_record_for_paused_user.id}-initial-new") is not None
-    user_record_paused.toggle_pause((scheduler, None))
+    user_record_paused.pause(scheduler)
     assert scheduler.get_job(f"{dose_window_record_for_paused_user.id}-initial-new") is None
 
 
