@@ -525,11 +525,8 @@ def patient_data():
         if dose_window:
             for medication in dose_window.medications:
                 if not medication.is_recorded_for_today(dose_window):
-                    print("medication wasnt taken yet")
-                    print(medication)
                     dose_to_take_now = True
                     break
-
     else:
         patient_dose_times = PATIENT_DOSE_MAP[phone_number]
         relevant_dose_ids = list(chain.from_iterable(patient_dose_times.values()))
