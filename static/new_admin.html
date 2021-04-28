@@ -130,7 +130,7 @@
             // controls div
             htmlOut += "<div>";
             htmlOut += `<input id="customTextMessage-${userData.user.id}" />`
-            htmlOut += `<button id="sendCustomText(\'${userData.user.id}\')">Send text</button>`
+            htmlOut += `<button onclick="sendCustomText(\'${userData.user.id}\', '${userData.user.phone_number}')">Send text</button>`
             htmlOut += "</div>";
             // closing tag
             htmlOut += "</div>";
@@ -165,6 +165,10 @@
             post("admin/dropNewTables", { phoneNumber }).then(response => response.json()).then(result => {
                 refreshData();
             });
+        }
+        const sendCustomText = (userId, phoneNumber) => {
+            const text = document.getElementById(`customTextMessage-${userId}`).value;
+            post("admin/text", { phoneNumber, text })
         }
         refreshData();
     </script>

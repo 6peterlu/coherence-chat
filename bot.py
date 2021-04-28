@@ -1669,6 +1669,19 @@ def manual_send_text():
     log_event("manual_text", f"+11{target_phone_number}", description=text)
     return jsonify()
 
+@app.route("/admin/text", methods=["POST"])
+def manual_send_text():
+    incoming_data = request.json
+    target_phone_number = incoming_data["phoneNumber"]
+    text = incoming_data["text"]
+    client.messages.create(
+        body=text,
+        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+        to=f"+1{target_phone_number}"
+    )
+    log_event("manual_text", f"+11{target_phone_number}", description=text)
+    return jsonify()
+
 def get_online_status():
     online_record = Online.query.filter_by(id=1).one_or_none()
     if online_record is None:
