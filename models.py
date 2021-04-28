@@ -183,6 +183,7 @@ class Medication(db.Model):
             EventLog.event_time > start_of_day,
             EventLog.event_time < end_of_day
         ).all()
+        print(relevant_medication_history_records)
         return len(relevant_medication_history_records) > 0
 
 

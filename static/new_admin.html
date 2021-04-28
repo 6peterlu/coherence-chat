@@ -137,7 +137,7 @@
                     </div>
                 `;
                 htmlOut += "</div>";
-                htmlOut += `<p style="padding-left: 40px;">Medications: ${doseWindow.medications.map((medication) => {return medication.medication_name != "" ? medication.medication_name : "No name provided"}).join(", ")}`
+                htmlOut += `<p style="padding-left: 40px;">Medications: ${doseWindow.medications.map((medication) => {return `${medication.id} | ${medication.medication_name != "" ? medication.medication_name : "No name provided"}`}).join(", ")}`
             }
             htmlOut += "</div>";
             // controls div
