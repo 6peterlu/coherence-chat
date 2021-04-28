@@ -2010,7 +2010,7 @@ def port_legacy_data(phone_numbers_to_port, names, patient_dose_map):
     for phone_number in phone_numbers_to_port:
         # initialize users to paused for now to protect scheduler DB
         legacy_pause = PausedService.query.filter(PausedService.phone_number == f"+11{phone_number}").one_or_none()
-        user_obj = User(phone_number, names[f"+11{phone_number}"], paused=legacy_pause is not None)
+        user_obj = User(phone_number, names[f"+11{phone_number}"], paused=legacy_pause is None)  # start as the opposite config
         db.session.add(user_obj)
         db.session.flush()  # populate user_id
         formatted_phone_number = f"+11{phone_number}"
