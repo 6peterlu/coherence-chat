@@ -56,9 +56,12 @@ class User(db.Model):
         return start_of_day, end_of_day
 
     def toggle_pause(self, scheduler_tuple):
+        print("toggle pause")
+        print(self.paused)
         self.paused = not self.paused
         print(self.dose_windows)
         print(self.paused)
+        print("end toggle pause")
         for dose_window in self.dose_windows:
             # putting it here causes breakage
             if dose_window.active:
