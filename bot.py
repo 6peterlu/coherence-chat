@@ -1050,6 +1050,7 @@ def bot():
                                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                 to=incoming_phone_number
                             )
+                            remove_jobs_helper(dose_window.id, ["absent", "followup", "boundary"], new=True)
                     else:
                         log_event_new("out_of_range", user.id, None, None, description=incoming_msg["raw"])
                         client.messages.create(
@@ -1083,6 +1084,7 @@ def bot():
                                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                 to=incoming_phone_number
                             )
+                            remove_jobs_helper(dose_window.id, ["absent", "followup", "boundary"], new=True)
                     else:
                         log_event_new("out_of_range", user.id, None, None, description=incoming_msg["raw"])
                         client.messages.create(
