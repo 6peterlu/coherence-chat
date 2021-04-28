@@ -966,6 +966,7 @@ def drop_new_tables():
     for user in users:
         toggle_pause_service_for_phone_number(user.phone_number, silent=True)
         if not user.paused:
+            print("pausing user")
             user.toggle_pause((scheduler, None))
     drop_all_new_tables()
     return jsonify()
