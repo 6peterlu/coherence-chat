@@ -1670,7 +1670,7 @@ def manual_send_text():
     return jsonify()
 
 @app.route("/admin/text", methods=["POST"])
-def manual_send_text():
+def admin_send_text():
     incoming_data = request.json
     target_phone_number = incoming_data["phoneNumber"]
     text = incoming_data["text"]
