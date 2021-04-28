@@ -953,7 +953,8 @@ def port_phone_number():
     # user activation stuff here
     # pause legacy user service
     for phone_number in numbers_to_port:
-        toggle_pause_service_for_phone_number(phone_number, silent=True)
+        if PausedService.query.filter(PausedService.phone_number == f"+11{phone_number}").one_or_none() is None:
+            toggle_pause_service_for_phone_number(phone_number, silent=True)
         new_user, _ = get_current_user_and_dose_window(phone_number)
         new_user.resume(scheduler, send_intro_text_new)
     return jsonify()
@@ -963,7 +964,8 @@ def port_phone_number():
 def drop_new_tables():
     users = User.query.all()
     for user in users:
-        toggle_pause_service_for_phone_number(user.phone_number, silent=True)
+        if PausedService.query.filter(PausedService.phone_number == f"+11{phone_number}").one_or_none() is not None:
+            toggle_pause_service_for_phone_number(user.phone_number, silent=True)
         user.pause(scheduler)
         # for dose_window in user.dose_windows:
         #     print(dose_window.active)
