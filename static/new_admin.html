@@ -150,7 +150,7 @@
                     <div style="margin: 5px;">
                         <input id="loadTextDayLimit-${userData.user.id}" placeholder="Days to load" type="number"/>
                         <button onclick="loadTextConversation(\'${userData.user.id}\', '${userData.user.phone_number}')">Load text conversation</button>
-                        <div id="conversationHistory-${userData.user.id}"></div>
+                        <div id="conversationHistory-${userData.user.id}" style="max-width: 400px; max-height: 400px; overflow-y: scroll;""></div>
                     </div>
                 </div>
             `;
@@ -188,21 +188,23 @@
         }
         const sendCustomText = (userId, phoneNumber) => {
             const text = document.getElementById(`customTextMessage-${userId}`).value;
-            post("admin/text", { phoneNumber, text })
+            post("admin/text", { phoneNumber, text });
         }
         const loadTextConversation = (userId, phoneNumber) => {
             const daysToPull = document.getElementById(`loadTextDayLimit-${userId}`).value;
-            get("admin/messages", { phoneNumber, days: daysToPull }).then(response => response.json()).then(result => {
-                const rows = messagesList.map(message => {
-                    return `
-                        <li>
-                            <p style="color:${message.sender === 'them' ? 'blue' : 'black'}">${message.date_sent}/${message.sender}: ${message.body}</p>
-                        </li>
-                    `
+            if (daysToPull) {
+                get("admin/messages", { phoneNumber, days: daysToPull }).then(response => response.json()).then(result => {
+                    const rows = result.map(message => {
+                        return `
+                            <li>
+                                <p style="color:${message.sender === 'them' ? 'blue' : 'black'}">${message.date_sent}/${message.sender}: ${message.body}</p>
+                            </li>
+                        `
+                    });
+                    const html = `<ul>${rows.join("")}</ul>`;
+                    document.getElementById(`conversationHistory-${userId}`).innerHTML = html;
                 });
-                const html = `<ul>${rows.join("")}</ul>`;
-                document.getElementById(`conversationHistory-${userData.user.id}`).innerHTML = html;
-            });
+            };
         }
         refreshData();
     </script>
