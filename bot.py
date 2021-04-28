@@ -983,6 +983,7 @@ def bot():
     incoming_msg_list = segment_message(request.values.get('Body', ''))
     incoming_phone_number = request.values.get('From', None)
     formatted_incoming_phone_number = f"+1{incoming_phone_number[1:]}"
+    print(incoming_phone_number[2:])
     user, dose_window = get_current_user_and_dose_window(incoming_phone_number[2:])
     if user and not user.paused:
         # we weren't able to parse any part of the message
