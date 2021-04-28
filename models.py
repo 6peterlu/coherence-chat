@@ -60,11 +60,13 @@ class User(db.Model):
         for dose_window in self.dose_windows:
             if dose_window.active:
                 dose_window.schedule_initial_job(scheduler, func_to_schedule)
+        db.session.commit()
 
     def pause(self, scheduler):
         self.paused = True
         for dose_window in self.dose_windows:
             dose_window.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
+        db.session.commit()
 
 class DoseWindow(db.Model):
     __tablename__ = 'dose_window'
