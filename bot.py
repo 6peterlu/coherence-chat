@@ -986,6 +986,7 @@ def bot():
     print(incoming_phone_number[2:])
     user, dose_window = get_current_user_and_dose_window(incoming_phone_number[2:])
     if user and not user.paused:
+        print(f"new code path for {incoming_phone_number[2:]}")
         # we weren't able to parse any part of the message
         if len(incoming_msg_list) == 0:
             log_event_new("not_interpretable", user.id, None if dose_window is None else dose_window.id, description=request.values.get('Body', ''))
@@ -1247,6 +1248,7 @@ def bot():
                         to=incoming_phone_number
                     )
     else:
+        print(f"old code path for {incoming_phone_number[2:]}")
         # new data model objects
         user, current_dose_window = get_current_user_and_dose_window(incoming_phone_number[2:])
 
@@ -2012,7 +2014,7 @@ def port_legacy_data(phone_numbers_to_port, names, patient_dose_map):
     for phone_number in phone_numbers_to_port:
         # initialize users to paused for now to protect scheduler DB
         legacy_pause = PausedService.query.filter(PausedService.phone_number == f"+11{phone_number}").one_or_none()
-        user_obj = User(phone_number, names[f"+11{phone_number}"], paused=legacy_pause is None)  # start as the opposite config
+        user_obj = User(phone_number, names[f"+11{phone_number}"], paused=True)  # start paused so it can unpause later
         db.session.add(user_obj)
         db.session.flush()  # populate user_id
         formatted_phone_number = f"+11{phone_number}"
