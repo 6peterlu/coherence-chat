@@ -118,11 +118,10 @@ class DoseWindow(db.Model):
             )
 
     def remove_jobs(self, scheduler, jobs_list):
-        scheduler.remove_job(f"{self.id}-initial-new")
-        # for job in jobs_list:
-        #     job_id = f"{self.id}-{job}-new"
-        #     if scheduler.get_job(job_id):
-        #         scheduler.remove_job(job_id)
+        for job in jobs_list:
+            job_id = f"{self.id}-{job}-new"
+            if scheduler.get_job(job_id):
+                scheduler.remove_job(job_id)
 
 
     def jobs_scheduled(self, scheduler):
