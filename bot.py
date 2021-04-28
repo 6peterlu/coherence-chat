@@ -968,13 +968,14 @@ def drop_new_tables():
             toggle_pause_service_for_phone_number(phone_number_to_port, silent=True)
         user, _ = get_current_user_and_dose_window(phone_number_to_port)
         user.pause(scheduler)
-    else:
+        drop_all_new_tables(user=user)
+    else:  # drop everything
         users = User.query.all()
         for user in users:
             if PausedService.query.filter(PausedService.phone_number == f"+11{user.phone_number}").one_or_none() is not None:
                 toggle_pause_service_for_phone_number(user.phone_number, silent=True)
             user.pause(scheduler)
-    drop_all_new_tables(phone_number=phone_number_to_port)
+        drop_all_new_tables()
     return jsonify()
 
 @app.route('/bot', methods=['POST'])

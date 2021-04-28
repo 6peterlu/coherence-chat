@@ -155,7 +155,7 @@ def medication_record_2(db_session, dose_window_record, user_record, scheduler):
 @pytest.fixture
 def user_record_paused(db_session):
     user_obj = User(
-        phone_number="3604508655",
+        phone_number="3604508656",
         name="Peter",
         paused=True
     )
