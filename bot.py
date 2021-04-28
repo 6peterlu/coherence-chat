@@ -525,6 +525,8 @@ def patient_data():
         if dose_window:
             for medication in dose_window.medications:
                 if not medication.is_recorded_for_today(dose_window):
+                    print("medication wasnt taken yet")
+                    print(medication)
                     dose_to_take_now = True
                     break
 
