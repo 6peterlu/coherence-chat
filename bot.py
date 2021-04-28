@@ -883,6 +883,33 @@ def get_messages_for_number():
     ]
     return jsonify(json_blob)
 
+@app.route("/admin/messages", methods=["GET"])
+def admin_get_messages_for_number():
+    query_phone_number = request.args.get("phoneNumber")
+    query_days = int(request.args.get("days"))
+    date_limit = get_time_now() - timedelta(days=query_days)
+    truncated_date_limit = date_limit.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+    sent_messages_list = client.messages.list(
+        date_sent_after=truncated_date_limit,
+        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+        to=f"+1{query_phone_number}"
+    )
+    received_messages_list = client.messages.list(
+        date_sent_after=truncated_date_limit,
+        to=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+        from_=f"+1{query_phone_number}"
+    )
+    combined_list = sorted(sent_messages_list + received_messages_list, key= lambda msg: msg.date_sent, reverse=True)
+    json_blob = [
+        {
+            "sender": "us" if message.from_ == f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}" else "them",
+            "body": message.body,
+            "date_sent": message.date_sent.astimezone(timezone(USER_TIMEZONE)).strftime("%b %d, %I:%M%p")
+        }
+        for message in combined_list
+    ]
+    return jsonify(json_blob)
+
 # TODO: rewrite
 @app.route("/online", methods=["POST"])
 @auth_required_post_delete

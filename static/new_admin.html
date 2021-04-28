@@ -123,17 +123,37 @@
                 let doseEndTime = new Date();
                 doseStartTime.setUTCHours(doseWindow.start_hour, doseWindow.start_minute)
                 doseEndTime.setUTCHours(doseWindow.end_hour, doseWindow.end_minute)
+                htmlOut += "<div style='display: flex; flex-direction: row;'>";
                 htmlOut += `<p style="padding-left: 20px;">${doseWindow.id} | ${doseStartTime.getHours()}:${checkTime(doseStartTime.getMinutes())}->${doseEndTime.getHours()}:${checkTime(doseEndTime.getMinutes())}</p>`
+                htmlOut += `
+                    <div style="padding: 5px; display: flex; flex-direction: row;">
+                        <select name="reminderType-${doseWindow.id}" id="reminderType" style="margin: 5px;">
+                            <option value="absent">absent</option>
+                            <option value="followup">followup</option>
+                            <option value="initial">initial</option>
+                        </select>
+                        <input id="manualEventTime" type="datetime-local" style="margin: 5px;"/>
+                        <button id="scheduleManualReminder" onclick="scheduleManualReminder(\'${doseWindow.id}\')" style="margin: 5px;">Send manual reminder</button>
+                    </div>
+                `;
+                htmlOut += "</div>";
                 htmlOut += `<p style="padding-left: 40px;">Medications: ${doseWindow.medications.map((medication) => {return medication.medication_name != "" ? medication.medication_name : "No name provided"}).join(", ")}`
             }
             htmlOut += "</div>";
             // controls div
-            htmlOut += "<div>";
-            htmlOut += `<input id="customTextMessage-${userData.user.id}" />`
-            htmlOut += `<button onclick="sendCustomText(\'${userData.user.id}\', '${userData.user.phone_number}')">Send text</button>`
-            htmlOut += "</div>";
-            // closing tag
-            htmlOut += "</div>";
+            htmlOut += `
+                <div>
+                    <div style="margin: 5px;">
+                        <input id="customTextMessage-${userData.user.id}" placeholder="Say something..."/>
+                        <button onclick="sendCustomText(\'${userData.user.id}\', '${userData.user.phone_number}')">Send text</button>
+                    </div>
+                    <div style="margin: 5px;">
+                        <input id="loadTextDayLimit-${userData.user.id}" placeholder="Days to load" type="number"/>
+                        <button onclick="loadTextConversation(\'${userData.user.id}\', '${userData.user.phone_number}')">Load text conversation</button>
+                        <div id="conversationHistory-${userData.user.id}"></div>
+                    </div>
+                </div>
+            `;
             return htmlOut;
         }
         const refreshData = () => {
@@ -169,6 +189,20 @@
         const sendCustomText = (userId, phoneNumber) => {
             const text = document.getElementById(`customTextMessage-${userId}`).value;
             post("admin/text", { phoneNumber, text })
+        }
+        const loadTextConversation = (userId, phoneNumber) => {
+            const daysToPull = document.getElementById(`loadTextDayLimit-${userId}`).value;
+            get("admin/messages", { phoneNumber, days: daysToPull }).then(response => response.json()).then(result => {
+                const rows = messagesList.map(message => {
+                    return `
+                        <li>
+                            <p style="color:${message.sender === 'them' ? 'blue' : 'black'}">${message.date_sent}/${message.sender}: ${message.body}</p>
+                        </li>
+                    `
+                });
+                const html = `<ul>${rows.join("")}</ul>`;
+                document.getElementById(`conversationHistory-${userData.user.id}`).innerHTML = html;
+            });
         }
         refreshData();
     </script>
