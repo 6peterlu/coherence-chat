@@ -95,7 +95,8 @@ def test_thanks_with_manual_takeover(
 @mock.patch("bot.client.messages.create")
 @mock.patch("bot.segment_message")
 @mock.patch("bot.get_take_message")
-def test_take(take_message_mock, segment_message_mock, create_messages_mock, client, db_session, user_record, dose_window_record, medication_record):
+@mock.patch("bot.remove_jobs_helper")
+def test_take(remove_jobs_mock, take_message_mock, segment_message_mock, create_messages_mock, client, db_session, user_record, dose_window_record, medication_record):
     local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
     segment_message_mock.return_value = [{'type': 'take', 'modifiers': {'emotion': 'neutral'}, "raw": "T"}]
     client.post("/bot", query_string={"From": "+13604508655"})
@@ -108,6 +109,7 @@ def test_take(take_message_mock, segment_message_mock, create_messages_mock, cli
     assert all_events[0].dose_window_id == dose_window_record.id
     assert all_events[0].medication_id == medication_record.id
     assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 17, tzinfo=utc)  # match freezegun time
+    assert remove_jobs_mock.called
 
 
 @freeze_time("2012-01-01 17:00:00")  # within range of dose_window_record
@@ -182,7 +184,8 @@ def test_take_dose_out_of_range(
 @freeze_time("2012-01-01 17:00:00")  # within range of dose_window_record
 @mock.patch("bot.client.messages.create")
 @mock.patch("bot.segment_message")
-def test_skip(segment_message_mock, create_messages_mock, client, db_session, user_record, dose_window_record, medication_record):
+@mock.patch("bot.remove_jobs_helper")
+def test_skip(remove_jobs_mock, segment_message_mock, create_messages_mock, client, db_session, user_record, dose_window_record, medication_record):
     local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
     segment_message_mock.return_value = [{'type': 'skip', "raw": "S :)"}]
     client.post("/bot", query_string={"From": "+13604508655"})
@@ -194,6 +197,7 @@ def test_skip(segment_message_mock, create_messages_mock, client, db_session, us
     assert all_events[0].dose_window_id == dose_window_record.id
     assert all_events[0].medication_id == medication_record.id
     assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 17, tzinfo=utc)
+    assert remove_jobs_mock.called
 
 
 @freeze_time("2012-01-01 17:00:00")  # within range of dose_window_record
