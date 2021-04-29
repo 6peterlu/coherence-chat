@@ -8,7 +8,10 @@
     <button onclick="dropAllNewTables()">Drop all new tables</button>
     <p>Ported users:</p>
     <div id="portedUserList"></div>
-    <div id="jobListDiv"></div>
+    <div id="overviewDiv">
+        <div id="jobListDiv"></div>
+        <div id="eventListDiv"></div>
+    </div>
     <div id="userDetailedData"></div>
     <script defer>
         const initDetails = {
@@ -167,6 +170,14 @@
                     userDetailedDataDiv.innerHTML += renderUser(userData);
                 }
                 document.getElementById("portedUserList").innerHTML = portedUsers.join(", ");
+                // render event list
+                const eventListDiv = document.getElementById("eventListDiv");
+                eventListDiv.innerHTML = '';
+                for (const event of result.events) {
+                    eventListDiv.innerHTML += `
+                        <p>${1}</p>
+                    `;
+                }
             });
             get("scheduler/jobs", {}).then(response => response.json()).then(result => {
                 console.log(result);

@@ -953,6 +953,8 @@ def get_all_admin_data():
         for medication in user.doses:
             user_dict["medications"].append(MedicationSchema().dump(medication))
         return_dict["users"].append(user_dict)
+    global_event_stream = Event.query.order_by(Event.event_time.desc()).limit(100).all()
+    return_dict["events"] = [EventLogSchema().dump(event) for event in global_event_stream]
     return jsonify(return_dict)
 
 
