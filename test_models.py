@@ -107,10 +107,26 @@ def test_dose_window_scheduler(dose_window_record, medication_record, scheduler)
     dose_window_record.remove_jobs(scheduler, ["initial", "absent", "boundary", "followup"])
     assert scheduler.get_job(f"{dose_window_record.id}-initial-new") is None
 
-
+@freeze_time("2012-01-01 17:00:00")
 def test_toggle_user_pause(dose_window_record_for_paused_user, user_record_paused, medication_record_for_paused_user, scheduler):
+    send_upcoming_dose_message = mock.Mock()
+    send_intro_text = mock.Mock()
     assert scheduler.get_job(f"{dose_window_record_for_paused_user.id}-initial-new") is None
-    user_record_paused.resume(scheduler, test_function, test_function)
+    user_record_paused.resume(scheduler, send_intro_text, send_upcoming_dose_message)
+    assert send_intro_text.called
+    assert not send_upcoming_dose_message.called
+    assert scheduler.get_job(f"{dose_window_record_for_paused_user.id}-initial-new") is not None
+    user_record_paused.pause(scheduler, test_function)
+    assert scheduler.get_job(f"{dose_window_record_for_paused_user.id}-initial-new") is None
+
+@freeze_time("2012-01-01 12:00:00")
+def test_toggle_user_pause_out_of_range(dose_window_record_for_paused_user, user_record_paused, medication_record_for_paused_user, scheduler):
+    send_upcoming_dose_message = mock.Mock()
+    send_intro_text = mock.Mock()
+    assert scheduler.get_job(f"{dose_window_record_for_paused_user.id}-initial-new") is None
+    user_record_paused.resume(scheduler, send_intro_text, send_upcoming_dose_message)
+    assert not send_intro_text.called
+    assert send_upcoming_dose_message.called
     assert scheduler.get_job(f"{dose_window_record_for_paused_user.id}-initial-new") is not None
     user_record_paused.pause(scheduler, test_function)
     assert scheduler.get_job(f"{dose_window_record_for_paused_user.id}-initial-new") is None
