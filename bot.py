@@ -1348,7 +1348,7 @@ def admin_manually_create_event():
 @app.route("/admin/manual/event/delete", methods=["POST"])
 def admin_manually_delete_event():
     event_id = int(request.json["eventId"])
-    event_to_delete = Event.query.get(event_id)
+    event_to_delete = EventLog.query.get(event_id)
     if event_to_delete:
         db.session.delete(event_to_delete)
         db.session.commit()

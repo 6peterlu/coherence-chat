@@ -193,8 +193,8 @@
                 eventListDiv.innerHTML = '';
                 for (const event of result.events) {
                     eventListDiv.innerHTML += `
-                        <div>
-                            <button onclick="deleteEvent(\'${event.id}\')">Delete event</button>
+                        <div style="display:flex; flex-direction:row;">
+                            <button onclick="deleteEvent(\'${event.id}\')" style="margin:10px;">Delete event</button>
                             <p>${event.user.name} | dw${event.dose_window ? event.dose_window.id : null}: ${event.event_type} / ${event.event_time}: ${event.description}</p>
                         </div>
                     `;
@@ -278,6 +278,7 @@
             );
         }
         const deleteEvent = (eventId) => {
+            console.log("deleting event")
             post("admin/manual/event/delete", { eventId }).then(
                 response => response.json()).then(result => {
                     refreshData();
