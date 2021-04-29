@@ -988,7 +988,7 @@ def get_all_admin_data():
         }
         for dose_window in user.dose_windows:
             dose_window_json = DoseWindowSchema().dump(dose_window)
-            dose_window_json["action_required"] = dose_window.is_recorded_for_today and dose_window.within_dosing_period()
+            dose_window_json["action_required"] = not dose_window.is_recorded_for_today and dose_window.within_dosing_period()
             user_dict["dose_windows"].append(dose_window_json)
         for medication in user.doses:
             user_dict["medications"].append(MedicationSchema().dump(medication))
