@@ -948,7 +948,7 @@ def online_toggle():
 
 
 @app.route("/admin/online", methods=["POST"])
-def online_toggle():
+def admin_online_toggle():
     online_status = get_online_status()
     if online_status:  # is online, we need to clear manual takeover on going offline
         ManualTakeover.query.delete()
@@ -1000,10 +1000,8 @@ def bot():
     incoming_msg_list = segment_message(request.values.get('Body', ''))
     incoming_phone_number = request.values.get('From', None)
     formatted_incoming_phone_number = f"+1{incoming_phone_number[1:]}"
-    print(incoming_phone_number[2:])
     user, dose_window = get_current_user_and_dose_window(incoming_phone_number[2:])
     if user and not user.paused:
-        print(f"new code path for {incoming_phone_number[2:]}")
         # we weren't able to parse any part of the message
         if len(incoming_msg_list) == 0:
             log_event_new("not_interpretable", user.id, None if dose_window is None else dose_window.id, description=request.values.get('Body', ''))
@@ -1274,7 +1272,6 @@ def bot():
                         to=incoming_phone_number
                     )
     else:
-        print(f"old code path for {incoming_phone_number[2:]}")
         # new data model objects
         user, current_dose_window = get_current_user_and_dose_window(incoming_phone_number[2:])
 
