@@ -193,7 +193,10 @@
                 eventListDiv.innerHTML = '';
                 for (const event of result.events) {
                     eventListDiv.innerHTML += `
-                        <p>${event.user.name} | dw${event.dose_window ? event.dose_window.id : null}: ${event.event_type} / ${event.event_time}: ${event.description}</p>
+                        <div style="display:flex; flex-direction:row;">
+                            <button onclick="deleteEvent(\'${event.id}\')" style="margin:10px;">Delete event</button>
+                            <p>${event.user.name} | dw${event.dose_window ? event.dose_window.id : null}: ${event.event_type} / ${event.event_time}: ${event.description}</p>
+                        </div>
                     `;
                 }
 
@@ -269,6 +272,14 @@
             const eventType = document.getElementById(`eventType-${doseWindowId}`).value;
             const manualTime = document.getElementById(`manualEventTime-${doseWindowId}`).value;
             post("admin/manual/event", { doseWindowId, manualTime, eventType }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
+        }
+        const deleteEvent = (eventId) => {
+            console.log("deleting event")
+            post("admin/manual/event/delete", { eventId }).then(
                 response => response.json()).then(result => {
                     refreshData();
                 }
