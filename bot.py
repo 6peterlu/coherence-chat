@@ -1710,6 +1710,23 @@ def manual_send_reminder():
             )
     return jsonify()
 
+@app.route("/admin/manual/event", methods=["POST"])
+def admin_manually_create_event():
+    incoming_data = request.json
+    dose_window_id = int(incoming_data["doseWindowId"])
+    event_type = incoming_data["eventType"]
+    event_time_raw = incoming_data["manualTime"]
+    dose_window = DoseWindow.query.get(dose_window_id)
+    for medication in dose_window.medications:
+        if not event_time_raw:
+            log_event_new(event_type, dose_window.user.id, dose_window.id, medication.id)
+        else:
+            event_time_obj = datetime.strptime(event_time_raw, "%Y-%m-%dT%H:%M")
+            if os.environ["FLASK_ENV"] != "local":
+                event_time_obj += timedelta(hours=7)  # HACK to transform to UTC
+            log_event_new(event_type, dose_window.user.id, dose_window.id, medication.id, event_time=event_time_obj)
+    return jsonify()
+
 # TODO: rewrite
 @app.route("/manual/takeover", methods=["POST"])
 @auth_required_post_delete

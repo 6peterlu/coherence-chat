@@ -145,8 +145,17 @@
                             <option value="followup">followup</option>
                             <option value="initial">initial</option>
                         </select>
-                        <input id="manualEventTime-${doseWindow.id}" type="datetime-local" style="margin: 5px;" placeholder="2018-06-12T19:30"/>
+                        <input id="manualReminderTime-${doseWindow.id}" type="datetime-local" style="margin: 5px;" placeholder="2018-06-12T19:30"/>
                         <button id="scheduleManualReminder" onclick="scheduleManualReminder(\'${doseWindow.id}\')" style="margin: 5px;">Send manual reminder</button>
+                        <div style="border-left: 2px solid black;">
+                            <select name="eventType-${doseWindow.id}" id='eventType-${doseWindow.id}' style="margin: 5px;">
+                                <option value="take">take</option>
+                                <option value="skip">skip</option>
+                                <option value="boundary">boundary</option>
+                            </select>
+                            <input id="manualEventTime-${doseWindow.id}" type="datetime-local" style="margin: 5px;" placeholder="2018-06-12T19:30"/>
+                            <button id="createEvent" onclick="createEvent(\'${doseWindow.id}\')" style="margin: 5px;">Create event</button>
+                        </div>
                     </div>
                 `;
                 htmlOut += "</div>";
@@ -248,10 +257,18 @@
             );
         }
         const scheduleManualReminder = (doseWindowId) => {
-            console.log("scheduling manual reminder");
             const reminderType = document.getElementById(`reminderType-${doseWindowId}`).value;
-            const manualTime = document.getElementById(`manualEventTime-${doseWindowId}`).value;
+            const manualTime = document.getElementById(`manualReminderTime-${doseWindowId}`).value;
             post("admin/manual", { reminderType, doseWindowId, manualTime }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
+        }
+        const createEvent = (doseWindowId) => {
+            const eventType = document.getElementById(`eventType-${doseWindowId}`).value;
+            const manualTime = document.getElementById(`manualEventTime-${doseWindowId}`).value;
+            post("admin/manual/event", { doseWindowId, manualTime, eventType }).then(
                 response => response.json()).then(result => {
                     refreshData();
                 }
