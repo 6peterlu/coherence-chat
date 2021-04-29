@@ -979,6 +979,7 @@ def get_all_admin_data():
             user_dict["medications"].append(MedicationSchema().dump(medication))
         return_dict["users"].append(user_dict)
     global_event_stream = EventLog.query.order_by(EventLog.event_time.desc()).limit(100).all()
+    print(global_event_stream)
     return_dict["events"] = [EventLogSchema().dump(event) for event in global_event_stream]
     return jsonify(return_dict)
 
@@ -1254,8 +1255,8 @@ def bot():
                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                         to=incoming_phone_number
                     )
-                if incoming_msg["type"] == "requested_website":
-                    log_event_new("requested_website", user.id, None, None, description=incoming_msg["raw"])
+                if incoming_msg["type"] == "website_request":
+                    log_event_new("website_request", user.id, None, None, description=incoming_msg["raw"])
                     client.messages.create(
                         body=REQUEST_WEBSITE,
                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",

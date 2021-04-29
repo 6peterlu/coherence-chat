@@ -178,7 +178,7 @@
                 eventListDiv.innerHTML = '';
                 for (const event of result.events) {
                     eventListDiv.innerHTML += `
-                        <p>${event.user.name} | dw${event.dose_window.id}: ${event.event_type} / ${event.event_time}: ${event.description}</p>
+                        <p>${event.user.name} | dw${event.dose_window ? event.dose_window.id : null}: ${event.event_type} / ${event.event_time}: ${event.description}</p>
                     `;
                 }
             });
