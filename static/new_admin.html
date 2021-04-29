@@ -154,7 +154,7 @@
                                 <option value="boundary">boundary</option>
                             </select>
                             <input id="manualEventTime-${doseWindow.id}" type="datetime-local" style="margin: 5px;" placeholder="2018-06-12T19:30"/>
-                            <button id="createEvent" onclick="createEvent(\'${doseWindow.id}\')" style="margin: 5px;">Create event</button>
+                            <button id="createEvent" onclick="createEventLog(\'${doseWindow.id}\')" style="margin: 5px;">Create event</button>
                         </div>
                     </div>
                 `;
@@ -265,7 +265,7 @@
                 }
             );
         }
-        const createEvent = (doseWindowId) => {
+        const createEventLog = (doseWindowId) => {
             const eventType = document.getElementById(`eventType-${doseWindowId}`).value;
             const manualTime = document.getElementById(`manualEventTime-${doseWindowId}`).value;
             post("admin/manual/event", { doseWindowId, manualTime, eventType }).then(
