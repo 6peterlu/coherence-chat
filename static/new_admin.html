@@ -3,14 +3,15 @@
 <body>
     <h1 id="header"></h1>
     <button onclick="refreshData()">Pull data</button>
-    <input id="phoneNumberEntry" type="tel" placeholder="phone"/>
-    <button onclick="portDataForPhone()">Port data for phone</button>
-    <button onclick="dropAllNewTables()">Drop all new tables</button>
-    <p>Ported users:</p>
-    <div id="portedUserList"></div>
-    <div id="overviewDiv">
-        <div id="jobListDiv"></div>
-        <div id="eventListDiv"></div>
+    <div id="overviewDiv" style="display:flex; flex-direction: row; justify-content: space-between;">
+        <div>
+            <p>Job list:</p>
+            <div id="jobListDiv" style="flex:2; max-height:400px; overflow-y: scroll;"></div>
+        </div>
+        <div>
+            <p>Recent events:</p>
+            <div id="eventListDiv" style="flex:1; max-height:400px; overflow-y: scroll;"></div>
+        </div>
     </div>
     <div id="userDetailedData"></div>
     <script defer>
@@ -106,7 +107,7 @@
             });
             const html = `<ul>${rows.join("")}</ul>`;
             const jobListDiv = document.getElementById("jobListDiv");
-            jobListDiv.innerHTML = `<p>Job list: </p>${html}`;
+            jobListDiv.innerHTML = html;
         }
 
         function deleteJob(id) {
@@ -127,7 +128,10 @@
                 doseStartTime.setUTCHours(doseWindow.start_hour, doseWindow.start_minute)
                 doseEndTime.setUTCHours(doseWindow.end_hour, doseWindow.end_minute)
                 htmlOut += "<div style='display: flex; flex-direction: row;'>";
-                htmlOut += `<p style="padding-left: 20px;">${doseWindow.id} | ${doseStartTime.getHours()}:${checkTime(doseStartTime.getMinutes())}->${doseEndTime.getHours()}:${checkTime(doseEndTime.getMinutes())}</p>`
+                htmlOut += `
+                    <p style="padding-left: 20px;">${doseWindow.id} | ${doseStartTime.getHours()}:${checkTime(doseStartTime.getMinutes())}->${doseEndTime.getHours()}:${checkTime(doseEndTime.getMinutes())}</p>
+                    <button id="editDoseWindow" style="margin: 5px;" onclick>Edit dose window</button>
+                `
                 htmlOut += `
                     <div style="padding: 5px; display: flex; flex-direction: row;">
                         <select name="reminderType-${doseWindow.id}" id="reminderType" style="margin: 5px;">
@@ -169,13 +173,12 @@
                     portedUsers.push(userData.user.name);
                     userDetailedDataDiv.innerHTML += renderUser(userData);
                 }
-                document.getElementById("portedUserList").innerHTML = portedUsers.join(", ");
                 // render event list
                 const eventListDiv = document.getElementById("eventListDiv");
                 eventListDiv.innerHTML = '';
                 for (const event of result.events) {
                     eventListDiv.innerHTML += `
-                        <p>${1}</p>
+                        <p>${event.user.name} | dw${event.dose_window.id}: ${event.event_type} / ${event.event_time}: ${event.description}</p>
                     `;
                 }
             });
@@ -183,19 +186,6 @@
                 console.log(result);
                 renderJobs(result);
             })
-        }
-
-        const portDataForPhone = () => {
-            const phoneNumber = document.getElementById("phoneNumberEntry").value;
-            post("admin/portData", { phoneNumber }).then(response => response.json()).then(result => {
-                refreshData();
-            });
-        }
-        const dropAllNewTables = () => {
-            const phoneNumber = document.getElementById("phoneNumberEntry").value;
-            post("admin/dropNewTables", { phoneNumber }).then(response => response.json()).then(result => {
-                refreshData();
-            });
         }
         const sendCustomText = (userId, phoneNumber) => {
             const text = document.getElementById(`customTextMessage-${userId}`).value;

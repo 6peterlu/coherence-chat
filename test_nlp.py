@@ -32,4 +32,6 @@ def test_segment_message():
     assert segment_message("S :)")[0] == {'type': 'skip', "raw": "S :)"}
     assert segment_message("walking")[0] == {'type': 'activity', 'payload': {'type': 'short', 'response': "Computing ideal reminder time...done. Enjoy your walk! We'll check in later.", 'concept': 'leisure'}, 'raw': 'walking'}
     assert segment_message("dinner")[0] == {'type': 'activity', 'payload': {'type': 'long', 'response': "Computing ideal reminder time...done. Have a great dinner! We'll check in later.", 'concept': 'meal'}, 'raw': 'dinner'}
+    assert segment_message("website")[0] == {'type': 'website_request', "raw": "website"}
+    assert segment_message("hi w")[0] == {'type': 'website_request', "raw": "hi w"}
 

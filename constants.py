@@ -136,3 +136,5 @@ THANKS_MESSAGES = [
 ]
 
 ALREADY_RECORDED = "We already have a record of this dose. If you'd like to edit it, please go to https://www.coherence-chat.herokuapp.com and tap on the current day."
+
+REQUEST_WEBSITE = "You can access your medication take history and much more at https://www.coherence-chat.herokuapp.com."

@@ -46,7 +46,7 @@ class User(db.Model):
         self.paused = paused
         self.timezone = timezone
 
-    # TODO: determine bounds from dose window settings. for now, it's hardcoded to midnight (which is not gonna work).
+    # TODO: determine bounds from dose window settings. for now, it's hardcoded to 2AM (which is not gonna work).
     @property
     def current_day_bounds(self):
         local_timezone = timezone(self.timezone)
@@ -55,18 +55,27 @@ class User(db.Model):
         end_of_day = start_of_day + timedelta(days=1)
         return start_of_day, end_of_day
 
-    def resume(self, scheduler, func_to_schedule):
-        self.paused = False
-        for dose_window in self.dose_windows:
-            if dose_window.active:
-                dose_window.schedule_initial_job(scheduler, func_to_schedule)
-        db.session.commit()
+    def resume(self, scheduler, send_intro_text_new, send_upcoming_dose_message):
+        if self.paused:
+            self.paused = False
+            sorted_dose_windows = sorted(self.dose_windows, key=lambda dw: dw.next_start_date)
+            for i, dose_window in enumerate(sorted_dose_windows):
+                if dose_window.active:
+                    dose_window.schedule_initial_job(scheduler, send_intro_text_new)
+                    # send resume messages
+                    if dose_window.within_dosing_period() and not dose_window.is_recorded_for_today:
+                        send_intro_text_new(dose_window.id, welcome_back=True)
+                    elif i == 0:  # upcoming dose
+                        send_upcoming_dose_message(self, dose_window)
+            db.session.commit()
 
-    def pause(self, scheduler):
-        self.paused = True
-        for dose_window in self.dose_windows:
-            dose_window.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
-        db.session.commit()
+    def pause(self, scheduler, send_pause_message):
+        if not self.paused:
+            self.paused = True
+            for dose_window in self.dose_windows:
+                dose_window.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
+            send_pause_message(self)
+            db.session.commit()
 
 class DoseWindow(db.Model):
     __tablename__ = 'dose_window'
@@ -108,11 +117,11 @@ class DoseWindow(db.Model):
         db.session.commit()
 
 
-    def schedule_initial_job(self, scheduler, func_to_schedule):
+    def schedule_initial_job(self, scheduler, send_intro_text_new):
         if scheduler.get_job(f"{self.id}-initial-new") is None and not self.user.paused:
             scheduler.add_job(
                 f"{self.id}-initial-new",
-                func_to_schedule,
+                send_intro_text_new,
                 trigger="interval",
                 start_date=self.next_start_date,
                 days=1,
@@ -130,6 +139,14 @@ class DoseWindow(db.Model):
     def jobs_scheduled(self, scheduler):
         job_id = f"{self.id}-initial-new"
         return scheduler.get_job(job_id) is not None
+
+
+    @property
+    def is_recorded_for_today(self):
+        for medication in self.medications:
+            if not medication.is_recorded_for_today(self):
+                return False
+        return True
 
 
     @property
