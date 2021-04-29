@@ -140,12 +140,12 @@
                 `
                 htmlOut += `
                     <div style="padding: 5px; display: flex; flex-direction: row;">
-                        <select name="reminderType-${doseWindow.id}" id="reminderType" style="margin: 5px;">
+                        <select name="reminderType-${doseWindow.id}" id='reminderType-${doseWindow.id}' style="margin: 5px;">
                             <option value="absent">absent</option>
                             <option value="followup">followup</option>
                             <option value="initial">initial</option>
                         </select>
-                        <input id="manualEventTime-${doseWindow.id}" type="datetime-local" style="margin: 5px;"/>
+                        <input id="manualEventTime-${doseWindow.id}" type="datetime-local" style="margin: 5px;" placeholder="2018-06-12T19:30"/>
                         <button id="scheduleManualReminder" onclick="scheduleManualReminder(\'${doseWindow.id}\')" style="margin: 5px;">Send manual reminder</button>
                     </div>
                 `;
@@ -242,6 +242,16 @@
             onlineButton.innerHTML = "switching modes..."
             onlineButton.disabled = true;
             post("admin/online", {}).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
+        }
+        const scheduleManualReminder = (doseWindowId) => {
+            console.log("scheduling manual reminder");
+            const reminderType = document.getElementById(`reminderType-${doseWindowId}`).value;
+            const manualTime = document.getElementById(`manualEventTime-${doseWindowId}`).value;
+            post("admin/manual", { reminderType, doseWindowId, manualTime }).then(
                 response => response.json()).then(result => {
                     refreshData();
                 }

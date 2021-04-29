@@ -1688,21 +1688,21 @@ def manual_send_reminder():
         if os.environ["FLASK_ENV"] != "local":
             event_time_obj += timedelta(hours=7)  # HACK to transform to UTC
         if reminder_type == "absent":
-            scheduler.add_job(f"{dose_window_id}-absent", send_absent_text_new,
+            scheduler.add_job(f"{dose_window_id}-absent-new", send_absent_text_new,
                 args=[dose_window_id],
                 trigger="date",
                 run_date=event_time_obj,  # HACK, assumes this executes after start_date
                 misfire_grace_time=5*60
             )
         elif reminder_type == "followup":
-            scheduler.add_job(f"{dose_window_id}-followup", send_followup_text_new,
+            scheduler.add_job(f"{dose_window_id}-followup-new", send_followup_text_new,
                 args=[dose_window_id],
                 trigger="date",
                 run_date=event_time_obj,  # HACK, assumes this executes after start_date
                 misfire_grace_time=5*60
             )
         elif reminder_type == "initial":
-            scheduler.add_job(f"{dose_window_id}-initial", send_intro_text_new,
+            scheduler.add_job(f"{dose_window_id}-initial-new", send_intro_text_new,
                 args=[dose_window_id],
                 trigger="date",
                 run_date=event_time_obj,  # HACK, assumes this executes after start_date
