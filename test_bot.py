@@ -39,6 +39,22 @@ def dose_record(db_session):
     return dose_obj
 
 @pytest.fixture
+def dose_record_for_paused_user(db_session):
+    dose_obj = Dose(
+        start_hour=9+7,
+        end_hour=11+7,
+        start_minute=0,
+        end_minute=0,
+        patient_name="Peter",
+        phone_number="+113604508656",
+        medication_name="Keppra, Glipizide",
+        active=True
+    )
+    db_session.add(dose_obj)
+    db_session.commit()
+    return dose_obj
+
+@pytest.fixture
 def inactive_dose_record(db_session):
     dose_obj = Dose(
         start_hour=9+7,
@@ -101,6 +117,16 @@ def initial_reminder_record(db_session, dose_record):
     db_session.add(reminder_obj)
     db_session.commit()
 
+@pytest.fixture
+def initial_reminder_record_for_paused_user(db_session, dose_record_for_paused_user):
+    reminder_obj = Reminder(
+        dose_id=dose_record_for_paused_user.id,
+        send_time=datetime(2012, 1, 1, 9+7),
+        reminder_type="initial"
+    )
+    db_session.add(reminder_obj)
+    db_session.commit()
+
 
 @pytest.fixture
 def manual_takeover_number(db_session):
@@ -126,10 +152,10 @@ def manual_takeover_number(db_session):
 @mock.patch("bot.remove_jobs_helper")
 def test_send_followup_text_live_port(
     remove_jobs_mock, schedule_absent_mock, create_messages_mock,
-    dose_record, user_record_paused, dose_window_record_for_paused_user, medication_record_for_paused_user,
+    dose_record_for_paused_user, user_record_paused, dose_window_record_for_paused_user, medication_record_for_paused_user,
     medication_record_for_paused_user_2, db_session
 ):
-    send_followup_text(dose_record.id)
+    send_followup_text(dose_record_for_paused_user.id)
     assert remove_jobs_mock.called
     assert schedule_absent_mock.called
     all_events = db_session.query(Event).all()
@@ -138,7 +164,7 @@ def test_send_followup_text_live_port(
     assert len(all_event_logs) == 2
 
 
-
+# /bot tests
 @mock.patch("bot.segment_message")
 @mock.patch("bot.text_fallback")
 def test_not_interpretable(text_fallback_mock, segment_message_mock, client, db_session):
@@ -340,7 +366,7 @@ def test_activity_delay(
 @mock.patch("bot.text_fallback")
 def test_not_interpretable_live_port(text_fallback_mock, segment_message_mock, client, db_session, user_record_paused, dose_window_record_for_paused_user):
     segment_message_mock.return_value = []
-    client.post("/bot", query_string={"From": "+13604508655"})
+    client.post("/bot", query_string={"From": "+13604508656"})
     assert text_fallback_mock.called
     all_events = db_session.query(Event).all()
     assert len(all_events) == 1
@@ -358,7 +384,7 @@ def test_not_interpretable_live_port(text_fallback_mock, segment_message_mock, c
 @mock.patch("bot.get_thanks_message")
 def test_thanks_live_port(thanks_message_mock, segment_message_mock, create_messages_mock, client, db_session, user_record_paused, dose_window_record_for_paused_user):
     segment_message_mock.return_value = [{'modifiers': {'emotion': 'excited'}, 'type': 'thanks', "raw": "T. Thanks!"}]
-    client.post("/bot", query_string={"From": "+13604508655"})
+    client.post("/bot", query_string={"From": "+13604508656"})
     assert create_messages_mock.called
     assert thanks_message_mock.called
     # assert dose_record.id == db_session.query(Online).all()[0].id
@@ -379,7 +405,7 @@ def test_take_without_dose_live_port(
     db_session, user_record_paused
 ):
     segment_message_mock.return_value = [{'type': 'take', 'modifiers': {'emotion': 'neutral'}, "raw": "T"}]
-    client.post("/bot", query_string={"From": "+13604508655"})
+    client.post("/bot", query_string={"From": "+13604508656"})
     assert create_messages_mock.called
     all_events = db_session.query(Event).all()
     assert len(all_events) == 1
@@ -398,12 +424,13 @@ def test_take_without_dose_live_port(
 @mock.patch("bot.get_take_message")
 def test_take_with_dose_live_port(
     take_message_mock, segment_message_mock, create_messages_mock,
-    client, db_session, dose_record, initial_reminder_record,
-    user_record_paused, dose_window_record_for_paused_user, medication_record_for_paused_user, medication_record_for_paused_user_2
+    client, db_session, dose_record_for_paused_user, initial_reminder_record_for_paused_user,
+    user_record_paused, dose_window_record_for_paused_user, medication_record_for_paused_user,
+    medication_record_for_paused_user_2
 ):
     local_tz = tzlocal.get_localzone()
     segment_message_mock.return_value = [{'type': 'take', 'modifiers': {'emotion': 'neutral'}, "raw": "T"}]
-    client.post("/bot", query_string={"From": "+13604508655"})
+    client.post("/bot", query_string={"From": "+13604508656"})
     assert create_messages_mock.called
     assert take_message_mock.called
     all_events = db_session.query(Event).all()
@@ -427,12 +454,12 @@ def test_take_with_dose_live_port(
 @mock.patch("bot.get_current_end_date")
 def test_option_3_near_boundary_live_port(
     mock_get_current_end_date, segment_message_mock, create_messages_mock,
-    client, db_session, dose_record, initial_reminder_record, scheduler,
+    client, db_session, dose_record_for_paused_user, initial_reminder_record_for_paused_user, scheduler,
     user_record_paused, dose_window_record_for_paused_user, medication_record_for_paused_user
 ):
     segment_message_mock.return_value = [{'type': 'special', 'payload': '3', "raw": "1"}]
     mock_get_current_end_date.return_value = datetime(2012, 1, 1, 18, tzinfo=utc)
-    client.post("/bot", query_string={"From": "+13604508655"})
+    client.post("/bot", query_string={"From": "+13604508656"})
     assert create_messages_mock.called
     all_events = db_session.query(Event).all()
     assert len(all_events) == 2
@@ -440,7 +467,7 @@ def test_option_3_near_boundary_live_port(
     assert all_events[0].description == f"{timedelta(minutes=60)}"
     assert all_events[1].event_type == "reminder_delay"
     assert all_events[1].description == 'delayed to 2012-01-01 09:50:00-08:00'
-    scheduled_job = scheduler.get_job(f"{dose_record.id}-followup")
+    scheduled_job = scheduler.get_job(f"{dose_record_for_paused_user.id}-followup")
     assert scheduled_job is not None
     assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 50, tzinfo=utc)
     all_event_logs = db_session.query(EventLog).all()
@@ -460,19 +487,19 @@ def test_option_3_near_boundary_live_port(
 @mock.patch("bot.get_current_end_date")
 def test_1_hr_delay_live_port(
     mock_get_current_end_date, mock_followup_text, segment_message_mock,
-    create_messages_mock, client, db_session, dose_record,
+    create_messages_mock, client, db_session, dose_record_for_paused_user, initial_reminder_record_for_paused_user,
     initial_reminder_record, scheduler, user_record_paused, dose_window_record_for_paused_user,
     medication_record_for_paused_user
 ):
     segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': datetime(2012, 1, 1, 18, tzinfo=utc), "raw": "1hr"}]
     mock_get_current_end_date.return_value = datetime(2012, 1, 1, 19, tzinfo=utc)
-    client.post("/bot", query_string={"From": "+13604508655"})
+    client.post("/bot", query_string={"From": "+13604508656"})
     assert create_messages_mock.called
     all_events = db_session.query(Event).all()
     assert len(all_events) == 1
     assert all_events[0].event_type == "reminder_delay"
     assert all_events[0].description == "delayed to 2012-01-01 10:00:00-08:00"
-    scheduled_job = scheduler.get_job(f"{dose_record.id}-followup")
+    scheduled_job = scheduler.get_job(f"{dose_record_for_paused_user.id}-followup")
     assert scheduled_job is not None
     assert scheduled_job.next_run_time == datetime(2012, 1, 1, 18, 0, tzinfo=utc)
     all_event_logs = db_session.query(EventLog).all()
@@ -489,18 +516,19 @@ def test_1_hr_delay_live_port(
 @mock.patch("bot.get_current_end_date")
 def test_1_hr_delay_near_boundary_live_port(
     mock_get_current_end_date, mock_followup_text, segment_message_mock,
-    create_messages_mock, client, db_session, dose_record,
-    initial_reminder_record, scheduler, user_record_paused, dose_window_record_for_paused_user, medication_record_for_paused_user
+    create_messages_mock, client, db_session, dose_record_for_paused_user,
+    initial_reminder_record_for_paused_user, scheduler, user_record_paused,
+    dose_window_record_for_paused_user, medication_record_for_paused_user
 ):
     segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': datetime(2012, 1, 1, 18, 0, 1, tzinfo=utc), "raw": "1hr"}]
     mock_get_current_end_date.return_value = datetime(2012, 1, 1, 18, tzinfo=utc)
-    client.post("/bot", query_string={"From": "+13604508655"})
+    client.post("/bot", query_string={"From": "+13604508656"})
     assert create_messages_mock.called
     all_events = db_session.query(Event).all()
     assert len(all_events) == 1
     assert all_events[0].event_type == "reminder_delay"
     assert all_events[0].description == "delayed to 2012-01-01 09:50:00-08:00"
-    scheduled_job = scheduler.get_job(f"{dose_record.id}-followup")
+    scheduled_job = scheduler.get_job(f"{dose_record_for_paused_user.id}-followup")
     assert scheduled_job is not None
     assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 50, tzinfo=utc)
     all_event_logs = db_session.query(EventLog).all()
@@ -518,13 +546,14 @@ def test_1_hr_delay_near_boundary_live_port(
 @mock.patch("bot.random.randint")
 def test_activity_delay_live_port(
     mock_randint, mock_get_current_end_date, segment_message_mock,
-    create_messages_mock, client, db_session, dose_record,
-    initial_reminder_record, scheduler, user_record_paused, dose_window_record_for_paused_user, medication_record_for_paused_user
+    create_messages_mock, client, db_session, dose_record_for_paused_user,
+    initial_reminder_record_for_paused_user, scheduler, user_record_paused,
+    dose_window_record_for_paused_user, medication_record_for_paused_user
 ):
     segment_message_mock.return_value = [{'type': 'activity', 'payload': {'type': 'short', 'response': "Computing ideal reminder time...done. Enjoy your walk! We'll check in later.", 'concept': 'leisure'}, 'raw': 'walking'}]
     mock_get_current_end_date.return_value = datetime(2012, 1, 1, 18, tzinfo=utc)
     mock_randint.return_value = 23
-    client.post("/bot", query_string={"From": "+13604508655"})
+    client.post("/bot", query_string={"From": "+13604508656"})
     assert create_messages_mock.called
     all_events = db_session.query(Event).all()
     assert len(all_events) == 2
@@ -532,7 +561,7 @@ def test_activity_delay_live_port(
     assert all_events[0].description == "walking"
     assert all_events[1].event_type == "reminder_delay"
     assert all_events[1].description == "delayed to 2012-01-01 09:23:01-08:00"
-    scheduled_job = scheduler.get_job(f"{dose_record.id}-followup")
+    scheduled_job = scheduler.get_job(f"{dose_record_for_paused_user.id}-followup")
     assert scheduled_job is not None
     assert scheduled_job.next_run_time == timezone("UTC").localize(datetime(2012, 1, 1, 17, 23, 1))
     all_event_logs = db_session.query(EventLog).all()
@@ -553,12 +582,12 @@ def test_activity_delay_live_port(
 @mock.patch("bot.get_current_end_date")
 def test_delay_minutes_live_port(
     mock_get_current_end_date, segment_message_mock, create_messages_mock,
-    client, db_session, dose_record, initial_reminder_record, scheduler,
+    client, db_session, dose_record_for_paused_user, initial_reminder_record_for_paused_user, scheduler,
     user_record_paused, dose_window_record_for_paused_user, medication_record_for_paused_user
 ):
     segment_message_mock.return_value = [{'type': 'delay_minutes', 'payload': 20, "raw": "20"}]
     mock_get_current_end_date.return_value = datetime(2012, 1, 1, 18, tzinfo=utc)
-    client.post("/bot", query_string={"From": "+13604508655"})
+    client.post("/bot", query_string={"From": "+13604508656"})
     assert create_messages_mock.called
     all_events = db_session.query(Event).all()
     assert len(all_events) == 2
@@ -566,7 +595,7 @@ def test_delay_minutes_live_port(
     assert all_events[0].description == f"{timedelta(minutes=20)}"
     assert all_events[1].event_type == "reminder_delay"
     assert all_events[1].description == 'delayed to 2012-01-01 09:20:01-08:00'
-    scheduled_job = scheduler.get_job(f"{dose_record.id}-followup")
+    scheduled_job = scheduler.get_job(f"{dose_record_for_paused_user.id}-followup")
     assert scheduled_job is not None
     assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 20, 1, tzinfo=utc)
     all_event_logs = db_session.query(EventLog).all()
@@ -597,20 +626,6 @@ def test_port_legacy_data(
     event_logs = db_session.query(EventLog).all()
     assert len(event_logs) == 4
     assert UserSchema().dump(users[0]) == {
-        'events': [
-            {
-                'event_type': 'take', 'id': event_logs[0].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
-            },
-            {
-                'event_type': 'take', 'id': event_logs[1].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
-            },
-            {
-                'event_type': 'reminder_delay', 'id': event_logs[2].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': "delayed to 2021-04-25 09:26:20.045841-07:00"
-            },
-            {
-                'event_type': 'conversational', 'id': event_logs[3].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
-            },
-        ],
         'phone_number': '3604508655',
         'paused': True,
         'id': users[0].id,
@@ -654,12 +669,7 @@ def test_port_legacy_data(
             'active': True
         }],
         'id': medications[0].id,
-        'active': True,
-        'events': [
-            {
-                'event_type': 'take', 'id': event_logs[0].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
-            }
-        ],
+        'active': True
     }
     assert MedicationSchema().dump(medications[1]) == {
         'medication_name': 'Glipizide',
@@ -681,12 +691,7 @@ def test_port_legacy_data(
             'active': True
         }],
         'id': medications[1].id,
-        'active': True,
-        'events': [
-            {
-                'event_type': 'take', 'id': event_logs[1].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
-            }
-        ],
+        'active': True
     }
     assert DoseWindowSchema().dump(dose_windows[0]) == {
         'start_minute': 0,
@@ -705,14 +710,6 @@ def test_port_legacy_data(
             'timezone': 'US/Pacific',
             'id': users[0].id
         },
-        'events': [
-            {
-                'event_type': 'take', 'id': event_logs[0].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
-            },
-            {
-                'event_type': 'take', 'id': event_logs[1].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
-            }
-        ],
         'start_hour': 16,
         'id': dose_windows[0].id
     }
@@ -806,6 +803,19 @@ def test_port_legacy_data(
     }
 
 
+
 def test_drop_all_new_tables(db_session, user_record_paused, dose_window_record_for_paused_user, medication_record_for_paused_user):
     drop_all_new_tables()
     assert len(db_session.query(User).all()) == 0
+    assert len(db_session.query(DoseWindow).all()) == 0
+    assert len(db_session.query(Medication).all()) == 0
+
+
+def test_drop_all_new_tables_with_user(
+    db_session, user_record_paused, dose_window_record_for_paused_user,
+    medication_record_for_paused_user, user_record
+):
+    drop_all_new_tables(user_record_paused)
+    assert len(db_session.query(User).all()) == 1  # other user still remains
+    assert len(db_session.query(DoseWindow).all()) == 0
+    assert len(db_session.query(Medication).all()) == 0

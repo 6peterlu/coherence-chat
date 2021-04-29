@@ -1,3 +1,4 @@
+from bot import maybe_schedule_absent_new, send_absent_text_new, send_followup_text_new, send_intro_text_new
 import pytest
 from unittest import mock
 import os
@@ -28,6 +29,9 @@ def medication_take_event_record_not_in_dose_window(db_session, medication_recor
     db_session.add(event_obj)
     db_session.commit()
     return event_obj
+
+def stub_fn(*_):
+    pass
 
 
 def test_get_all_data_for_user(
@@ -94,7 +98,16 @@ def test_thanks_with_manual_takeover(
 @mock.patch("bot.client.messages.create")
 @mock.patch("bot.segment_message")
 @mock.patch("bot.get_take_message")
-def test_take(take_message_mock, segment_message_mock, create_messages_mock, client, db_session, user_record, dose_window_record, medication_record):
+@mock.patch("bot.remove_jobs_helper")
+def test_take(
+    remove_jobs_mock, take_message_mock, segment_message_mock,
+    create_messages_mock, client, db_session, user_record,
+    dose_window_record, medication_record, scheduler
+):
+    # seed scheduler jobs to test removal
+    scheduler.add_job(f"{dose_window_record.id}-followup-new", stub_fn)
+    scheduler.add_job(f"{dose_window_record.id}-absent-new", stub_fn)
+    scheduler.add_job(f"{dose_window_record.id}-boundary-new", stub_fn)
     local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
     segment_message_mock.return_value = [{'type': 'take', 'modifiers': {'emotion': 'neutral'}, "raw": "T"}]
     client.post("/bot", query_string={"From": "+13604508655"})
@@ -107,6 +120,9 @@ def test_take(take_message_mock, segment_message_mock, create_messages_mock, cli
     assert all_events[0].dose_window_id == dose_window_record.id
     assert all_events[0].medication_id == medication_record.id
     assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 17, tzinfo=utc)  # match freezegun time
+    assert remove_jobs_mock.called
+    for job_type in ["followup", "absent", "boundary"]:
+        assert scheduler.get_job(f"{dose_window_record.id}-{job_type}-new") is None
 
 
 @freeze_time("2012-01-01 17:00:00")  # within range of dose_window_record
@@ -181,7 +197,8 @@ def test_take_dose_out_of_range(
 @freeze_time("2012-01-01 17:00:00")  # within range of dose_window_record
 @mock.patch("bot.client.messages.create")
 @mock.patch("bot.segment_message")
-def test_skip(segment_message_mock, create_messages_mock, client, db_session, user_record, dose_window_record, medication_record):
+@mock.patch("bot.remove_jobs_helper")
+def test_skip(remove_jobs_mock, segment_message_mock, create_messages_mock, client, db_session, user_record, dose_window_record, medication_record):
     local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
     segment_message_mock.return_value = [{'type': 'skip', "raw": "S :)"}]
     client.post("/bot", query_string={"From": "+13604508655"})
@@ -193,6 +210,7 @@ def test_skip(segment_message_mock, create_messages_mock, client, db_session, us
     assert all_events[0].dose_window_id == dose_window_record.id
     assert all_events[0].medication_id == medication_record.id
     assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 17, tzinfo=utc)
+    assert remove_jobs_mock.called
 
 
 @freeze_time("2012-01-01 17:00:00")  # within range of dose_window_record
@@ -690,3 +708,57 @@ def test_activity_out_of_range(
     assert all_events[0].dose_window_id is None
     assert all_events[0].medication_id is None
     assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 17, tzinfo=utc)
+
+
+@mock.patch("bot.remove_jobs_helper")
+@mock.patch("bot.maybe_schedule_absent_new")
+def test_send_followup_text_new(mock_remove_jobs, mock_maybe_schedule_absent, dose_window_record, db_session):
+    send_followup_text_new(dose_window_record.id)
+    assert mock_remove_jobs.called
+    assert mock_maybe_schedule_absent.called
+    all_event_logs = db_session.query(EventLog).all()
+    assert len(all_event_logs) == 1
+    assert all_event_logs[0].event_type == "followup"
+
+@mock.patch("bot.remove_jobs_helper")
+@mock.patch("bot.client.messages.create")
+def test_send_intro_text_new(mock_message_create, mock_remove_jobs, dose_window_record, db_session):
+    send_intro_text_new(dose_window_record.id)
+    assert mock_message_create.called
+    all_event_logs = db_session.query(EventLog).all()
+    assert len(all_event_logs) == 1
+    assert all_event_logs[0].event_type == "initial"
+
+@mock.patch("bot.remove_jobs_helper")
+@mock.patch("bot.maybe_schedule_absent_new")
+@mock.patch("bot.client.messages.create")
+def test_send_absent_text_new(
+    mock_message_create, mock_maybe_schedule_absent,
+    mock_remove_jobs, dose_window_record, db_session
+):
+    send_absent_text_new(dose_window_record.id)
+    assert mock_message_create.called
+    assert mock_maybe_schedule_absent.called
+    all_event_logs = db_session.query(EventLog).all()
+    assert len(all_event_logs) == 1
+    assert all_event_logs[0].event_type == "absent"
+
+@freeze_time("2012-01-01 17:00:00")
+@mock.patch("bot.random.randint")
+def test_maybe_schedule_absent_new(mock_randint, dose_window_record, db_session, scheduler):
+    mock_randint.return_value = 45
+    maybe_schedule_absent_new(dose_window_record)
+    scheduled_job = scheduler.get_job(f"{dose_window_record.id}-absent-new")
+    assert scheduled_job is not None
+    assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 45, tzinfo=utc)
+
+
+# /admin tests
+# TODO: finish this
+# @freeze_time("2012-01-01 17:00:00")
+# def test_manual_send_reminder(dose_window_record, db_session, scheduler, client):
+#     client.post("/admin/manual", body={
+#         "doseWindowId": str(dose_window_record.id),
+#         "reminderType": "initial",
+#         "manual_time": datetime
+#     })

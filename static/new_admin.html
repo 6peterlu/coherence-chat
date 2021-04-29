@@ -111,22 +111,49 @@
                 refreshData();
             })
         }
-
-
         const renderUser = (userData) => {
-            let htmlOut = "<div style='margin: 10px; padding: 10px; background-color: #8ad1c2;'>";
+            let htmlOut = "<div style='margin: 10px; padding: 10px; background-color: #8ad1c2; display: flex; flex-direction: row; justify-content: space-between;'>";
+            // user data div
+            htmlOut += "<div>";
             htmlOut += "<p style='font-weight:bold;'>Name</p>";
-            htmlOut += `<p style="padding-left: 20px;">${userData.user.name}: ${userData.user.phone_number}</p>`;
+            htmlOut += `<p style="padding-left: 20px;">${userData.user.id} | ${userData.user.name}: ${userData.user.phone_number}</p>`;
             htmlOut += "<p style='font-weight:bold;'>Dose windows</p>";
             for (const doseWindow of userData.dose_windows) {
                 let doseStartTime = new Date();
                 let doseEndTime = new Date();
                 doseStartTime.setUTCHours(doseWindow.start_hour, doseWindow.start_minute)
                 doseEndTime.setUTCHours(doseWindow.end_hour, doseWindow.end_minute)
+                htmlOut += "<div style='display: flex; flex-direction: row;'>";
                 htmlOut += `<p style="padding-left: 20px;">${doseWindow.id} | ${doseStartTime.getHours()}:${checkTime(doseStartTime.getMinutes())}->${doseEndTime.getHours()}:${checkTime(doseEndTime.getMinutes())}</p>`
-                htmlOut += `<p style="padding-left: 40px;">Medications: ${doseWindow.medications.map((medication) => {return medication.medication_name != "" ? medication.medication_name : "No name provided"}).join(", ")}`
+                htmlOut += `
+                    <div style="padding: 5px; display: flex; flex-direction: row;">
+                        <select name="reminderType-${doseWindow.id}" id="reminderType" style="margin: 5px;">
+                            <option value="absent">absent</option>
+                            <option value="followup">followup</option>
+                            <option value="initial">initial</option>
+                        </select>
+                        <input id="manualEventTime-${doseWindow.id}" type="datetime-local" style="margin: 5px;"/>
+                        <button id="scheduleManualReminder" onclick="scheduleManualReminder(\'${doseWindow.id}\')" style="margin: 5px;">Send manual reminder</button>
+                    </div>
+                `;
+                htmlOut += "</div>";
+                htmlOut += `<p style="padding-left: 40px;">Medications: ${doseWindow.medications.map((medication) => {return `${medication.id} | ${medication.medication_name != "" ? medication.medication_name : "No name provided"}`}).join(", ")}`
             }
             htmlOut += "</div>";
+            // controls div
+            htmlOut += `
+                <div>
+                    <div style="margin: 5px;">
+                        <input id="customTextMessage-${userData.user.id}" placeholder="Say something..."/>
+                        <button onclick="sendCustomText(\'${userData.user.id}\', '${userData.user.phone_number}')">Send text</button>
+                    </div>
+                    <div style="margin: 5px;">
+                        <input id="loadTextDayLimit-${userData.user.id}" placeholder="Days to load" type="number"/>
+                        <button onclick="loadTextConversation(\'${userData.user.id}\', '${userData.user.phone_number}')">Load text conversation</button>
+                        <div id="conversationHistory-${userData.user.id}" style="max-width: 400px; max-height: 400px; overflow-y: scroll;""></div>
+                    </div>
+                </div>
+            `;
             return htmlOut;
         }
         const refreshData = () => {
@@ -154,9 +181,39 @@
             });
         }
         const dropAllNewTables = () => {
-            post("admin/dropNewTables", {}).then(response => response.json()).then(result => {
+            const phoneNumber = document.getElementById("phoneNumberEntry").value;
+            post("admin/dropNewTables", { phoneNumber }).then(response => response.json()).then(result => {
                 refreshData();
             });
+        }
+        const sendCustomText = (userId, phoneNumber) => {
+            const text = document.getElementById(`customTextMessage-${userId}`).value;
+            post("admin/text", { phoneNumber, text });
+        }
+        const loadTextConversation = (userId, phoneNumber) => {
+            const daysToPull = document.getElementById(`loadTextDayLimit-${userId}`).value;
+            if (daysToPull) {
+                get("admin/messages", { phoneNumber, days: daysToPull }).then(response => response.json()).then(result => {
+                    const rows = result.map(message => {
+                        return `
+                            <li>
+                                <p style="color:${message.sender === 'them' ? 'blue' : 'black'}">${message.date_sent}/${message.sender}: ${message.body}</p>
+                            </li>
+                        `
+                    });
+                    const html = `<ul>${rows.join("")}</ul>`;
+                    document.getElementById(`conversationHistory-${userId}`).innerHTML = html;
+                });
+            };
+        }
+        const sendManualReminder = (doseWindowId) => {
+            const reminderType = document.getElementById(`reminderType-${doseWindow.id}`).value;
+            const manualTime = document.getElementById(`manualEventTime-${doseWindow.id}`).value;
+            post("manual", { reminderType, doseWindowId, manualTime }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
         }
         refreshData();
     </script>
