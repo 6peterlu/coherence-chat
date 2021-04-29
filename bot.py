@@ -951,9 +951,9 @@ def online_toggle():
 def admin_online_toggle():
     online_status = get_online_status()
     if online_status:  # is online, we need to clear manual takeover on going offline
-        ManualTakeover.query.delete()
-    online_record = Online.query.get(1)
-    online_record.online = not online_status
+        all_users = User.query.filter_by(User.manual_takeover == True).all()
+        for user in all_users:
+            user.manual_takeover = False
     db.session.commit()
     return jsonify()
 

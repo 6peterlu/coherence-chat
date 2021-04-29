@@ -124,7 +124,7 @@
             htmlOut += `
                 <div>
                     <p style="padding-left: 20px;">${userData.user.id} | ${userData.user.name}: ${userData.user.phone_number}</p>
-                    <button id="manualTakeover-${userData.user.id} onpress=toggleManualTakeover(\'${userData.user.id}\')">Manually takeover user</button>
+                    <button id="manualTakeover-${userData.user.id}" onclick=toggleManualTakeover(\'${userData.user.id}\')>${userData.user.manual_takeover ? 'Stop taking over user' : 'Manually takeover user' }</button>
                 </div>
             `;
             htmlOut += "<p style='font-weight:bold;'>Dose windows</p>";
@@ -178,9 +178,6 @@
                 for (const userData of result.users) {
                     portedUsers.push(userData.user.name);
                     userDetailedDataDiv.innerHTML += renderUser(userData);
-                    const manualTakeoverButton = document.getElementById(`manualTakeover-${userData.user.id}`);
-                    manualTakeoverButton.innerHTML = userData.user.manual_takeover ? "Stop taking over user" : "Take over user";
-                    manualTakeoverButton.disabled = false;
                 }
                 // render event list
                 const eventListDiv = document.getElementById("eventListDiv");
@@ -201,10 +198,11 @@
             })
         }
         const toggleManualTakeover = (userId) => {
+            console.log("called");
             const manualTakeoverButton = document.getElementById(`manualTakeover-${userId}`);
             manualTakeoverButton.innerHTML = "switching modes..."
-            manualTakeoverButtondisabled = true;
-            post("admin/manualTakever", { userId }).then(
+            manualTakeoverButton.disabled = true;
+            post("admin/manualTakeover", { userId }).then(
                 response => response.json()).then(result => {
                     refreshData();
                 }
