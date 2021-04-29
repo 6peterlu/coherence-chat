@@ -96,6 +96,7 @@ UNKNOWN_MSG = """You can reply
 "2" to check in in 30
 "3" to check in in an hour
 "x" to report an error
+"w" to get the website link
 "I need help", "I'm confused"
 a specific amount of time such as "2 hours", "20 minutes"
 activities such as "eating dinner", "on a walk", etc.
