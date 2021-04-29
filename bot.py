@@ -1921,7 +1921,7 @@ def send_intro_text_new(dose_window_obj_id, manual=False, welcome_back=False):
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=f"+11{dose_window_obj.user.phone_number}"
     )
-    scheduler.add_job(f"{dose_window_obj.id}-boundary", send_boundary_text_new,
+    scheduler.add_job(f"{dose_window_obj.id}-boundary-new", send_boundary_text_new,
         args=[dose_window_obj.id],
         trigger="date",
         run_date=dose_window_obj.next_end_date if manual else dose_window_obj.next_end_date - timedelta(days=1),  # HACK, assumes this executes after start_date

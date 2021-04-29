@@ -626,20 +626,6 @@ def test_port_legacy_data(
     event_logs = db_session.query(EventLog).all()
     assert len(event_logs) == 4
     assert UserSchema().dump(users[0]) == {
-        'events': [
-            {
-                'event_type': 'take', 'id': event_logs[0].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
-            },
-            {
-                'event_type': 'take', 'id': event_logs[1].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
-            },
-            {
-                'event_type': 'reminder_delay', 'id': event_logs[2].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': "delayed to 2021-04-25 09:26:20.045841-07:00"
-            },
-            {
-                'event_type': 'conversational', 'id': event_logs[3].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
-            },
-        ],
         'phone_number': '3604508655',
         'paused': True,
         'id': users[0].id,
@@ -683,12 +669,7 @@ def test_port_legacy_data(
             'active': True
         }],
         'id': medications[0].id,
-        'active': True,
-        'events': [
-            {
-                'event_type': 'take', 'id': event_logs[0].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
-            }
-        ],
+        'active': True
     }
     assert MedicationSchema().dump(medications[1]) == {
         'medication_name': 'Glipizide',
@@ -710,12 +691,7 @@ def test_port_legacy_data(
             'active': True
         }],
         'id': medications[1].id,
-        'active': True,
-        'events': [
-            {
-                'event_type': 'take', 'id': event_logs[1].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
-            }
-        ],
+        'active': True
     }
     assert DoseWindowSchema().dump(dose_windows[0]) == {
         'start_minute': 0,
@@ -734,14 +710,6 @@ def test_port_legacy_data(
             'timezone': 'US/Pacific',
             'id': users[0].id
         },
-        'events': [
-            {
-                'event_type': 'take', 'id': event_logs[0].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
-            },
-            {
-                'event_type': 'take', 'id': event_logs[1].id, 'event_time': '2012-01-01T17:23:15+00:00', 'description': None
-            }
-        ],
         'start_hour': 16,
         'id': dose_windows[0].id
     }

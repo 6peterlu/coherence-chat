@@ -343,13 +343,10 @@ class UserSchema(Schema):
     paused = fields.Boolean()
     timezone = fields.String()
     dose_windows = fields.List(fields.Nested(
-        lambda: DoseWindowSchema(exclude=("user", "events", "medications"))
+        lambda: DoseWindowSchema(exclude=("user", "medications"))
         ))
     doses = fields.List(fields.Nested(
-        lambda: MedicationSchema(exclude=("user", "dose_windows", "events"))
-    ))
-    events = fields.List(fields.Nested(
-        lambda: EventLogSchema(exclude=("user", "dose_window", "medication"))
+        lambda: MedicationSchema(exclude=("user", "dose_windows"))
     ))
 
 class DoseWindowSchema(Schema):
@@ -358,9 +355,8 @@ class DoseWindowSchema(Schema):
     start_minute = fields.Integer()
     end_hour = fields.Integer()
     end_minute = fields.Integer()
-    user = fields.Nested(UserSchema(exclude=("dose_windows", "events", "doses")))
-    medications = fields.List(fields.Nested(lambda: MedicationSchema(exclude=("dose_windows", "user", "events"))))
-    events = fields.List(fields.Nested(lambda: EventLogSchema(exclude=("user", "dose_window", "medication"))))
+    user = fields.Nested(UserSchema(exclude=("dose_windows", "doses")))
+    medications = fields.List(fields.Nested(lambda: MedicationSchema(exclude=("dose_windows", "user"))))
     active = fields.Boolean()
 
 
@@ -369,11 +365,10 @@ class MedicationSchema(Schema):
     medication_name = fields.String()
     instructions = fields.String()
     active = fields.Boolean()
-    events = fields.List(fields.Nested(lambda: EventLogSchema(exclude=("user", "dose_window", "medication"))))
     dose_windows = dose_windows = fields.List(fields.Nested(
-        DoseWindowSchema(exclude=("user", "events", "medications"))
+        DoseWindowSchema(exclude=("user", "medications"))
         ))
-    user = fields.Nested(UserSchema(exclude=("dose_windows", "events", "doses")))
+    user = fields.Nested(UserSchema(exclude=("dose_windows", "doses")))
 
 
 
@@ -382,6 +377,6 @@ class EventLogSchema(Schema):
     event_type = fields.String()
     description = fields.String()
     event_time = fields.DateTime(format='%Y-%m-%dT%H:%M:%S+00:00')  # UTC time
-    user = fields.Nested(UserSchema(exclude=("dose_windows", "events", "doses")))
-    medication = fields.Nested(MedicationSchema(exclude=("dose_windows", "user", "events")))
-    dose_window = fields.Nested(DoseWindowSchema(exclude=("user", "events", "medications")))
+    user = fields.Nested(UserSchema(exclude=("dose_windows", "doses")))
+    medication = fields.Nested(MedicationSchema(exclude=("dose_windows", "user")))
+    dose_window = fields.Nested(DoseWindowSchema(exclude=("user", "medications")))

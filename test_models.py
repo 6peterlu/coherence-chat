@@ -60,7 +60,6 @@ def test_user_schema(user_record, dose_window_record, medication_record, medicat
                 "medication_name": "Lisinopril"
             }
         ],
-        "events": [],
         "id": user_record.id,
         "manual_takeover": False,
         "name": "Peter",
@@ -72,7 +71,6 @@ def test_user_schema(user_record, dose_window_record, medication_record, medicat
 def test_dose_window_schema(dose_window_record, medication_record, medication_record_2, user_record):
     dose_window_schema = DoseWindowSchema()
     assert dose_window_schema.dump(dose_window_record) == {
-        'events': [],
         'start_hour': 16,
         'active': True,
         'medications': [
@@ -131,7 +129,6 @@ def test_medication_schema(dose_window_record, medication_record, user_record):
             'id': user_record.id,
             'timezone': 'US/Pacific'
         },
-        'events': [],
         'active': True,
         'id': medication_record.id,
         'medication_name': 'Zoloft',

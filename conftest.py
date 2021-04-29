@@ -54,6 +54,7 @@ def app(database):
 @pytest.fixture(scope='session')
 def scheduler(app):
     prod_scheduler.remove_listener(prod_error_alert)  # prevent these from triggering
+    prod_scheduler.remove_all_jobs()  # just clear the local db whatever
     return prod_scheduler
 
 @pytest.fixture
