@@ -522,7 +522,7 @@ def patient_data():
             event_data_by_time[get_time_of_day(current_dose_window)]["dose"] = DoseWindowSchema().dump(current_dose_window)
         paused_service = user.paused
         behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
-        dose_to_take_now = False if dose_window is None else dose_window.is_recorded_for_today
+        dose_to_take_now = False if dose_window is None else not dose_window.is_recorded_for_today
     else:
         patient_dose_times = PATIENT_DOSE_MAP[phone_number]
         relevant_dose_ids = list(chain.from_iterable(patient_dose_times.values()))
