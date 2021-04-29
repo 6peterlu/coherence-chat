@@ -985,7 +985,9 @@ def get_all_admin_data():
             "medications": []
         }
         for dose_window in user.dose_windows:
-            user_dict["dose_windows"].append(DoseWindowSchema().dump(dose_window))
+            dose_window_json = DoseWindowSchema().dump(dose_window)
+            dose_window_json["action_required"] = dose_window.is_recorded_for_today and dose_window.within_dosing_period()
+            user_dict["dose_windows"].append(dose_window_json)
         for medication in user.doses:
             user_dict["medications"].append(MedicationSchema().dump(medication))
         return_dict["users"].append(user_dict)
@@ -993,6 +995,16 @@ def get_all_admin_data():
     return_dict["events"] = [EventLogSchema().dump(event) for event in global_event_stream]
     return_dict["online"] = get_online_status()
     return jsonify(return_dict)
+
+
+@app.route("/admin/manualTakeover", methods=["POST"])
+def toggle_manual_takeover_for_user():
+    user_id = int(request.json["userId"])
+    user = User.query.get(user_id)
+    if user is not None:
+        user.manual_takeover = not user.manual_takeover
+    db.session.commit()
+    return jsonify()
 
 
 @app.route('/bot', methods=['POST'])

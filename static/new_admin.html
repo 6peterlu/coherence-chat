@@ -121,7 +121,12 @@
             // user data div
             htmlOut += "<div>";
             htmlOut += "<p style='font-weight:bold;'>Name</p>";
-            htmlOut += `<p style="padding-left: 20px;">${userData.user.id} | ${userData.user.name}: ${userData.user.phone_number}</p>`;
+            htmlOut += `
+                <div>
+                    <p style="padding-left: 20px;">${userData.user.id} | ${userData.user.name}: ${userData.user.phone_number}</p>
+                    <button id="manualTakeover-${userData.user.id} onpress=toggleManualTakeover(\'${userData.user.id}\')">Manually takeover user</button>
+                </div>
+            `;
             htmlOut += "<p style='font-weight:bold;'>Dose windows</p>";
             for (const doseWindow of userData.dose_windows) {
                 let doseStartTime = new Date();
@@ -173,6 +178,9 @@
                 for (const userData of result.users) {
                     portedUsers.push(userData.user.name);
                     userDetailedDataDiv.innerHTML += renderUser(userData);
+                    const manualTakeoverButton = document.getElementById(`manualTakeover-${userData.user.id}`);
+                    manualTakeoverButton.innerHTML = userData.user.manual_takeover ? "Stop taking over user" : "Take over user";
+                    manualTakeoverButton.disabled = false;
                 }
                 // render event list
                 const eventListDiv = document.getElementById("eventListDiv");
@@ -191,6 +199,16 @@
                 console.log(result);
                 renderJobs(result);
             })
+        }
+        const toggleManualTakeover = (userId) => {
+            const manualTakeoverButton = document.getElementById(`manualTakeover-${userId}`);
+            manualTakeoverButton.innerHTML = "switching modes..."
+            manualTakeoverButtondisabled = true;
+            post("admin/manualTakever", { userId }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
         }
         const sendCustomText = (userId, phoneNumber) => {
             const text = document.getElementById(`customTextMessage-${userId}`).value;
