@@ -520,7 +520,7 @@ def patient_data():
             event_data_by_time[time_of_day]["events"].append(EventLogSchema().dump(event))
         for current_dose_window in user.dose_windows:
             event_data_by_time[get_time_of_day(current_dose_window)]["dose"] = DoseWindowSchema().dump(current_dose_window)
-        paused_service = PausedService.query.get(phone_number)
+        paused_service = user.paused
         behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
         dose_to_take_now = False if dose_window is None else dose_window.is_recorded_for_today
     else:
