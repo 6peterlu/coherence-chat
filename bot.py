@@ -491,6 +491,8 @@ def patient_data():
         return response
     user, dose_window = get_current_user_and_dose_window(recovered_cookie)
     if user is not None:
+        if request.remote_addr not in IP_BLACKLIST:
+            log_event_new("patient_portal_load", user.id, dose_window.id if dose_window else None, description=request.remote_addr)
         # grab data from user object
         take_record_events = [
             "take",

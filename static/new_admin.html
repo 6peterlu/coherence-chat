@@ -157,7 +157,7 @@
             htmlOut += `
                 <div>
                     <div style="margin: 5px;">
-                        <input id="customTextMessage-${userData.user.id}" placeholder="Say something..."/>
+                        <textarea id="customTextMessage-${userData.user.id}" placeholder="Say something..."></textarea>
                         <button onclick="sendCustomText(\'${userData.user.id}\', '${userData.user.phone_number}')">Send text</button>
                     </div>
                     <div style="margin: 5px;">
