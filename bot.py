@@ -121,6 +121,7 @@ from constants import (
     REMINDER_OUT_OF_RANGE_MSG,
     REMINDER_TOO_CLOSE_MSG,
     REMINDER_TOO_LATE_MSG,
+    REQUEST_WEBSITE,
     SECRET_CODE_MESSAGE,
     SKIP_MSG,
     TAKE_MSG,
@@ -490,6 +491,8 @@ def patient_data():
         return response
     user, dose_window = get_current_user_and_dose_window(recovered_cookie)
     if user is not None:
+        if request.remote_addr not in IP_BLACKLIST:
+            log_event_new("patient_portal_load", user.id, dose_window.id if dose_window else None, description=request.remote_addr)
         # grab data from user object
         take_record_events = [
             "take",
@@ -519,14 +522,9 @@ def patient_data():
             event_data_by_time[time_of_day]["events"].append(EventLogSchema().dump(event))
         for current_dose_window in user.dose_windows:
             event_data_by_time[get_time_of_day(current_dose_window)]["dose"] = DoseWindowSchema().dump(current_dose_window)
-        paused_service = PausedService.query.get(phone_number)
+        paused_service = user.paused
         behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
-        dose_to_take_now = False
-        if dose_window:
-            for medication in dose_window.medications:
-                if not medication.is_recorded_for_today(dose_window):
-                    dose_to_take_now = True
-                    break
+        dose_to_take_now = False if dose_window is None else not dose_window.is_recorded_for_today
     else:
         patient_dose_times = PATIENT_DOSE_MAP[phone_number]
         relevant_dose_ids = list(chain.from_iterable(patient_dose_times.values()))
@@ -616,6 +614,35 @@ def toggle_pause_service_for_phone_number(phone_number, silent=False):
                 resume_dose(dose, silent=silent)
         log_event("resumed", formatted_phone_number)
     db.session.commit()
+
+
+def send_pause_message(user):
+    client.messages.create(
+        body=PAUSE_MESSAGE,
+        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+        to=f"+1{user.phone_number}"
+    )
+
+def send_upcoming_dose_message(user, dose_window):
+    client.messages.create(
+        body=f"{random.choice(WELCOME_BACK_MESSAGES)} {random.choice(FUTURE_MESSAGE_SUFFIXES).substitute(time=dose_window.next_start_date.astimezone(timezone(user.timezone)).strftime('%I:%M %p'))}",
+        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+        to=f"+1{user.phone_number}"
+    )
+
+
+@app.route("/user/pause", methods=["POST"])
+def pause_user():
+    recovered_cookie = request.cookies.get("phoneNumber")
+    user, _ = get_current_user_and_dose_window(recovered_cookie)
+    user.pause(scheduler, send_pause_message)
+
+
+@app.route("/user/resume", methods=["POST"])
+def resume_user():
+    recovered_cookie = request.cookies.get("phoneNumber")
+    user, _ = get_current_user_and_dose_window(recovered_cookie)
+    user.resume(scheduler, send_intro_text_new, send_upcoming_dose_message)
 
 
 @app.route("/pauseService", methods=["POST"])
@@ -921,6 +948,19 @@ def online_toggle():
     db.session.commit()
     return jsonify()
 
+
+@app.route("/admin/online", methods=["POST"])
+def admin_online_toggle():
+    online_status = get_online_status()
+    if online_status:  # is online, we need to clear manual takeover on going offline
+        all_users = User.query.filter(User.manual_takeover.is_(True)).all()
+        for user in all_users:
+            user.manual_takeover = False
+    online_record = Online.query.get(1)
+    online_record.online = not online_status
+    db.session.commit()
+    return jsonify()
+
 # TODO: rewrite
 def should_force_manual(phone_number):  # phone number format: +13604508655
     all_takeover = ManualTakeover.query.all()
@@ -949,70 +989,35 @@ def get_all_admin_data():
             "medications": []
         }
         for dose_window in user.dose_windows:
-            user_dict["dose_windows"].append(DoseWindowSchema().dump(dose_window))
+            dose_window_json = DoseWindowSchema().dump(dose_window)
+            dose_window_json["action_required"] = not dose_window.is_recorded_for_today and dose_window.within_dosing_period()
+            user_dict["dose_windows"].append(dose_window_json)
         for medication in user.doses:
             user_dict["medications"].append(MedicationSchema().dump(medication))
         return_dict["users"].append(user_dict)
+    global_event_stream = EventLog.query.order_by(EventLog.event_time.desc()).limit(100).all()
+    return_dict["events"] = [EventLogSchema().dump(event) for event in global_event_stream]
+    return_dict["online"] = get_online_status()
     return jsonify(return_dict)
 
 
-@app.route("/admin/portData", methods=["POST"])
-def port_phone_number():
-    phone_number_to_port = request.json["phoneNumber"]
-    numbers_to_port = [
-        "3604508655",
-        "3609010956",
-        "3607738908",
-        "3609049085",
-        "8587761377",
-        "6502690598",
-        "5038871884",
-        "3605214193",
-        "3605131225",
-        "3609042210",
-        "3606064445",
-        "4152142478"
-    ]
-    if phone_number_to_port:
-        numbers_to_port = [phone_number_to_port]
-    port_legacy_data(numbers_to_port, PATIENT_NAME_MAP, PATIENT_DOSE_MAP)
-    # user activation stuff here
-    # pause legacy user service
-    for phone_number in numbers_to_port:
-        if PausedService.query.filter(PausedService.phone_number == f"+11{phone_number}").one_or_none() is None:
-            toggle_pause_service_for_phone_number(phone_number, silent=True)
-        new_user, _ = get_current_user_and_dose_window(phone_number)
-        new_user.resume(scheduler, send_intro_text_new)
+@app.route("/admin/manualTakeover", methods=["POST"])
+def toggle_manual_takeover_for_user():
+    user_id = int(request.json["userId"])
+    user = User.query.get(user_id)
+    if user is not None:
+        user.manual_takeover = not user.manual_takeover
+    db.session.commit()
     return jsonify()
 
-
-@app.route("/admin/dropNewTables", methods=["POST"])
-def drop_new_tables():
-    phone_number_to_port = request.json["phoneNumber"]
-    if phone_number_to_port:
-        if PausedService.query.filter(PausedService.phone_number == f"+11{phone_number_to_port}").one_or_none() is not None:
-            toggle_pause_service_for_phone_number(phone_number_to_port, silent=True)
-        user, _ = get_current_user_and_dose_window(phone_number_to_port)
-        user.pause(scheduler)
-        drop_all_new_tables(user=user)
-    else:  # drop everything
-        users = User.query.all()
-        for user in users:
-            if PausedService.query.filter(PausedService.phone_number == f"+11{user.phone_number}").one_or_none() is not None:
-                toggle_pause_service_for_phone_number(user.phone_number, silent=True)
-            user.pause(scheduler)
-        drop_all_new_tables()
-    return jsonify()
 
 @app.route('/bot', methods=['POST'])
 def bot():
     incoming_msg_list = segment_message(request.values.get('Body', ''))
     incoming_phone_number = request.values.get('From', None)
     formatted_incoming_phone_number = f"+1{incoming_phone_number[1:]}"
-    print(incoming_phone_number[2:])
     user, dose_window = get_current_user_and_dose_window(incoming_phone_number[2:])
     if user and not user.paused:
-        print(f"new code path for {incoming_phone_number[2:]}")
         # we weren't able to parse any part of the message
         if len(incoming_msg_list) == 0:
             log_event_new("not_interpretable", user.id, None if dose_window is None else dose_window.id, description=request.values.get('Body', ''))
@@ -1092,7 +1097,7 @@ def bot():
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                             to=incoming_phone_number
                         )
-                elif incoming_msg["type"] == "special":  # TODO: start here
+                elif incoming_msg["type"] == "special":
                     if incoming_msg["payload"] == "x":
                         client.messages.create(
                             body=USER_ERROR_REPORT.substitute(phone_number=incoming_phone_number),
@@ -1275,8 +1280,14 @@ def bot():
                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                         to=incoming_phone_number
                     )
+                if incoming_msg["type"] == "website_request":
+                    log_event_new("website_request", user.id, None, None, description=incoming_msg["raw"])
+                    client.messages.create(
+                        body=REQUEST_WEBSITE,
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                        to=incoming_phone_number
+                    )
     else:
-        print(f"old code path for {incoming_phone_number[2:]}")
         # new data model objects
         user, current_dose_window = get_current_user_and_dose_window(incoming_phone_number[2:])
 
@@ -1959,18 +1970,6 @@ def get_all_data_for_user():
         return jsonify(), 400
     user_schema = UserSchema()
     return jsonify(user_schema.dump(user))
-
-@app.route("/user/togglePause", methods=["POST"])
-@auth_required_post_delete
-def pause_user():
-    incoming_data = request.json
-    user = User.query.get(incoming_data["userId"])
-    if user is None:
-        return jsonify(), 400
-    user.paused = not user.paused
-    db.session.commit()
-    return jsonify()
-
 
 @app.route("/user/manualTakeover", methods=["POST"])
 @auth_required_post_delete

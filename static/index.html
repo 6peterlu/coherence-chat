@@ -69,7 +69,7 @@
             <div id="behaviorLearningChartTitle"></div>
             <div id="behaviorLearningChart"></div>
         </div>
-        <div id="servicePausedSection" style="display:none; width: 100%; flex-direction: column; align-items: center; background-color: rgb(233, 231, 220); box-sizing: border-box; padding: 20px;">
+        <div id="servicePausedSection" style="display: flex; width: 100%; flex-direction: column; align-items: center; background-color: rgb(233, 231, 220); box-sizing: border-box; padding: 20px;">
             <h3 style="color:#000; align-self:center;">Current status: <span id="statusIndicator">active</span></h2>
             <p id="statusExplainer" style="color:#000; align-self:center; text-align: center; margin-top: 0px;">I'm currently texting you to help you stay on track with your medication!</p>
             <button id="pauseButton" onclick="pauseService()" style="background-color: #f54242; color: #FBECB7; border: none; padding-top: 15px; padding-bottom: 15px; margin: 15px; border-radius: 30px; font-family: 'Lora', serif; text-align: center; font-size: 20px;">Pause</button>
@@ -406,7 +406,7 @@
         function renderServicePaused() {
             statusIndicator.innerHTML = servicePaused ? "paused 🚫" : "active ✅";
             pauseButton.innerHTML = servicePaused ? "Resume" : "Pause";
-            pauseButton.setAttribute("onclick", "pauseService()");
+            pauseButton.setAttribute("onclick", servicePaused ? "resumeService()" : "pauseService()");
             pauseButton.style.backgroundColor = servicePaused ? "#09ad56" : "transparent";
             pauseButton.style.color = servicePaused ? "FFF": "#f54242";
             pauseButton.style.paddingTop = servicePaused ? "15px" : "0px";
@@ -450,7 +450,15 @@
             pauseButton.innerHTML = "Loading...";
             pauseButton.onclick = "";
             const initDetails = {...postInitDetails}
-            fetch(`${apiURL}/pauseService`, postInitDetails).then(() => {
+            fetch(`${apiURL}/user/pause`, postInitDetails).then(() => {
+                requestData();
+            });
+        }
+        function resumeService() {
+            pauseButton.innerHTML = "Loading...";
+            pauseButton.onclick = "";
+            const initDetails = {...postInitDetails}
+            fetch(`${apiURL}/user/resume`, postInitDetails).then(() => {
                 requestData();
             });
         }

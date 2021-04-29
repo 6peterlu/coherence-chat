@@ -24,6 +24,7 @@ TIME_DELAY_EXTRACTION_REGEX = r'(\d+)\s*(minutes|minute|mins|min|hours|hour|hr)'
 ABSOLUTE_TIME_EXTRACTION_REGEX = r'(\d+(?:\:\d+)?)\s*(am|pm)?'
 SKIP_REGEX = r'(?:\W|^)(skipped|skipping|skip|s)(?:\W|$)'
 SPECIAL_COMMANDS_REGEX = r'(?:\W|^)(\d+|x)(?:\W|$)'
+WEBSITE_REGEX = r'((?:\W|^)(?:w)(?:\W|$)|website|site)'
 
 COMPUTING_PREFIX = "Computing ideal reminder time...done."
 
@@ -97,6 +98,7 @@ def segment_message(raw_message_str):
     taken_data = re.findall(MEDICATION_TAKEN_REGEX, processed_msg)
     skip_data = re.findall(SKIP_REGEX, processed_msg)
     special_commands = re.findall(SPECIAL_COMMANDS_REGEX, processed_msg)
+    website_request = re.findall(WEBSITE_REGEX, processed_msg)
 
     extracted_time = get_datetime_obj_from_string(processed_msg, expanded_search=True, format_restrictions=True)
 
@@ -126,6 +128,8 @@ def segment_message(raw_message_str):
             if activity in processed_msg:
                 message_segments.append({"type": "activity", "payload": RECOGNIZED_ACTIVITIES[activity]})
                 break
+        if website_request:
+            message_segments.append({"type": "website_request"})
     for thanks_version in THANKS_VERSIONS:
         if thanks_version in processed_msg:
             message_segments.append({"type": "thanks", "modifiers": {"emotion": "excited" if excited else "neutral"}})

@@ -3,12 +3,17 @@
 <body>
     <h1 id="header"></h1>
     <button onclick="refreshData()">Pull data</button>
-    <input id="phoneNumberEntry" type="tel" placeholder="phone"/>
-    <button onclick="portDataForPhone()">Port data for phone</button>
-    <button onclick="dropAllNewTables()">Drop all new tables</button>
-    <p>Ported users:</p>
-    <div id="portedUserList"></div>
-    <div id="jobListDiv"></div>
+    <button onclick="toggleOnlineStatus()" id="onlineToggleButton">Go online</button>
+    <div id="overviewDiv" style="display:flex; flex-direction: row; justify-content: space-between;">
+        <div>
+            <p>Job list:</p>
+            <div id="jobListDiv" style="flex:2; max-height:400px; overflow-y: scroll;"></div>
+        </div>
+        <div>
+            <p>Recent events:</p>
+            <div id="eventListDiv" style="flex:1; max-height:400px; overflow-y: scroll;"></div>
+        </div>
+    </div>
     <div id="userDetailedData"></div>
     <script defer>
         const initDetails = {
@@ -103,7 +108,7 @@
             });
             const html = `<ul>${rows.join("")}</ul>`;
             const jobListDiv = document.getElementById("jobListDiv");
-            jobListDiv.innerHTML = `<p>Job list: </p>${html}`;
+            jobListDiv.innerHTML = html;
         }
 
         function deleteJob(id) {
@@ -116,15 +121,23 @@
             // user data div
             htmlOut += "<div>";
             htmlOut += "<p style='font-weight:bold;'>Name</p>";
-            htmlOut += `<p style="padding-left: 20px;">${userData.user.id} | ${userData.user.name}: ${userData.user.phone_number}</p>`;
+            htmlOut += `
+                <div style='display: flex; flex-direction: row; ${userData.user.manual_takeover ? 'background-color: #bd5c59' : ''}'>
+                    <p style="padding-left: 20px;">${userData.user.id} | ${userData.user.name}: ${userData.user.phone_number}</p>
+                    <button style="margin: 10px;" id="manualTakeover-${userData.user.id}" onclick=toggleManualTakeover(\'${userData.user.id}\')>${userData.user.manual_takeover ? 'Stop taking over user' : 'Manually takeover user' }</button>
+                </div>
+            `;
             htmlOut += "<p style='font-weight:bold;'>Dose windows</p>";
             for (const doseWindow of userData.dose_windows) {
                 let doseStartTime = new Date();
                 let doseEndTime = new Date();
                 doseStartTime.setUTCHours(doseWindow.start_hour, doseWindow.start_minute)
                 doseEndTime.setUTCHours(doseWindow.end_hour, doseWindow.end_minute)
-                htmlOut += "<div style='display: flex; flex-direction: row;'>";
-                htmlOut += `<p style="padding-left: 20px;">${doseWindow.id} | ${doseStartTime.getHours()}:${checkTime(doseStartTime.getMinutes())}->${doseEndTime.getHours()}:${checkTime(doseEndTime.getMinutes())}</p>`
+                htmlOut += `<div style='display: flex; flex-direction: row; ${doseWindow.action_required ? 'background-color: #bd5c59' : ''}'>`;
+                htmlOut += `
+                    <p style="padding-left: 20px;">${doseWindow.id} | ${doseStartTime.getHours()}:${checkTime(doseStartTime.getMinutes())}->${doseEndTime.getHours()}:${checkTime(doseEndTime.getMinutes())}</p>
+                    <button id="editDoseWindow" style="margin: 10px;" onclick>Edit dose window</button>
+                `
                 htmlOut += `
                     <div style="padding: 5px; display: flex; flex-direction: row;">
                         <select name="reminderType-${doseWindow.id}" id="reminderType" style="margin: 5px;">
@@ -144,7 +157,7 @@
             htmlOut += `
                 <div>
                     <div style="margin: 5px;">
-                        <input id="customTextMessage-${userData.user.id}" placeholder="Say something..."/>
+                        <textarea id="customTextMessage-${userData.user.id}" placeholder="Say something..."></textarea>
                         <button onclick="sendCustomText(\'${userData.user.id}\', '${userData.user.phone_number}')">Send text</button>
                     </div>
                     <div style="margin: 5px;">
@@ -166,25 +179,34 @@
                     portedUsers.push(userData.user.name);
                     userDetailedDataDiv.innerHTML += renderUser(userData);
                 }
-                document.getElementById("portedUserList").innerHTML = portedUsers.join(", ");
+                // render event list
+                const eventListDiv = document.getElementById("eventListDiv");
+                eventListDiv.innerHTML = '';
+                for (const event of result.events) {
+                    eventListDiv.innerHTML += `
+                        <p>${event.user.name} | dw${event.dose_window ? event.dose_window.id : null}: ${event.event_type} / ${event.event_time}: ${event.description}</p>
+                    `;
+                }
+
+                const onlineButton = document.getElementById("onlineToggleButton")
+                onlineButton.innerHTML = result.online ? "Go offline" : "Go online";
+                onlineButton.disabled = false;
             });
             get("scheduler/jobs", {}).then(response => response.json()).then(result => {
                 console.log(result);
                 renderJobs(result);
             })
         }
-
-        const portDataForPhone = () => {
-            const phoneNumber = document.getElementById("phoneNumberEntry").value;
-            post("admin/portData", { phoneNumber }).then(response => response.json()).then(result => {
-                refreshData();
-            });
-        }
-        const dropAllNewTables = () => {
-            const phoneNumber = document.getElementById("phoneNumberEntry").value;
-            post("admin/dropNewTables", { phoneNumber }).then(response => response.json()).then(result => {
-                refreshData();
-            });
+        const toggleManualTakeover = (userId) => {
+            console.log("called");
+            const manualTakeoverButton = document.getElementById(`manualTakeover-${userId}`);
+            manualTakeoverButton.innerHTML = "switching modes..."
+            manualTakeoverButton.disabled = true;
+            post("admin/manualTakeover", { userId }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
         }
         const sendCustomText = (userId, phoneNumber) => {
             const text = document.getElementById(`customTextMessage-${userId}`).value;
@@ -210,6 +232,16 @@
             const reminderType = document.getElementById(`reminderType-${doseWindow.id}`).value;
             const manualTime = document.getElementById(`manualEventTime-${doseWindow.id}`).value;
             post("manual", { reminderType, doseWindowId, manualTime }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
+        }
+        const toggleOnlineStatus = () => {
+            const onlineButton = document.getElementById("onlineToggleButton");
+            onlineButton.innerHTML = "switching modes..."
+            onlineButton.disabled = true;
+            post("admin/online", {}).then(
                 response => response.json()).then(result => {
                     refreshData();
                 }
