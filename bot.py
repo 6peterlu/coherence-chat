@@ -15,12 +15,7 @@ import random
 from itertools import chain, groupby
 from werkzeug.middleware.proxy_fix import ProxyFix
 from models import (
-    Dose,
-    Reminder,
     Online,
-    ManualTakeover,
-    Event,
-    PausedService,
     # new data models
     User,
     EventLog,
