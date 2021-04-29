@@ -182,7 +182,10 @@
                         <p>${event.user.name} | dw${event.dose_window ? event.dose_window.id : null}: ${event.event_type} / ${event.event_time}: ${event.description}</p>
                     `;
                 }
-                document.getElementById("onlineToggleButton").innerHTML = result.online ? "Go offline" : "Go online";
+
+                const onlineButton = document.getElementById("onlineToggleButton")
+                onlineButton.innerHTML = result.online ? "Go offline" : "Go online";
+                onlineButton.disabled = false;
             });
             get("scheduler/jobs", {}).then(response => response.json()).then(result => {
                 console.log(result);
@@ -218,11 +221,16 @@
                 }
             );
         }
-        post("admin/online", {}).then(
+        const toggleOnlineStatus = () => {
+            const onlineButton = document.getElementById("onlineToggleButton");
+            onlineButton.innerHTML = "switching modes..."
+            onlineButton.disabled = true;
+            post("admin/online", {}).then(
                 response => response.json()).then(result => {
                     refreshData();
                 }
             );
+        }
         refreshData();
     </script>
 </body>
