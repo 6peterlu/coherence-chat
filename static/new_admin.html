@@ -3,6 +3,7 @@
 <body>
     <h1 id="header"></h1>
     <button onclick="refreshData()">Pull data</button>
+    <button onclick="toggleOnlineStatus()" id="onlineToggleButton">Go online</button>
     <div id="overviewDiv" style="display:flex; flex-direction: row; justify-content: space-between;">
         <div>
             <p>Job list:</p>
@@ -181,6 +182,7 @@
                         <p>${event.user.name} | dw${event.dose_window ? event.dose_window.id : null}: ${event.event_type} / ${event.event_time}: ${event.description}</p>
                     `;
                 }
+                document.getElementById("onlineToggleButton").innerHTML = result.online ? "Go offline" : "Go online";
             });
             get("scheduler/jobs", {}).then(response => response.json()).then(result => {
                 console.log(result);
@@ -216,6 +218,11 @@
                 }
             );
         }
+        post("admin/online", {}).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
         refreshData();
     </script>
 </body>

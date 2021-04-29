@@ -946,6 +946,17 @@ def online_toggle():
     db.session.commit()
     return jsonify()
 
+
+@app.route("/admin/online", methods=["POST"])
+def online_toggle():
+    online_status = get_online_status()
+    if online_status:  # is online, we need to clear manual takeover on going offline
+        ManualTakeover.query.delete()
+    online_record = Online.query.get(1)
+    online_record.online = not online_status
+    db.session.commit()
+    return jsonify()
+
 # TODO: rewrite
 def should_force_manual(phone_number):  # phone number format: +13604508655
     all_takeover = ManualTakeover.query.all()
@@ -979,8 +990,8 @@ def get_all_admin_data():
             user_dict["medications"].append(MedicationSchema().dump(medication))
         return_dict["users"].append(user_dict)
     global_event_stream = EventLog.query.order_by(EventLog.event_time.desc()).limit(100).all()
-    print(global_event_stream)
     return_dict["events"] = [EventLogSchema().dump(event) for event in global_event_stream]
+    return_dict["online"] = get_online_status()
     return jsonify(return_dict)
 
 
