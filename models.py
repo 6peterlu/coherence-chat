@@ -50,7 +50,7 @@ class User(db.Model):
     @property
     def current_day_bounds(self):
         local_timezone = timezone(self.timezone)
-        local_time_now = local_timezone.localize(get_time_now(tzaware=False))
+        local_time_now = get_time_now().astimezone(local_timezone)
         start_of_day = local_time_now.replace(hour=0, minute=0, second=0, microsecond=0)
         end_of_day = start_of_day + timedelta(days=1)
         return start_of_day, end_of_day
