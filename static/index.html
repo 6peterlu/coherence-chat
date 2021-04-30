@@ -205,15 +205,17 @@
                             </div>
                             <button id="updateDoseWindow-${doseWindow.id}" onclick=updateDoseWindow(\'${doseWindow.id}\') style="border-radius: 20px; padding-left:5px; padding-right:5px; background-color: #09ad56;">Save changes</button>
                         </div>
-                        <button id="editDoseWindow-${doseWindow.id}" onclick="startEditingDoseWindow(\'${doseWindow.id}\')" style="border-radius: 20px; padding-left:5px; padding-right:5px; background-color: #002864;">Edit</button>
+                        <button id="editDoseWindow-${doseWindow.id}" onclick="startEditingDoseWindow(\'${doseWindow.id}\')" style="border-radius: 20px; padding-left:10px; padding-right:10px; background-color: #002864; color: #FFF; border:0;">Edit</button>
                     </div>
                 `;
                 doseWindowDiv.innerHTML += doseWindowHTML;
             }
         }
         function startEditingDoseWindow(doseWindowId) {
+            console.log("clicked start editing for " + doseWindowId);
             const startEditingButton = document.getElementById(`editDoseWindow-${doseWindowId}`);
             startEditingButton.innerHTML = "Cancel edits";
+            startEditingButton.onclick = () => {stopEditingDoseWindow(doseWindowId)};
             const doseWindowHeader = document.getElementById(`doseWindowTimeHeader-${doseWindowId}`);
             doseWindowHeader.display = "none";
             const doseWindowEditingInterface = document.getElementById(`doseWindowEditingInterface-${doseWindowId}`);
@@ -222,6 +224,7 @@
         function stopEditingDoseWindow(doseWindowId) {
             const stopEditingButton = document.getElementById(`editDoseWindow-${doseWindowId}`);
             stopEditingButton.innerHTML = "Edit";
+            stopEditingButton.onclick = () => {startEditingDoseWindow(doseWindowId)};
             const doseWindowHeader = document.getElementById(`doseWindowTimeHeader-${doseWindowId}`);
             doseWindowHeader.display = "inline";
             const doseWindowEditingInterface = document.getElementById(`doseWindowEditingInterface-${doseWindowId}`);
