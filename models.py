@@ -19,8 +19,8 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     phone_number = db.Column(db.String(10), nullable=False, unique=True)
     name = db.Column(db.String, nullable=False)
-    dose_windows = db.relationship("DoseWindow", backref="user", passive_deletes=True, cascade="delete, merge, save-update")
-    doses = db.relationship("Medication", backref="user", passive_deletes=True, cascade="delete, merge, save-update")
+    dose_windows = db.relationship("DoseWindow", backref="user", passive_deletes=True, cascade="delete, merge, save-update", order_by="DoseWindow.id.asc()")
+    doses = db.relationship("Medication", backref="user", passive_deletes=True, cascade="delete, merge, save-update", order_by="Medication.id.asc()")
     events = db.relationship("EventLog", backref="user", order_by="EventLog.event_time.asc()", passive_deletes=True, cascade="delete, merge, save-update")
     manual_takeover = db.Column(db.Boolean, nullable=False)
     paused = db.Column(db.Boolean, nullable=False)
@@ -86,7 +86,7 @@ class DoseWindow(db.Model):
     start_minute = db.Column(db.Integer, nullable=False)
     end_minute = db.Column(db.Integer, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE', name="dose_window_user_fkey_custom"), nullable=False)
-    medications = db.relationship("Medication", secondary=dose_medication_linker, back_populates="dose_windows")
+    medications = db.relationship("Medication", secondary=dose_medication_linker, back_populates="dose_windows", order_by="Medication.id.asc()")
     events = db.relationship("EventLog", backref="dose_window", order_by="EventLog.event_time.asc()")
     active = db.Column(db.Boolean)  # active dose windows can be interacted in, even if the bot is paused.
 
@@ -217,7 +217,7 @@ class Medication(db.Model):
     medication_name = db.Column(db.String, nullable=False)
     instructions = db.Column(db.String)
     events = db.relationship("EventLog", backref="medication", order_by="EventLog.event_time.asc()")
-    dose_windows = db.relationship("DoseWindow", secondary=dose_medication_linker, back_populates="medications")
+    dose_windows = db.relationship("DoseWindow", secondary=dose_medication_linker, back_populates="medications", order_by="DoseWindow.id.asc()")
     active = db.Column(db.Boolean, nullable=False)
 
     def __init__(self, user_id, medication_name, scheduler_tuple=None, instructions=None, events=[], dose_windows=[], active=True):

@@ -597,7 +597,7 @@ def convert_to_user_local_time(user_obj, dt):
 
 @app.route("/admin/everything", methods=["GET"])
 def get_all_admin_data():
-    all_users_in_system = User.query.all()
+    all_users_in_system = User.query.order_by(User.name).all()
     return_dict = {"users": []}
     for user in all_users_in_system:
         user_dict = {
@@ -605,7 +605,7 @@ def get_all_admin_data():
             "dose_windows": [],
             "medications": []
         }
-        for dose_window in user.dose_windows:
+        for dose_window in user.dose_windows, lambda dw: dw.id:
             dose_window_json = DoseWindowSchema().dump(dose_window)
             dose_window_json["action_required"] = not dose_window.is_recorded_for_today and dose_window.within_dosing_period()
             user_dict["dose_windows"].append(dose_window_json)
