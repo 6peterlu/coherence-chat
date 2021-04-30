@@ -120,7 +120,7 @@ class DoseWindow(db.Model):
         return hour >= 0 and hour <= 23
 
     def valid_minute(self, minute):
-        return minute >= 0 and minute <= 23
+        return minute >= 0 and minute <= 59
 
     def edit_window(self, new_start_hour,
         new_start_minute, new_end_hour, new_end_minute,
