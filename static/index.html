@@ -220,13 +220,11 @@
         function getTimeFromHourMinute(hour, minute, utc=false) {
             let time = new Date();
             let dayStart = new Date();
-            if (dayStart.getHours() <= 2) {
+            if (dayStart.getHours() < 2) {
                 dayStart.addDays(-1);
             }
             dayStart.setHours(2, 0, 0, 0); // 2 AM today.
             if (utc) {
-                console.log(hour);
-                console.log(minute);
                 time.setUTCHours(hour, minute, 0, 0);
                 console.log(time);
             } else {
@@ -235,8 +233,7 @@
             if (time < dayStart) {  // UTC caused it to become the previous day.
                 time = time.addDays(1);
             }
-            console.log(time.getHours());
-            if (time.getHours() <= 2) {
+            if (time.getHours() < 2) {
                 time = time.addDays(1);
             }
             return time
@@ -245,9 +242,6 @@
             const { startHour, startMinute, endHour, endMinute, doseWindowId } = updatedDoseWindow;
             let newDwStartTime = getTimeFromHourMinute(startHour, startMinute);
             let newDwEndTime = getTimeFromHourMinute(endHour, endMinute);
-            console.log("new");
-            console.log(newDwStartTime);
-            console.log(newDwEndTime);
             if (newDwEndTime <= newDwStartTime) {
                 return "Dose window end time must be after start time."
             }
@@ -256,8 +250,6 @@
                 console.log("existing");
                 let existingDwStartTime = getTimeFromHourMinute(dw.start_hour, dw.start_minute, utc=true);
                 let existingDwEndTime = getTimeFromHourMinute(dw.end_hour, dw.end_minute, utc=true);
-                console.log(existingDwStartTime);
-                console.log(existingDwEndTime);
                 if (newDwStartTime < existingDwStartTime && newDwEndTime > existingDwStartTime) {
                     return "Dose windows cannot overlap.";
                 }

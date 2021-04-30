@@ -168,7 +168,6 @@ class DoseWindow(db.Model):
             )
 
     def remove_jobs(self, scheduler, jobs_list):
-        print("removing jobs")
         for job in jobs_list:
             job_id = f"{self.id}-{job}-new"
             if scheduler.get_job(job_id):
@@ -196,7 +195,6 @@ class DoseWindow(db.Model):
         return alarm_starttime
     @property
     def next_end_date(self):
-        print(self.end_hour)
         alarm_endtime = get_time_now().replace(hour=self.end_hour, minute=self.end_minute, second=0, microsecond=0)
         if alarm_endtime < get_time_now():
             alarm_endtime += timedelta(days=1)
@@ -234,8 +232,8 @@ class Medication(db.Model):
         relevant_medication_history_records = EventLog.query.filter(
             EventLog.dose_window_id == dose_window_obj.id,
             EventLog.medication_id == self.id,
-            EventLog.event_time > start_of_day,
-            EventLog.event_time <= end_of_day,
+            EventLog.event_time >= start_of_day,
+            EventLog.event_time < end_of_day,
             EventLog.event_type.in_(["take", "skip", "boundary"])
         ).all()
         return len(relevant_medication_history_records) > 0
