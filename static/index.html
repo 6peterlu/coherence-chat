@@ -217,18 +217,18 @@
             startEditingButton.innerHTML = "Cancel edits";
             startEditingButton.onclick = () => {stopEditingDoseWindow(doseWindowId)};
             const doseWindowHeader = document.getElementById(`doseWindowTimeHeader-${doseWindowId}`);
-            doseWindowHeader.display = "none";
+            doseWindowHeader.style.display = "none";
             const doseWindowEditingInterface = document.getElementById(`doseWindowEditingInterface-${doseWindowId}`);
-            doseWindowEditingInterface.display = "flex";
+            doseWindowEditingInterface.style.display = "flex";
         }
         function stopEditingDoseWindow(doseWindowId) {
             const stopEditingButton = document.getElementById(`editDoseWindow-${doseWindowId}`);
             stopEditingButton.innerHTML = "Edit";
             stopEditingButton.onclick = () => {startEditingDoseWindow(doseWindowId)};
             const doseWindowHeader = document.getElementById(`doseWindowTimeHeader-${doseWindowId}`);
-            doseWindowHeader.display = "inline";
+            doseWindowHeader.style.display = "inline";
             const doseWindowEditingInterface = document.getElementById(`doseWindowEditingInterface-${doseWindowId}`);
-            doseWindowEditingInterface.display = "none";
+            doseWindowEditingInterface.style.display = "none";
         }
         function renderAnalytics() {
             const timeOfDayOrder = ["morning", "afternoon", "evening"];
