@@ -268,6 +268,7 @@
             if (previousStartTimeString === startTimeString && previousEndTimeString === endTimeString) {
                 // no changes, close editor
                 stopEditingDoseWindow(doseWindowId);
+                return;
             }
             const startHour = parseInt(startTimeString.split(":")[0]);
             const startMinute = parseInt(startTimeString.split(":")[1]);
