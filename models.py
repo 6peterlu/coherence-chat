@@ -117,15 +117,35 @@ class DoseWindow(db.Model):
         db.session.commit()
 
 
-    def edit_window(self, new_start_hour, new_start_minute, new_end_hour, new_end_minute, scheduler):
+    def edit_window(self, new_start_hour,
+        new_start_minute, new_end_hour, new_end_minute,
+        scheduler, send_intro_text_new, send_boundary_text_new
+    ):
+        currently_outgoing_jobs = self.within_dosing_period() and not self.is_recorded_for_today
         self.start_hour = new_start_hour
         self.start_minute = new_start_minute
         self.end_hour = new_end_hour
         self.end_minute = new_end_minute
         db.session.commit()
-        # clear old jobs
-        self.remove_jobs(self, scheduler, ["initial", "followup", "boundary", "absent"])
-        # TODO: start here
+        # clear initial
+        self.remove_jobs(scheduler, ["initial"])
+        self.schedule_initial_job(scheduler, send_intro_text_new)
+        if currently_outgoing_jobs:  # manage the jobs currently in flight
+            if self.next_end_date - timedelta(days=1) < get_time_now():  # we're after the new end time, clear all jobs.
+                self.remove_jobs(scheduler, ["followup", "absent", "boundary"])
+            else:
+                if self.next_start_date - timedelta(days=1) > get_time_now():  # we start after the current time, clear all jobs
+                    self.remove_jobs(scheduler, ["followup", "absent", "boundary"])
+                else:  # we're still in the range, so leave the existing jobs and just move the end one.
+                    self.remove_jobs(scheduler, ["boundary"])
+                    scheduler.add_job(f"{self.id}-boundary-new", send_boundary_text_new,
+                        args=[self.id],
+                        trigger="date",
+                        run_date=self.next_end_date - timedelta(days=1),
+                        misfire_grace_time=5*60
+                    )
+
+
 
     def schedule_initial_job(self, scheduler, send_intro_text_new):
         if scheduler.get_job(f"{self.id}-initial-new") is None and not self.user.paused:
@@ -140,6 +160,7 @@ class DoseWindow(db.Model):
             )
 
     def remove_jobs(self, scheduler, jobs_list):
+        print("removing jobs")
         for job in jobs_list:
             job_id = f"{self.id}-{job}-new"
             if scheduler.get_job(job_id):
