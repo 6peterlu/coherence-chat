@@ -292,13 +292,13 @@
         function confirmUpdateForDoseWindow(startHour, startMinute, endHour, endMinute, doseWindowId) {
             const initDetails = {
                 ...postInitDetails,
-                body: {
+                body: JSON.stringify({
                     startHour: parseInt(startHour),
                     startMinute: parseInt(startMinute),
                     endHour: parseInt(endHour),
                     endMinute: parseInt(endMinute),
                     doseWindowId: parseInt(doseWindowId)
-                }
+                })
             };
             const confirmUpdateButton = document.getElementById("confirmUpdateButton");
             confirmUpdateButton.disabled = true;
