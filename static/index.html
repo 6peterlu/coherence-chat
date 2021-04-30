@@ -244,7 +244,7 @@
                 return "Dose window end time must be after start time."
             }
             const remainingDoseWindows = doseWindows.filter((dw) => {return dw.id != doseWindowId});
-            for (const dw in remainingDoseWindows) {
+            for (const dw of remainingDoseWindows) {
                 console.log("existing");
                 let existingDwStartTime = getTimeFromHourMinute(dw.start_hour, dw.start_minute, utc=true);
                 let existingDwEndTime = getTimeFromHourMinute(dw.end_hour, dw.end_minute, utc=true);
