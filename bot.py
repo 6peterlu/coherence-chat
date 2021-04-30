@@ -142,7 +142,7 @@ TWILIO_PHONE_NUMBERS = {
 CLINICAL_BOUNDARY_PHONE_NUMBERS = ["8587761377"]
 
 
-PATIENT_DOSE_MAP = { "+113604508655": {"morning": [153, 154, 173], "afternoon": [114, 152]}} if os.environ["FLASK_ENV"] == "local" else {
+PATIENT_DOSE_MAP = {
     "+113604508655": {"morning": [85]},
     "+113609042210": {"afternoon": [25], "evening": [15]},
     "+113609049085": {"evening": [16]},
@@ -157,7 +157,7 @@ PATIENT_DOSE_MAP = { "+113604508655": {"morning": [153, 154, 173], "afternoon": 
     "+113609010956": {"evening": [86]}
 }
 
-PATIENT_NAME_MAP = { "+113604508655": "Peter" } if os.environ["FLASK_ENV"] == "local" else {
+PATIENT_NAME_MAP = {
     "+113604508655": "Peter",
     "+113606064445": "Cheryl",
     "+113609042210": "Steven",
@@ -172,7 +172,7 @@ PATIENT_NAME_MAP = { "+113604508655": "Peter" } if os.environ["FLASK_ENV"] == "l
     "+113609010956": "Andie"
 }
 
-SECRET_CODES = { "+113604508655": 123456 } if os.environ["FLASK_ENV"] == "local" else {
+SECRET_CODES = {
     "+113604508655": 123456,
     "+113606064445": 110971,
     "+113609042210": 902157,
@@ -526,11 +526,12 @@ def request_secret_code():
         phone_number = phone_number[1:]
     phone_number_formatted = f"+11{phone_number}"
     if phone_number_formatted in SECRET_CODES:
-        client.messages.create(
-            body=SECRET_CODE_MESSAGE.substitute(code=SECRET_CODES[phone_number_formatted]),
-            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-            to=phone_number_formatted
-        )
+        if "NOALERTS" not in os.environ:
+            client.messages.create(
+                body=SECRET_CODE_MESSAGE.substitute(code=SECRET_CODES[phone_number_formatted]),
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=phone_number_formatted
+            )
         return jsonify()
     return jsonify(), 401
 
@@ -630,6 +631,8 @@ def toggle_manual_takeover_for_user():
     return jsonify()
 
 
+def locate_correct_input_time(input_time, )
+
 @app.route('/bot', methods=['POST'])
 def bot():
     incoming_msg_list = segment_message(request.values.get('Body', ''))
@@ -647,12 +650,8 @@ def bot():
             else:
                 if incoming_msg["type"] == "take":
                     if dose_window is not None:
-                        associated_doses = dose_window.medications
-                        doses_not_recorded = list(filter(
-                            lambda dose: not dose.is_recorded_for_today(dose_window),
-                            associated_doses
-                        ))
-                        if len(doses_not_recorded) == 0: # all doses already recorded.
+                        if dose_window.is_recorded_for_today():
+                            associated_doses = dose_window.medications
                             for dose in associated_doses:
                                 log_event_new("attempted_rerecord", user.id, dose_window.id, dose.id, description=incoming_msg["raw"])
                             client.messages.create(
@@ -663,7 +662,8 @@ def bot():
                         else:
                             # all doses not recorded, we record now
                             excited = incoming_msg["modifiers"]["emotion"] == "excited"
-                            input_time = incoming_msg.get("payload")
+                            # input_time = incoming_msg.get("payload")
+                            input_time = None  # TODO: start here
                             outgoing_copy = get_take_message_new(excited, user, input_time=input_time)
                             for dose in associated_doses:
                                 log_event_new("take", user.id, dose_window.id, dose.id, description=dose.id, event_time=input_time)
@@ -683,12 +683,8 @@ def bot():
                         )
                 elif incoming_msg["type"] == "skip":
                     if dose_window is not None:
-                        associated_doses = dose_window.medications
-                        doses_not_recorded = list(filter(
-                            lambda dose: not dose.is_recorded_for_today(dose_window),
-                            associated_doses
-                        ))
-                        if len(doses_not_recorded) == 0: # all doses already recorded.
+                        if dose_window.is_recorded_for_today():
+                            associated_doses = dose_window.medications
                             for dose in associated_doses:
                                 log_event_new("attempted_rerecord", user.id, dose_window.id, dose.id, description=incoming_msg["raw"])
                             client.messages.create(

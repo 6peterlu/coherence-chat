@@ -105,12 +105,11 @@ def segment_message(raw_message_str):
     if taken_data:
         next_alarm_time = get_datetime_obj_from_string(processed_msg, expanded_search=False)
         message_body = {"type": "take", "modifiers": {"emotion": "excited" if excited else "neutral"}}
-        # if "NEW_DATA_MODEL" in os.environ:
-        # # only enabled for new data model
-        #     if next_alarm_time is not None:
-        #         # maybe this is only needed in the pm?
-        #         # next_alarm_time -= timedelta(hours=12)  # go back to last referenced time
-        #         message_body["payload"] = next_alarm_time
+        # only enabled for new data model
+        if next_alarm_time is not None:
+            # maybe this is only needed in the pm?
+            # next_alarm_time -= timedelta(hours=12)  # go back to last referenced time
+            message_body["payload"] = next_alarm_time
         message_segments.append(message_body)
     elif skip_data:
         message_segments.append({"type": "skip"})
