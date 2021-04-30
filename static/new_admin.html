@@ -136,9 +136,9 @@
                 htmlOut += `<div style='display: flex; flex-direction: row; ${doseWindow.action_required ? 'background-color: #bd5c59' : ''}'>`;
                 htmlOut += `
                     <p style="padding-left: 20px;" id="doseTimeDisplay-${doseWindow.id}">${doseWindow.id} | ${doseStartTime.getHours()}:${checkTime(doseStartTime.getMinutes())}->${doseEndTime.getHours()}:${checkTime(doseEndTime.getMinutes())}</p>
-                    <div id="doseWindowEditing-${doseWindow.id}" style="display:none; flex-direction:row;">
-                        <input type="time" id="updatedDoseStartTime-${doseWindow.id}"/>
-                        <input type="time" id="updatedDoseEndTime-${doseWindow.id}"/>
+                    <div id="doseWindowEditing-${doseWindow.id}" style="display:none; flex-direction:column;">
+                        <input type="time" id="updatedDoseStartTime-${doseWindow.id}" value="${checkTime(doseStartTime.getHours())}:${checkTime(doseStartTime.getMinutes())}"/>
+                        <input type="time" id="updatedDoseEndTime-${doseWindow.id}" value="${checkTime(doseEndTime.getHours())}:${checkTime(doseEndTime.getMinutes())}"/>
                         <button id="updateDoseWindow-${doseWindow.id}" onclick=updateDoseWindow(\'${doseWindow.id}\')>Save changes</button>
                     </div>
                     <button id="editDoseWindow-${doseWindow.id}" onclick="editDoseWindow(\'${doseWindow.id}\')" style="margin: 10px;" onclick>Edit dose window</button>
@@ -206,9 +206,9 @@
             const endTime = document.getElementById(`updatedDoseEndTime-${doseWindowId}`).value;
             const splitStartTime = startTime.split(":");
             const splitEndTime = endTime.split(":");
-            const startHour = parseInt(splitStartTime[0]) + 7 % 24;  // convert to UTC (only needs to be done because admin has no user account)
+            const startHour = (parseInt(splitStartTime[0]) + 7) % 24;  // convert to UTC (only needs to be done because admin has no user account)
             const startMinute = parseInt(splitStartTime[1]);
-            const endHour = parseInt(splitEndTime[0]) + 7 % 24;
+            const endHour = (parseInt(splitEndTime[0]) + 7) % 24;
             const endMinute = parseInt(splitEndTime[1]);
             post("admin/editDoseWindow", { startHour, startMinute, endHour, endMinute, doseWindowId }).then(response => response.json()).then(result => {
                 refreshData();

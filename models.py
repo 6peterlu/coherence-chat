@@ -116,12 +116,19 @@ class DoseWindow(db.Model):
                 self.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
         db.session.commit()
 
+    def valid_hour(self, hour):
+        return hour >= 0 and hour <= 23
+
+    def valid_minute(self, minute):
+        return minute >= 0 and minute <= 23
 
     def edit_window(self, new_start_hour,
         new_start_minute, new_end_hour, new_end_minute,
         scheduler, send_intro_text_new, send_boundary_text_new
     ):
         currently_outgoing_jobs = self.within_dosing_period() and not self.is_recorded_for_today
+        if not self.valid_hour(new_start_hour) or not self.valid_minute(new_start_minute) or not self.valid_hour(new_end_hour) or not self.valid_minute(new_end_minute):
+            return
         self.start_hour = new_start_hour
         self.start_minute = new_start_minute
         self.end_hour = new_end_hour
