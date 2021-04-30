@@ -457,13 +457,15 @@ def patient_data():
         paused_service = user.paused
         behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
         dose_to_take_now = False if dose_window is None else not dose_window.is_recorded_for_today
+        dose_windows = [DoseWindowSchema().dump(dw) for dw in user.dose_windows]
         return jsonify({
             "phoneNumber": recovered_cookie,
             "eventData": event_data_by_time,
             "patientName": PATIENT_NAME_MAP[phone_number],
             "takeNow": dose_to_take_now,
             "pausedService": bool(paused_service),
-            "behaviorLearningScores": behavior_learning_scores
+            "behaviorLearningScores": behavior_learning_scores,
+            "doseWindows": dose_windows
         })
     return jsonify(), 401
 
