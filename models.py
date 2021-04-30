@@ -235,7 +235,7 @@ class Medication(db.Model):
             EventLog.dose_window_id == dose_window_obj.id,
             EventLog.medication_id == self.id,
             EventLog.event_time > start_of_day,
-            EventLog.event_time < end_of_day,
+            EventLog.event_time <= end_of_day,
             EventLog.event_type.in_(["take", "skip", "boundary"])
         ).all()
         return len(relevant_medication_history_records) > 0

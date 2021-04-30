@@ -189,30 +189,87 @@
         }
         function renderDoseWindows() {
             const doseWindowDiv = document.getElementById("doseWindows");
-            console.log(doseWindows);
             for (const doseWindow of doseWindows) {
                 let doseStartTime = new Date();
                 let doseEndTime = new Date();
-                doseStartTime.setUTCHours(doseWindow.start_hour, doseWindow.start_minute)
-                doseEndTime.setUTCHours(doseWindow.end_hour, doseWindow.end_minute)
+                doseStartTime.setUTCHours(doseWindow.start_hour, doseWindow.start_minute);
+                doseEndTime.setUTCHours(doseWindow.end_hour, doseWindow.end_minute);
                 const doseWindowHTML = `
                     <div style="display:flex; flex-direction:row; justify-content: space-between;">
-                        <p id="doseWindowTimeHeader-${doseWindow.id}">${doseStartTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })} -> ${doseEndTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}</p>
+                        <p id="doseWindowTimeHeader-${doseWindow.id}" style="margin: 0;">${doseStartTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })} -> ${doseEndTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}</p>
                         <div id="doseWindowEditingInterface-${doseWindow.id}" style="display: none; flex-direction: row; justify-content: space-between;">
                             <div>
                                 <input type="time" id="updatedDoseStartTime-${doseWindow.id}" value="${checkTime(doseStartTime.getHours())}:${checkTime(doseStartTime.getMinutes())}"/>
                                 <input type="time" id="updatedDoseEndTime-${doseWindow.id}" value="${checkTime(doseEndTime.getHours())}:${checkTime(doseEndTime.getMinutes())}"/>
                             </div>
-                            <button id="updateDoseWindow-${doseWindow.id}" onclick=updateDoseWindow(\'${doseWindow.id}\') style="border-radius: 20px; padding-left:5px; padding-right:5px; background-color: #09ad56;">Save changes</button>
+                            <button id="updateDoseWindow-${doseWindow.id}" onclick=submitUpdateForDoseWindow(\'${doseWindow.id}\') style="border-radius: 10px; padding-left:5px; padding-right:5px; background-color: #09ad56; border:0;">Save changes</button>
                         </div>
-                        <button id="editDoseWindow-${doseWindow.id}" onclick="startEditingDoseWindow(\'${doseWindow.id}\')" style="border-radius: 20px; padding-left:10px; padding-right:10px; background-color: #002864; color: #FFF; border:0;">Edit</button>
+                        <button id="editDoseWindow-${doseWindow.id}" onclick="startEditingDoseWindow(\'${doseWindow.id}\')" style="border-radius: 10px; padding-left:10px; padding-right:10px; background-color: #002864; color: #FFF; border:0;">Edit</button>
                     </div>
                 `;
                 doseWindowDiv.innerHTML += doseWindowHTML;
             }
         }
+        function addDays(date, days) {
+            var result = new Date(date);
+            result.setDate(result.getDate() + days);
+            return result;
+        }
+        function getTimeFromHourMinute(hour, minute, utc=false) {
+            let time = new Date();
+            if (utc) {
+                time.setUTCHours(hour, minute, 0, 0);
+            } else {
+                time.setHours(hour, minute, 0, 0);
+            }
+            if (time.getHours() <= 2) {
+                time = addDays(time, 1);
+            }
+            return time
+        }
+        function checkDoseWindowIntegrity(updatedDoseWindow) {
+            const { startHour, startMinute, endHour, endMinute, doseWindowId } = updatedDoseWindow;
+            let newDwStartTime = getTimeFromHourMinute(startHour, startMinute);
+            let newDwEndTime = getTimeFromHourMinute(endHour, endMinute);
+            console.log("new");
+            console.log(newDwStartTime);
+            console.log(newDwEndTime);
+            if (newDwEndTime <= newDwStartTime) {
+                return "Dose window end time must be after start time."
+            }
+            const remainingDoseWindows = doseWindows.filter((dw) => {return dw.id != doseWindowId});
+            for (const dw in remainingDoseWindows) {
+                let existingDwStartTime = getTimeFromHourMinute(dw.start_hour, dw.start_minute, utc=true);
+                let existingDwEndTime = getTimeFromHourMinute(dw.end_hour, dw.end_minute, utc=true);
+                console.log("existing");
+                console.log(existingDwStartTime);
+                console.log(existingDwEndTime);
+                if (newDwStartTime < existingDwStartTime && newDwEndTime > existingDwStartTime) {
+                    return "Dose windows cannot overlap.";
+                }
+                if (newDwStartTime < existingDwEndTime && newDwEndTime > existingDwEndTime) {
+                    return "Dose windows cannot overlap.";
+                }
+            }
+            return null;
+        }
+        function submitUpdateForDoseWindow(doseWindowId) {
+            const startTimeString = document.getElementById(`updatedDoseStartTime-${doseWindow.id}`);
+            const endTimeString = document.getElementById(`updatedDoseEndTime-${doseWindow.id}`);
+            const startHour = parseInt(startTimeString.split(":")[0]);
+            const startMinute = parseInt(startTimeString.split(":")[1]);
+            const endHour = parseInt(endTimeString.split(":")[0]);
+            const endMinute = parseInt(endTimeString.split(":")[1]);
+            const errorMessage = checkDoseWindowIntegrity({ startHour, startMinute, endHour, endMinute, parseInt(doseWindowId) });
+            if (errorMessage) {
+                modalTitle.innerHTML = "Dose window error";
+                modalBody.innerHTML = errorMessage;
+            } else {
+                modalTitle.innerHTML = "Success!";
+                modalBody.innerHTML = '';
+            }
+        }
         function startEditingDoseWindow(doseWindowId) {
-            console.log("clicked start editing for " + doseWindowId);
             const startEditingButton = document.getElementById(`editDoseWindow-${doseWindowId}`);
             startEditingButton.innerHTML = "Cancel edits";
             startEditingButton.onclick = () => {stopEditingDoseWindow(doseWindowId)};
