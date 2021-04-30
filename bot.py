@@ -1023,6 +1023,7 @@ def admin_edit_dose_window():
 @app.route("/user/updateDoseWindow", methods=["POST"])
 def user_edit_dose_window():
     incoming_data = request.json
+    print(request.json)
     start_hour = incoming_data["startHour"]
     start_minute = incoming_data["startMinute"]
     end_hour = incoming_data["endHour"]

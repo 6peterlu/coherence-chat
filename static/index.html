@@ -268,6 +268,12 @@
             const endHour = parseInt(endTimeString.split(":")[0]);
             const endMinute = parseInt(endTimeString.split(":")[1]);
             const errorMessage = checkDoseWindowIntegrity({ startHour, startMinute, endHour, endMinute, doseWindowId: parseInt(doseWindowId) });
+            let doseStartTime = new Date();
+            doseStartTime.setHours(startHour, startMinute);
+            const startTimeFormatted = doseStartTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+            let doseEndTime = new Date();
+            doseEndTime.setHours(endHour, endMinute);
+            const endTimeFormatted = doseStartTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
             if (errorMessage) {
                 modalTitle.innerHTML = "Dose window error";
                 modalBody.innerHTML = errorMessage;
@@ -275,7 +281,7 @@
                 modalTitle.innerHTML = "Dose window update confirmation";
                 modalBody.innerHTML = `
                     <div style="display:flex; align-items: center; flex-direction: column;">
-                        <p>You're editing your dose window to ${startTimeString} -> ${endTimeString}. Click Confirm below if you'd like to save this change.</p>
+                        <p>You're editing your dose window to ${startTimeFormatted} -> ${endTimeFormatted}. Click Confirm below if you'd like to save this change.</p>
                         <button id="confirmUpdateButton" onclick="confirmUpdateForDoseWindow(\'${startHour}\', \'${startMinute}\', \'${endHour}\', \'${endMinute}\', \'${doseWindowId}\')"
                             style="border-radius: 10px; padding: 10px; background-color: #002864; color: #FFF; border:0; font-size: 15px;">Confirm</button>
                     <div>
@@ -286,11 +292,13 @@
         function confirmUpdateForDoseWindow(startHour, startMinute, endHour, endMinute, doseWindowId) {
             const initDetails = {
                 ...postInitDetails,
-                startHour: parseInt(startHour),
-                startMinute: parseInt(startMinute),
-                endHour: parseInt(endHour),
-                endMinute: parseInt(endMinute),
-                doseWindowId: parseInt(doseWindowId)
+                body: {
+                    startHour: parseInt(startHour),
+                    startMinute: parseInt(startMinute),
+                    endHour: parseInt(endHour),
+                    endMinute: parseInt(endMinute),
+                    doseWindowId: parseInt(doseWindowId)
+                }
             };
             const confirmUpdateButton = document.getElementById("confirmUpdateButton");
             confirmUpdateButton.disabled = true;
