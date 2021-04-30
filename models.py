@@ -117,6 +117,16 @@ class DoseWindow(db.Model):
         db.session.commit()
 
 
+    def edit_window(self, new_start_hour, new_start_minute, new_end_hour, new_end_minute, scheduler):
+        self.start_hour = new_start_hour
+        self.start_minute = new_start_minute
+        self.end_hour = new_end_hour
+        self.end_minute = new_end_minute
+        db.session.commit()
+        # clear old jobs
+        self.remove_jobs(self, scheduler, ["initial", "followup", "boundary", "absent"])
+        # TODO: start here
+
     def schedule_initial_job(self, scheduler, send_intro_text_new):
         if scheduler.get_job(f"{self.id}-initial-new") is None and not self.user.paused:
             scheduler.add_job(

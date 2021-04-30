@@ -145,7 +145,7 @@
                             <option value="followup">followup</option>
                             <option value="initial">initial</option>
                         </select>
-                        <input id="manualReminderTime-${doseWindow.id}" type="datetime-local" style="margin: 5px;" placeholder="2018-06-12T19:30"/>
+                        <input id="manualReminderTime-${doseWindow.id}" type="datetime-local" style="margin-top: 5px; margin-bottom: 5px; padding-left: 5px;" placeholder="2018-06-12T19:30"/>
                         <button id="scheduleManualReminder" onclick="scheduleManualReminder(\'${doseWindow.id}\')" style="margin: 5px;">Send manual reminder</button>
                         <div style="border-left: 2px solid black;">
                             <select name="eventType-${doseWindow.id}" id='eventType-${doseWindow.id}' style="margin: 5px;">
@@ -181,7 +181,6 @@
         const refreshData = () => {
             get("admin/everything", {}).then(response => response.json()).then(result => {
                 const userDetailedDataDiv = document.getElementById("userDetailedData");
-                console.log(result);
                 const portedUsers = [];
                 userDetailedDataDiv.innerHTML = '';
                 for (const userData of result.users) {
@@ -205,7 +204,6 @@
                 onlineButton.disabled = false;
             });
             get("scheduler/jobs", {}).then(response => response.json()).then(result => {
-                console.log(result);
                 renderJobs(result);
             })
         }
@@ -278,7 +276,6 @@
             );
         }
         const deleteEvent = (eventId) => {
-            console.log("deleting event")
             post("admin/manual/event/delete", { eventId }).then(
                 response => response.json()).then(result => {
                     refreshData();
