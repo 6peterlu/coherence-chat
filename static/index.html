@@ -208,8 +208,8 @@
                         <button id="editDoseWindow-${doseWindow.id}" onclick="startEditingDoseWindow(\'${doseWindow.id}\')" style="border-radius: 20px; padding-left:5px; padding-right:5px; background-color: #002864;">Edit</button>
                     </div>
                 `;
+                doseWindowDiv.innerHTML += doseWindowHTML;
             }
-            doseWindowDiv.innerHTML = doseWindowHTML;
         }
         function startEditingDoseWindow(doseWindowId) {
             const startEditingButton = document.getElementById(`editDoseWindow-${doseWindowId}`);
