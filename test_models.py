@@ -107,6 +107,105 @@ def test_dose_window_scheduler(dose_window_record, medication_record, scheduler)
     dose_window_record.remove_jobs(scheduler, ["initial", "absent", "boundary", "followup"])
     assert scheduler.get_job(f"{dose_window_record.id}-initial-new") is None
 
+@freeze_time("2012-01-01 13:00:00")
+def test_edit_dose_window_when_not_in_window(dose_window_record, medication_record, scheduler):
+    stub_fn = mock.Mock()
+    dose_window_record.edit_window(11, 0, 12, 0, scheduler, stub_fn, stub_fn)
+    assert scheduler.get_job(f"{dose_window_record.id}-initial-new") is not None
+    assert scheduler.get_job(f"{dose_window_record.id}-boundary-new") is None
+
+@freeze_time("2012-01-01 17:00:00")
+def test_edit_dose_window_when_in_window(dose_window_record, medication_record, scheduler):
+    stub_fn = mock.Mock()
+    scheduler.add_job(f"{dose_window_record.id}-followup-new", stub_fn,
+        args=[dose_window_record.id],
+        trigger="date",
+        run_date=datetime(2012, 1, 1, 18, tzinfo=utc),
+        misfire_grace_time=5*60
+    )
+    scheduler.add_job(f"{dose_window_record.id}-absent-new", stub_fn,
+        args=[dose_window_record.id],
+        trigger="date",
+        run_date=datetime(2012, 1, 1, 18, tzinfo=utc),
+        misfire_grace_time=5*60
+    )
+    scheduler.add_job(f"{dose_window_record.id}-boundary-new", stub_fn,
+        args=[dose_window_record.id],
+        trigger="date",
+        run_date=datetime(2012, 1, 1, 18, tzinfo=utc),
+        misfire_grace_time=5*60
+    )
+    dose_window_record.edit_window(11, 0, 12, 0, scheduler, stub_fn, stub_fn)
+    assert scheduler.get_job(f"{dose_window_record.id}-initial-new") is not None
+    assert scheduler.get_job(f"{dose_window_record.id}-boundary-new") is None
+    assert scheduler.get_job(f"{dose_window_record.id}-followup-new") is None
+    assert scheduler.get_job(f"{dose_window_record.id}-absent-new") is None
+
+
+@freeze_time("2012-01-01 17:00:00")
+def test_edit_dose_window_when_in_window_boundary_later(dose_window_record, medication_record, scheduler):
+    stub_fn = mock.Mock()
+    scheduler.add_job(f"{dose_window_record.id}-followup-new", stub_fn,
+        args=[dose_window_record.id],
+        trigger="date",
+        run_date=datetime(2012, 1, 1, 18, tzinfo=utc),
+        misfire_grace_time=5*60
+    )
+    scheduler.add_job(f"{dose_window_record.id}-absent-new", stub_fn,
+        args=[dose_window_record.id],
+        trigger="date",
+        run_date=datetime(2012, 1, 1, 18, tzinfo=utc),
+        misfire_grace_time=5*60
+    )
+    scheduler.add_job(f"{dose_window_record.id}-boundary-new", stub_fn,
+        args=[dose_window_record.id],
+        trigger="date",
+        run_date=datetime(2012, 1, 1, 18, tzinfo=utc),
+        misfire_grace_time=5*60
+    )
+    dose_window_record.edit_window(19, 0, 23, 0, scheduler, stub_fn, stub_fn)
+    assert scheduler.get_job(f"{dose_window_record.id}-initial-new") is not None
+    assert scheduler.get_job(f"{dose_window_record.id}-boundary-new") is None
+    assert scheduler.get_job(f"{dose_window_record.id}-followup-new") is None
+    assert scheduler.get_job(f"{dose_window_record.id}-absent-new") is None
+
+
+@freeze_time("2012-01-01 17:00:00")
+def test_edit_dose_window_when_in_window_boundary_later_start_earlier(dose_window_record, medication_record, scheduler):
+    stub_fn = mock.Mock()
+    scheduler.add_job(f"{dose_window_record.id}-followup-new", stub_fn,
+        args=[dose_window_record.id],
+        trigger="date",
+        run_date=datetime(2012, 1, 1, 18, tzinfo=utc),
+        misfire_grace_time=5*60
+    )
+    scheduler.add_job(f"{dose_window_record.id}-absent-new", stub_fn,
+        args=[dose_window_record.id],
+        trigger="date",
+        run_date=datetime(2012, 1, 1, 18, tzinfo=utc),
+        misfire_grace_time=5*60
+    )
+    scheduler.add_job(f"{dose_window_record.id}-boundary-new", stub_fn,
+        args=[dose_window_record.id],
+        trigger="date",
+        run_date=datetime(2012, 1, 1, 18, tzinfo=utc),
+        misfire_grace_time=5*60
+    )
+    dose_window_record.edit_window(11, 0, 23, 0, scheduler, stub_fn, stub_fn)
+    assert scheduler.get_job(f"{dose_window_record.id}-initial-new") is not None
+    assert scheduler.get_job(f"{dose_window_record.id}-boundary-new") is not None
+    assert scheduler.get_job(f"{dose_window_record.id}-followup-new") is not None
+    assert scheduler.get_job(f"{dose_window_record.id}-absent-new") is not None
+
+
+@freeze_time("2012-01-01 17:00:00")
+def test_edit_dose_window_when_in_window(dose_window_record, medication_record, scheduler):
+    stub_fn = mock.Mock()
+    dose_window_record.edit_window(11, 0, 12, 0, scheduler, stub_fn, stub_fn)
+    assert scheduler.get_job(f"{dose_window_record.id}-initial-new") is not None
+    assert scheduler.get_job(f"{dose_window_record.id}-boundary-new") is None
+
+
 @freeze_time("2012-01-01 17:00:00")
 def test_toggle_user_pause(dose_window_record_for_paused_user, user_record_paused, medication_record_for_paused_user, scheduler):
     send_upcoming_dose_message = mock.Mock()

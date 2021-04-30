@@ -135,8 +135,13 @@
                 doseEndTime.setUTCHours(doseWindow.end_hour, doseWindow.end_minute)
                 htmlOut += `<div style='display: flex; flex-direction: row; ${doseWindow.action_required ? 'background-color: #bd5c59' : ''}'>`;
                 htmlOut += `
-                    <p style="padding-left: 20px;">${doseWindow.id} | ${doseStartTime.getHours()}:${checkTime(doseStartTime.getMinutes())}->${doseEndTime.getHours()}:${checkTime(doseEndTime.getMinutes())}</p>
-                    <button id="editDoseWindow" style="margin: 10px;" onclick>Edit dose window</button>
+                    <p style="padding-left: 20px;" id="doseTimeDisplay-${doseWindow.id}">${doseWindow.id} | ${doseStartTime.getHours()}:${checkTime(doseStartTime.getMinutes())}->${doseEndTime.getHours()}:${checkTime(doseEndTime.getMinutes())}</p>
+                    <div id="doseWindowEditing-${doseWindow.id}" style="display:none; flex-direction:column;">
+                        <input type="time" id="updatedDoseStartTime-${doseWindow.id}" value="${checkTime(doseStartTime.getHours())}:${checkTime(doseStartTime.getMinutes())}"/>
+                        <input type="time" id="updatedDoseEndTime-${doseWindow.id}" value="${checkTime(doseEndTime.getHours())}:${checkTime(doseEndTime.getMinutes())}"/>
+                        <button id="updateDoseWindow-${doseWindow.id}" onclick=updateDoseWindow(\'${doseWindow.id}\')>Save changes</button>
+                    </div>
+                    <button id="editDoseWindow-${doseWindow.id}" onclick="editDoseWindow(\'${doseWindow.id}\')" style="margin: 10px;" onclick>Edit dose window</button>
                 `
                 htmlOut += `
                     <div style="padding: 5px; display: flex; flex-direction: row;">
@@ -145,7 +150,7 @@
                             <option value="followup">followup</option>
                             <option value="initial">initial</option>
                         </select>
-                        <input id="manualReminderTime-${doseWindow.id}" type="datetime-local" style="margin: 5px;" placeholder="2018-06-12T19:30"/>
+                        <input id="manualReminderTime-${doseWindow.id}" type="datetime-local" style="margin-top: 5px; margin-bottom: 5px; padding-left: 5px;" placeholder="2018-06-12T19:30"/>
                         <button id="scheduleManualReminder" onclick="scheduleManualReminder(\'${doseWindow.id}\')" style="margin: 5px;">Send manual reminder</button>
                         <div style="border-left: 2px solid black;">
                             <select name="eventType-${doseWindow.id}" id='eventType-${doseWindow.id}' style="margin: 5px;">
@@ -178,10 +183,42 @@
             `;
             return htmlOut;
         }
+        const editDoseWindow = (doseWindowId) => {
+            const doseHeader = document.getElementById(`doseTimeDisplay-${doseWindowId}`);
+            const doseEditingWindow = document.getElementById(`doseWindowEditing-${doseWindowId}`);
+            doseHeader.style.display = 'none';
+            doseEditingWindow.style.display = 'flex';
+            const editButton = document.getElementById(`editDoseWindow-${doseWindowId}`);
+            editButton.onclick = () => {stopEditingDoseWindow(doseWindowId)};
+            editButton.innerHTML = "Stop editing dose window";
+        }
+        const stopEditingDoseWindow = (doseWindowId) => {
+            const doseHeader = document.getElementById(`doseTimeDisplay-${doseWindowId}`);
+            const doseEditingWindow = document.getElementById(`doseWindowEditing-${doseWindowId}`);
+            doseHeader.style.display = 'inline';  // p tag
+            doseEditingWindow.style.display = 'none';
+            const editButton = document.getElementById(`editDoseWindow-${doseWindowId}`);
+            editButton.onclick = () => {editDoseWindow(doseWindowId)};
+            editButton.innerHTML = "Edit dose window";
+        }
+        const updateDoseWindow = (doseWindowId) => {
+            const startTime = document.getElementById(`updatedDoseStartTime-${doseWindowId}`).value;
+            const endTime = document.getElementById(`updatedDoseEndTime-${doseWindowId}`).value;
+            const splitStartTime = startTime.split(":");
+            const splitEndTime = endTime.split(":");
+            const startHour = (parseInt(splitStartTime[0]) + 7) % 24;  // convert to UTC (only needs to be done because admin has no user account)
+            const startMinute = parseInt(splitStartTime[1]);
+            const endHour = (parseInt(splitEndTime[0]) + 7) % 24;
+            console.log(endHour);
+            const endMinute = parseInt(splitEndTime[1]);
+            post("admin/editDoseWindow", { startHour, startMinute, endHour, endMinute, doseWindowId }).then(response => response.json()).then(result => {
+                refreshData();
+            });
+
+        }
         const refreshData = () => {
             get("admin/everything", {}).then(response => response.json()).then(result => {
                 const userDetailedDataDiv = document.getElementById("userDetailedData");
-                console.log(result);
                 const portedUsers = [];
                 userDetailedDataDiv.innerHTML = '';
                 for (const userData of result.users) {
@@ -205,7 +242,6 @@
                 onlineButton.disabled = false;
             });
             get("scheduler/jobs", {}).then(response => response.json()).then(result => {
-                console.log(result);
                 renderJobs(result);
             })
         }
@@ -278,7 +314,6 @@
             );
         }
         const deleteEvent = (eventId) => {
-            console.log("deleting event")
             post("admin/manual/event/delete", { eventId }).then(
                 response => response.json()).then(result => {
                     refreshData();

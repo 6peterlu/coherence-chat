@@ -597,7 +597,7 @@ def convert_to_user_local_time(user_obj, dt):
 
 @app.route("/admin/everything", methods=["GET"])
 def get_all_admin_data():
-    all_users_in_system = User.query.all()
+    all_users_in_system = User.query.order_by(User.name).all()
     return_dict = {"users": []}
     for user in all_users_in_system:
         user_dict = {
@@ -1000,6 +1000,22 @@ def admin_send_text():
     )
     user, dose_window = get_current_user_and_dose_window(target_phone_number)
     log_event_new("manual_text", user.id, dose_window.id if dose_window else None)
+    return jsonify()
+
+@app.route("/admin/editDoseWindow", methods=["POST"])
+def admin_edit_dose_window():
+    incoming_data = request.json
+    start_hour = int(incoming_data["startHour"])
+    start_minute = int(incoming_data["startMinute"])
+    end_hour = int(incoming_data["endHour"])
+    end_minute = int(incoming_data["endMinute"])
+    dose_window_id = int(incoming_data["doseWindowId"])
+    relevant_dose_window = DoseWindow.query.get(dose_window_id)
+    if relevant_dose_window is not None:
+        relevant_dose_window.edit_window(start_hour,
+            start_minute, end_hour, end_minute,
+            scheduler, send_intro_text_new, send_boundary_text_new
+        )
     return jsonify()
 
 def get_online_status():

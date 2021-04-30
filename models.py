@@ -19,8 +19,8 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     phone_number = db.Column(db.String(10), nullable=False, unique=True)
     name = db.Column(db.String, nullable=False)
-    dose_windows = db.relationship("DoseWindow", backref="user", passive_deletes=True, cascade="delete, merge, save-update")
-    doses = db.relationship("Medication", backref="user", passive_deletes=True, cascade="delete, merge, save-update")
+    dose_windows = db.relationship("DoseWindow", backref="user", passive_deletes=True, cascade="delete, merge, save-update", order_by="DoseWindow.id.asc()")
+    doses = db.relationship("Medication", backref="user", passive_deletes=True, cascade="delete, merge, save-update", order_by="Medication.id.asc()")
     events = db.relationship("EventLog", backref="user", order_by="EventLog.event_time.asc()", passive_deletes=True, cascade="delete, merge, save-update")
     manual_takeover = db.Column(db.Boolean, nullable=False)
     paused = db.Column(db.Boolean, nullable=False)
@@ -86,7 +86,7 @@ class DoseWindow(db.Model):
     start_minute = db.Column(db.Integer, nullable=False)
     end_minute = db.Column(db.Integer, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE', name="dose_window_user_fkey_custom"), nullable=False)
-    medications = db.relationship("Medication", secondary=dose_medication_linker, back_populates="dose_windows")
+    medications = db.relationship("Medication", secondary=dose_medication_linker, back_populates="dose_windows", order_by="Medication.id.asc()")
     events = db.relationship("EventLog", backref="dose_window", order_by="EventLog.event_time.asc()")
     active = db.Column(db.Boolean)  # active dose windows can be interacted in, even if the bot is paused.
 
@@ -116,6 +116,44 @@ class DoseWindow(db.Model):
                 self.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
         db.session.commit()
 
+    def valid_hour(self, hour):
+        return hour >= 0 and hour <= 23
+
+    def valid_minute(self, minute):
+        return minute >= 0 and minute <= 59
+
+    def edit_window(self, new_start_hour,
+        new_start_minute, new_end_hour, new_end_minute,
+        scheduler, send_intro_text_new, send_boundary_text_new
+    ):
+        currently_outgoing_jobs = self.within_dosing_period() and not self.is_recorded_for_today
+        if not self.valid_hour(new_start_hour) or not self.valid_minute(new_start_minute) or not self.valid_hour(new_end_hour) or not self.valid_minute(new_end_minute):
+            print("invalid...rejecting")
+            return
+        self.start_hour = new_start_hour
+        self.start_minute = new_start_minute
+        self.end_hour = new_end_hour
+        self.end_minute = new_end_minute
+        db.session.commit()
+        # clear initial
+        self.remove_jobs(scheduler, ["initial"])
+        self.schedule_initial_job(scheduler, send_intro_text_new)
+        if currently_outgoing_jobs:  # manage the jobs currently in flight
+            if self.next_end_date - timedelta(days=1) < get_time_now():  # we're after the new end time, clear all jobs.
+                self.remove_jobs(scheduler, ["followup", "absent", "boundary"])
+            else:
+                if self.next_start_date - timedelta(days=1) > get_time_now():  # we start after the current time, clear all jobs
+                    self.remove_jobs(scheduler, ["followup", "absent", "boundary"])
+                else:  # we're still in the range, so leave the existing jobs and just move the end one.
+                    self.remove_jobs(scheduler, ["boundary"])
+                    scheduler.add_job(f"{self.id}-boundary-new", send_boundary_text_new,
+                        args=[self.id],
+                        trigger="date",
+                        run_date=self.next_end_date - timedelta(days=1),
+                        misfire_grace_time=5*60
+                    )
+
+
 
     def schedule_initial_job(self, scheduler, send_intro_text_new):
         if scheduler.get_job(f"{self.id}-initial-new") is None and not self.user.paused:
@@ -130,6 +168,7 @@ class DoseWindow(db.Model):
             )
 
     def remove_jobs(self, scheduler, jobs_list):
+        print("removing jobs")
         for job in jobs_list:
             job_id = f"{self.id}-{job}-new"
             if scheduler.get_job(job_id):
@@ -157,6 +196,7 @@ class DoseWindow(db.Model):
         return alarm_starttime
     @property
     def next_end_date(self):
+        print(self.end_hour)
         alarm_endtime = get_time_now().replace(hour=self.end_hour, minute=self.end_minute, second=0, microsecond=0)
         if alarm_endtime < get_time_now():
             alarm_endtime += timedelta(days=1)
@@ -177,7 +217,7 @@ class Medication(db.Model):
     medication_name = db.Column(db.String, nullable=False)
     instructions = db.Column(db.String)
     events = db.relationship("EventLog", backref="medication", order_by="EventLog.event_time.asc()")
-    dose_windows = db.relationship("DoseWindow", secondary=dose_medication_linker, back_populates="medications")
+    dose_windows = db.relationship("DoseWindow", secondary=dose_medication_linker, back_populates="medications", order_by="DoseWindow.id.asc()")
     active = db.Column(db.Boolean, nullable=False)
 
     def __init__(self, user_id, medication_name, scheduler_tuple=None, instructions=None, events=[], dose_windows=[], active=True):
