@@ -190,6 +190,7 @@
         }
         function renderDoseWindows() {
             const doseWindowDiv = document.getElementById("doseWindows");
+            doseWindowDiv.innerHTML = '';
             for (const doseWindow of doseWindows) {
                 let doseStartTime = new Date();
                 let doseEndTime = new Date();
@@ -275,7 +276,8 @@
                 modalBody.innerHTML = `
                     <div style="display:flex; align-items: center; flex-direction: column;">
                         <p>You're editing your dose window to ${startTimeString} -> ${endTimeString}. Click Confirm below if you'd like to save this change.</p>
-                        <button id="confirmUpdateButton" onclick="confirmUpdateForDoseWindow(\'${startHour}\', \'${startMinute}\', \'${endHour}\', \'${endMinute}\', \'${doseWindowId}\')" style="border-radius: 10px; padding-left:10px; padding-right:10px; background-color: #002864; color: #FFF; border:0;">Confirm</button>
+                        <button id="confirmUpdateButton" onclick="confirmUpdateForDoseWindow(\'${startHour}\', \'${startMinute}\', \'${endHour}\', \'${endMinute}\', \'${doseWindowId}\')"
+                            style="border-radius: 10px; padding: 10px; background-color: #002864; color: #FFF; border:0; font-size: 15px;">Confirm</button>
                     <div>
                 `;
             }
@@ -293,7 +295,7 @@
             const confirmUpdateButton = document.getElementById("confirmUpdateButton");
             confirmUpdateButton.disabled = true;
             confirmUpdateButton.innerHTML = "Updating...";
-            fetch(`${apiURL}/user/editDoseWindow`, postInitDetails).then(() => {
+            fetch(`${apiURL}/user/editDoseWindow`, initDetails).then(() => {
                 requestData();
                 modalBody.innerHTML = "<p>Successfully updated!</p>";
             });

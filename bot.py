@@ -1032,6 +1032,8 @@ def user_edit_dose_window():
     user_tz = timezone(relevant_dose_window.user.timezone)
     target_start_date = user_tz.localize(datetime(2012, 5, 12, start_hour, start_minute, 0, 0, tzinfo=None)).astimezone(pytzutc)
     target_end_date = user_tz.localize(datetime(2012, 5, 12, end_hour, end_minute, 0, 0, tzinfo=None)).astimezone(pytzutc)
+    print("relevant dose window")
+    print(relevant_dose_window)
     if relevant_dose_window is not None:
         relevant_dose_window.edit_window(target_start_date.hour,
             target_start_date.minute, target_end_date.hour, target_end_date.minute,
