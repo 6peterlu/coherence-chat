@@ -220,7 +220,10 @@
         function getTimeFromHourMinute(hour, minute, utc=false) {
             let time = new Date();
             if (utc) {
+                console.log(hour);
+                console.log(minute);
                 time.setUTCHours(hour, minute, 0, 0);
+                console.log(time);
             } else {
                 time.setHours(hour, minute, 0, 0);
             }
@@ -242,9 +245,9 @@
             }
             const remainingDoseWindows = doseWindows.filter((dw) => {return dw.id != doseWindowId});
             for (const dw in remainingDoseWindows) {
+                console.log("existing");
                 let existingDwStartTime = getTimeFromHourMinute(dw.start_hour, dw.start_minute, utc=true);
                 let existingDwEndTime = getTimeFromHourMinute(dw.end_hour, dw.end_minute, utc=true);
-                console.log("existing");
                 console.log(existingDwStartTime);
                 console.log(existingDwEndTime);
                 if (newDwStartTime < existingDwStartTime && newDwEndTime > existingDwStartTime) {
