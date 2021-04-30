@@ -69,7 +69,7 @@
             <div id="behaviorLearningChartTitle"></div>
             <div id="behaviorLearningChart"></div>
         </div>
-        <div style="background-color: rgb(233, 231, 220);">
+        <div style="background-color: rgb(233, 231, 220); padding: 10px;">
             <h3>Dose windows</h3>
             <div id="doseWindows"></div>
         </div>
@@ -189,6 +189,7 @@
         }
         function renderDoseWindows() {
             const doseWindowDiv = document.getElementById("doseWindows");
+            console.log(doseWindows);
             for (const doseWindow of doseWindows) {
                 let doseStartTime = new Date();
                 let doseEndTime = new Date();
@@ -208,6 +209,7 @@
                     </div>
                 `;
             }
+            doseWindowDiv.innerHTML = doseWindowHTML;
         }
         function startEditingDoseWindow(doseWindowId) {
             const startEditingButton = document.getElementById(`editDoseWindow-${doseWindowId}`);
