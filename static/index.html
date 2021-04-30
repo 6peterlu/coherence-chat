@@ -295,7 +295,7 @@
             const confirmUpdateButton = document.getElementById("confirmUpdateButton");
             confirmUpdateButton.disabled = true;
             confirmUpdateButton.innerHTML = "Updating...";
-            fetch(`${apiURL}/user/editDoseWindow`, initDetails).then(() => {
+            fetch(`${apiURL}/user/updateDoseWindow`, initDetails).then(() => {
                 requestData();
                 modalBody.innerHTML = "<p>Successfully updated!</p>";
             });
