@@ -457,13 +457,15 @@ def patient_data():
         paused_service = user.paused
         behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
         dose_to_take_now = False if dose_window is None else not dose_window.is_recorded_for_today
+        dose_windows = [DoseWindowSchema().dump(dw) for dw in user.dose_windows]
         return jsonify({
             "phoneNumber": recovered_cookie,
             "eventData": event_data_by_time,
             "patientName": PATIENT_NAME_MAP[phone_number],
             "takeNow": dose_to_take_now,
             "pausedService": bool(paused_service),
-            "behaviorLearningScores": behavior_learning_scores
+            "behaviorLearningScores": behavior_learning_scores,
+            "doseWindows": dose_windows
         })
     return jsonify(), 401
 
@@ -1014,6 +1016,26 @@ def admin_edit_dose_window():
     if relevant_dose_window is not None:
         relevant_dose_window.edit_window(start_hour,
             start_minute, end_hour, end_minute,
+            scheduler, send_intro_text_new, send_boundary_text_new
+        )
+    return jsonify()
+
+@app.route("/user/updateDoseWindow", methods=["POST"])
+def user_edit_dose_window():
+    incoming_data = request.json
+    start_hour = incoming_data["startHour"]
+    start_minute = incoming_data["startMinute"]
+    end_hour = incoming_data["endHour"]
+    end_minute = incoming_data["endMinute"]
+    dose_window_id = incoming_data["doseWindowId"]
+    relevant_dose_window = DoseWindow.query.get(dose_window_id)
+    user_tz = timezone(relevant_dose_window.user.timezone)
+    target_start_date = user_tz.localize(datetime(2012, 5, 12, start_hour, start_minute, 0, 0, tzinfo=None)).astimezone(pytzutc)
+    target_end_date = user_tz.localize(datetime(2012, 5, 12, end_hour, end_minute, 0, 0, tzinfo=None)).astimezone(pytzutc)
+    if relevant_dose_window is not None:
+        log_event_new("edit_dose_window", relevant_dose_window.user.id, relevant_dose_window.id)
+        relevant_dose_window.edit_window(target_start_date.hour,
+            target_start_date.minute, target_end_date.hour, target_end_date.minute,
             scheduler, send_intro_text_new, send_boundary_text_new
         )
     return jsonify()

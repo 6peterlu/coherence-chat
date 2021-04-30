@@ -175,8 +175,10 @@
                         <button onclick="sendCustomText(\'${userData.user.id}\', '${userData.user.phone_number}')">Send text</button>
                     </div>
                     <div style="margin: 5px;">
-                        <input id="loadTextDayLimit-${userData.user.id}" placeholder="Days to load" type="number"/>
-                        <button onclick="loadTextConversation(\'${userData.user.id}\', '${userData.user.phone_number}')">Load text conversation</button>
+                        <div style="display:flex; flex-direction:row;">
+                            <input id="loadTextDayLimit-${userData.user.id}" placeholder="Days to load" type="number"/>
+                            <button onclick="loadTextConversation(\'${userData.user.id}\', '${userData.user.phone_number}')">Load text conversation</button>
+                        </div>
                         <div id="conversationHistory-${userData.user.id}" style="max-width: 400px; max-height: 400px; overflow-y: scroll;""></div>
                     </div>
                 </div>
