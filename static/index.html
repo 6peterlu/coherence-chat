@@ -216,7 +216,7 @@
             startEditingButton.innerHTML = "Cancel edits";
             const doseWindowHeader = document.getElementById(`doseWindowTimeHeader-${doseWindowId}`);
             doseWindowHeader.display = "none";
-            const doseWindowEditingInterface = document.getElementById(`doseWindowEditingInterface-${doseWindow.id}`);
+            const doseWindowEditingInterface = document.getElementById(`doseWindowEditingInterface-${doseWindowId}`);
             doseWindowEditingInterface.display = "flex";
         }
         function stopEditingDoseWindow(doseWindowId) {
@@ -224,7 +224,7 @@
             stopEditingButton.innerHTML = "Edit";
             const doseWindowHeader = document.getElementById(`doseWindowTimeHeader-${doseWindowId}`);
             doseWindowHeader.display = "inline";
-            const doseWindowEditingInterface = document.getElementById(`doseWindowEditingInterface-${doseWindow.id}`);
+            const doseWindowEditingInterface = document.getElementById(`doseWindowEditingInterface-${doseWindowId}`);
             doseWindowEditingInterface.display = "none";
         }
         function renderAnalytics() {
