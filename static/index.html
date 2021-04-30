@@ -219,6 +219,11 @@
         }
         function getTimeFromHourMinute(hour, minute, utc=false) {
             let time = new Date();
+            let dayStart = new Date();
+            if (dayStart.getHours() <= 2) {
+                dayStart.addDays(-1);
+            }
+            dayStart.setHours(2, 0, 0, 0); // 2 AM today.
             if (utc) {
                 console.log(hour);
                 console.log(minute);
@@ -226,6 +231,9 @@
                 console.log(time);
             } else {
                 time.setHours(hour, minute, 0, 0);
+            }
+            if (time < dayStart) {  // UTC caused it to become the previous day.
+                time = time.addDays(1);
             }
             console.log(time.getHours());
             if (time.getHours() <= 2) {
