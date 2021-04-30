@@ -254,8 +254,8 @@
             return null;
         }
         function submitUpdateForDoseWindow(doseWindowId) {
-            const startTimeString = document.getElementById(`updatedDoseStartTime-${doseWindowId}`);
-            const endTimeString = document.getElementById(`updatedDoseEndTime-${doseWindowId}`);
+            const startTimeString = document.getElementById(`updatedDoseStartTime-${doseWindowId}`).value;
+            const endTimeString = document.getElementById(`updatedDoseEndTime-${doseWindowId}`).value;
             const startHour = parseInt(startTimeString.split(":")[0]);
             const startMinute = parseInt(startTimeString.split(":")[1]);
             const endHour = parseInt(endTimeString.split(":")[0]);
