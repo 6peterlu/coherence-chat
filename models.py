@@ -195,6 +195,7 @@ class DoseWindow(db.Model):
         return alarm_starttime
     @property
     def next_end_date(self):
+        print(self.end_hour)
         alarm_endtime = get_time_now().replace(hour=self.end_hour, minute=self.end_minute, second=0, microsecond=0)
         if alarm_endtime < get_time_now():
             alarm_endtime += timedelta(days=1)
