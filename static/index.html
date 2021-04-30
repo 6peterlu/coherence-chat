@@ -273,7 +273,7 @@
             const startTimeFormatted = doseStartTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
             let doseEndTime = new Date();
             doseEndTime.setHours(endHour, endMinute);
-            const endTimeFormatted = doseStartTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+            const endTimeFormatted = doseEndTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
             if (errorMessage) {
                 modalTitle.innerHTML = "Dose window error";
                 modalBody.innerHTML = errorMessage;
