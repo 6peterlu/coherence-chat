@@ -273,8 +273,10 @@
             } else {
                 modalTitle.innerHTML = "Dose window update confirmation";
                 modalBody.innerHTML = `
+                    <div style="display:flex; align-items: center;">
                     <p>You're editing your dose window to ${startTimeString} -> ${endTimeString}. Click Confirm below if you'd like to save this change.</p>
-                    <button id="confirmUpdateButton" onpress="confirmUpdateForDoseWindow(\'${startHour}\', \'${startMinute}\', \'${endHour}\', \'${endMinute}\', \'${doseWindowId}\')">Confirm</button>
+                    <button id="confirmUpdateButton" onclick="confirmUpdateForDoseWindow(\'${startHour}\', \'${startMinute}\', \'${endHour}\', \'${endMinute}\', \'${doseWindowId}\') style="border-radius: 10px; padding-left:10px; padding-right:10px; background-color: #002864; color: #FFF; border:0;">Confirm</button>
+                    <div>
                 `;
             }
             modal.style.display = 'block';
