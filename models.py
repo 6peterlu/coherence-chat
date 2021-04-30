@@ -128,6 +128,7 @@ class DoseWindow(db.Model):
     ):
         currently_outgoing_jobs = self.within_dosing_period() and not self.is_recorded_for_today
         if not self.valid_hour(new_start_hour) or not self.valid_minute(new_start_minute) or not self.valid_hour(new_end_hour) or not self.valid_minute(new_end_minute):
+            print("invalid...rejecting")
             return
         self.start_hour = new_start_hour
         self.start_minute = new_start_minute

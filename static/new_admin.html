@@ -209,6 +209,7 @@
             const startHour = (parseInt(splitStartTime[0]) + 7) % 24;  // convert to UTC (only needs to be done because admin has no user account)
             const startMinute = parseInt(splitStartTime[1]);
             const endHour = (parseInt(splitEndTime[0]) + 7) % 24;
+            console.log(endHour);
             const endMinute = parseInt(splitEndTime[1]);
             post("admin/editDoseWindow", { startHour, startMinute, endHour, endMinute, doseWindowId }).then(response => response.json()).then(result => {
                 refreshData();
