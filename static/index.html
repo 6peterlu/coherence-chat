@@ -196,6 +196,8 @@
                 let doseEndTime = new Date();
                 doseStartTime.setUTCHours(doseWindow.start_hour, doseWindow.start_minute);
                 doseEndTime.setUTCHours(doseWindow.end_hour, doseWindow.end_minute);
+                const startTimeString = `${checkTime(doseStartTime.getHours())}:${checkTime(doseStartTime.getMinutes())}`;
+                const endTimeString = `${checkTime(doseEndTime.getHours())}:${checkTime(doseEndTime.getMinutes())}`;
                 const doseWindowHTML = `
                     <div style="display:flex; flex-direction:row; justify-content: space-between; padding: 5px;">
                         <p id="doseWindowTimeHeader-${doseWindow.id}" style="margin: 0;">${doseStartTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })} -> ${doseEndTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}</p>
@@ -204,9 +206,9 @@
                                 <input type="time" id="updatedDoseStartTime-${doseWindow.id}" value="${checkTime(doseStartTime.getHours())}:${checkTime(doseStartTime.getMinutes())}"/>
                                 <input type="time" id="updatedDoseEndTime-${doseWindow.id}" value="${checkTime(doseEndTime.getHours())}:${checkTime(doseEndTime.getMinutes())}"/>
                             </div>
-                            <button id="updateDoseWindow-${doseWindow.id}" onclick=submitUpdateForDoseWindow(\'${doseWindow.id}\') style="border-radius: 10px; padding-left:5px; padding-right:5px; background-color: #09ad56; border:0;">Save changes</button>
+                            <button id="updateDoseWindow-${doseWindow.id}" onclick=submitUpdateForDoseWindow(\'${doseWindow.id}\', \'${startTimeString}\', \'${endTimeString}\') style="border-radius: 10px; padding-left:5px; padding-right:5px; background-color: #09ad56; border:0; font-family: Lora;">Save changes</button>
                         </div>
-                        <button id="editDoseWindow-${doseWindow.id}" onclick="startEditingDoseWindow(\'${doseWindow.id}\')" style="border-radius: 10px; padding-left:10px; padding-right:10px; background-color: #002864; color: #FFF; border:0;">Edit</button>
+                        <button id="editDoseWindow-${doseWindow.id}" onclick="startEditingDoseWindow(\'${doseWindow.id}\')" style="border-radius: 10px; padding-left:10px; padding-right:10px; background-color: #002864; color: #FFF; border:0; font-family: Lora;">Edit</button>
                     </div>
                 `;
                 doseWindowDiv.innerHTML += doseWindowHTML;
@@ -260,9 +262,13 @@
             }
             return null;
         }
-        function submitUpdateForDoseWindow(doseWindowId) {
+        function submitUpdateForDoseWindow(doseWindowId, previousStartTimeString, previousEndTimeString) {
             const startTimeString = document.getElementById(`updatedDoseStartTime-${doseWindowId}`).value;
             const endTimeString = document.getElementById(`updatedDoseEndTime-${doseWindowId}`).value;
+            if (previousStartTimeString === startTimeString && previousEndTimeString === endTimeString) {
+                // no changes, close editor
+                stopEditingDoseWindow(doseWindowId);
+            }
             const startHour = parseInt(startTimeString.split(":")[0]);
             const startMinute = parseInt(startTimeString.split(":")[1]);
             const endHour = parseInt(endTimeString.split(":")[0]);
@@ -283,7 +289,7 @@
                     <div style="display:flex; align-items: center; flex-direction: column;">
                         <p>You're editing your dose window to ${startTimeFormatted} -> ${endTimeFormatted}. Click Confirm below if you'd like to save this change.</p>
                         <button id="confirmUpdateButton" onclick="confirmUpdateForDoseWindow(\'${startHour}\', \'${startMinute}\', \'${endHour}\', \'${endMinute}\', \'${doseWindowId}\')"
-                            style="border-radius: 10px; padding: 10px; background-color: #002864; color: #FFF; border:0; font-size: 15px;">Confirm</button>
+                            style="border-radius: 10px; padding: 10px; background-color: #002864; color: #FFF; border:0; font-size: 15px; font-family: Lora;">Confirm</button>
                     <div>
                 `;
             }
