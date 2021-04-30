@@ -210,10 +210,12 @@
                 doseWindowDiv.innerHTML += doseWindowHTML;
             }
         }
-        function addDays(date, days) {
-            var result = new Date(date);
-            result.setDate(result.getDate() + days);
-            return result;
+        // I don't know where to put these things
+        // src: https://stackoverflow.com/questions/563406/add-days-to-javascript-date
+        Date.prototype.addDays = function(days) {
+            var date = new Date(this.valueOf());
+            date.setDate(date.getDate() + days);
+            return date;
         }
         function getTimeFromHourMinute(hour, minute, utc=false) {
             let time = new Date();
@@ -223,7 +225,7 @@
                 time.setHours(hour, minute, 0, 0);
             }
             if (time.getHours() <= 2) {
-                time = addDays(time, 1);
+                time = time.addDays(1);
             }
             return time
         }
