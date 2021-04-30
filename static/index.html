@@ -181,6 +181,12 @@
                 }
             });
         }
+        function checkTime(i) {
+            if (i < 10) {
+                i = "0" + i;
+            }
+            return i;
+        }
         function renderDoseWindows() {
             const doseWindowDiv = document.getElementById("doseWindows");
             for (const doseWindow of doseWindows) {
