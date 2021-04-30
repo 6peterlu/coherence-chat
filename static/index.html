@@ -260,7 +260,7 @@
             const startMinute = parseInt(startTimeString.split(":")[1]);
             const endHour = parseInt(endTimeString.split(":")[0]);
             const endMinute = parseInt(endTimeString.split(":")[1]);
-            const errorMessage = checkDoseWindowIntegrity({ startHour, startMinute, endHour, endMinute, parseInt(doseWindowId) });
+            const errorMessage = checkDoseWindowIntegrity({ startHour, startMinute, endHour, endMinute, doseWindowId: parseInt(doseWindowId) });
             if (errorMessage) {
                 modalTitle.innerHTML = "Dose window error";
                 modalBody.innerHTML = errorMessage;
