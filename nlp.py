@@ -79,7 +79,8 @@ def get_datetime_obj_from_string(
         if parse_status != 0:
             output_time = computed_time
     if output_time is None:
-        if format_restrictions and not re.match(r'(pm|am|\:)', input_str):
+        if format_restrictions and not re.search(r'(pm|am|(?:\d+\:\d))', input_str):
+            print("restricted away")
             return None, False
         extracted_absolute_time = re.findall(ABSOLUTE_TIME_EXTRACTION_REGEX, input_str)
         am_pm_present = re.findall(r'(pm|am)', input_str)
@@ -114,7 +115,7 @@ def segment_message(raw_message_str):
     website_request = re.findall(WEBSITE_REGEX, processed_msg)
 
     extracted_time, am_pm_defined = get_datetime_obj_from_string(processed_msg, expanded_search=True, format_restrictions=True)
-
+    print(extracted_time)
     if taken_data:
         next_alarm_time, am_pm_defined = get_datetime_obj_from_string(processed_msg, expanded_search=False)
         message_body = {"type": "take", "modifiers": {"emotion": "excited" if excited else "neutral"}}
