@@ -655,9 +655,10 @@ def get_nearest_dose_window(input_time, user):
 
     return nearest_dose_window, True
 
-def get_most_recent_matching_time(input_time_data):
+def get_most_recent_matching_time(input_time_data, user):
     now = get_time_now()
-    most_recent_time = input_time_data["time"]
+    local_tz = timezone(user.timezone)
+    most_recent_time = local_tz.localize(input_time_data["time"].replace(tzinfo=None))  # user enters in their local time
     am_pm_defined = input_time_data["am_pm_defined"]
     cycle_interval = 24 if am_pm_defined else 12
     # cycle forward
@@ -692,7 +693,7 @@ def bot():
                     out_of_range = False
                     input_time = None
                     if input_time_data is not None:
-                        input_time = get_most_recent_matching_time(input_time_data)
+                        input_time = get_most_recent_matching_time(input_time_data, user)
                     else:
                         input_time = get_time_now()
                     dose_window_to_mark, out_of_range = get_nearest_dose_window(input_time, user) if dose_window is None else (dose_window, False)
