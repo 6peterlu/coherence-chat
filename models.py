@@ -55,6 +55,15 @@ class User(db.Model):
         end_of_day = start_of_day + timedelta(days=1)
         return start_of_day, end_of_day
 
+    def past_day_bounds(self, days_delta=0):  # negative is past days
+        start_of_day, end_of_day = self.current_day_bounds
+        return start_of_day + timedelta(days=days_delta), end_of_day + timedelta(days=days_delta)
+
+    def get_day_delta(self, input_time):
+        start_of_day, _ = self.current_day_bounds
+        return (input_time - start_of_day).days
+
+
     def resume(self, scheduler, send_intro_text_new, send_upcoming_dose_message):
         if self.paused:
             self.paused = False
@@ -63,7 +72,7 @@ class User(db.Model):
                 if dose_window.active:
                     dose_window.schedule_initial_job(scheduler, send_intro_text_new)
                     # send resume messages
-                    if dose_window.within_dosing_period() and not dose_window.is_recorded_for_today:
+                    if dose_window.within_dosing_period() and not dose_window.is_recorded():
                         send_intro_text_new(dose_window.id, welcome_back=True)
                     elif i == 0:  # upcoming dose
                         send_upcoming_dose_message(self, dose_window)
@@ -126,9 +135,8 @@ class DoseWindow(db.Model):
         new_start_minute, new_end_hour, new_end_minute,
         scheduler, send_intro_text_new, send_boundary_text_new
     ):
-        currently_outgoing_jobs = self.within_dosing_period() and not self.is_recorded_for_today
+        currently_outgoing_jobs = self.within_dosing_period() and not self.is_recorded()
         if not self.valid_hour(new_start_hour) or not self.valid_minute(new_start_minute) or not self.valid_hour(new_end_hour) or not self.valid_minute(new_end_minute):
-            print("invalid...rejecting")
             return
         self.start_hour = new_start_hour
         self.start_minute = new_start_minute
@@ -152,7 +160,6 @@ class DoseWindow(db.Model):
                         run_date=self.next_end_date - timedelta(days=1),
                         misfire_grace_time=5*60
                     )
-
 
 
     def schedule_initial_job(self, scheduler, send_intro_text_new):
@@ -179,10 +186,9 @@ class DoseWindow(db.Model):
         return scheduler.get_job(job_id) is not None
 
 
-    @property
-    def is_recorded_for_today(self):
+    def is_recorded(self, days_delta=0):
         for medication in self.medications:
-            if not medication.is_recorded_for_today(self):
+            if not medication.is_recorded_for_day(self, days_delta=days_delta):
                 return False
         return True
 
@@ -202,6 +208,33 @@ class DoseWindow(db.Model):
             alarm_endtime += timedelta(days=1)
         return alarm_endtime
 
+    @property
+    def bounds_for_current_day(self):
+        start_of_day, end_of_day = self.user.current_day_bounds
+        start_date = self.next_start_date
+        while not (start_date < end_of_day and start_date > start_of_day):
+            start_date -= timedelta(days=1)
+        end_date = self.next_end_date
+        while not (end_date < end_of_day and end_date >= start_of_day):
+            end_date -= timedelta(days=1)
+        return start_date, end_date
+
+
+    def dosing_period_status(self, time=None, day_agnostic=False):
+        time_to_compare = get_time_now() if time is None else time
+        if day_agnostic:
+            time_now = get_time_now()
+            time_to_compare.replace(time_now.year, time_now.month, time_now.day)
+        start_date, end_date = self.bounds_for_current_day
+        if time_to_compare < start_date:
+            return "before"
+        elif time_to_compare >= start_date and time_to_compare < end_date:
+            return "during"
+        else:
+            return "after"
+
+
+    # TODO: deprecate
     def within_dosing_period(self, time=None, day_agnostic=False):
         time_to_compare = get_time_now() if time is None else time
         if day_agnostic:
@@ -209,6 +242,7 @@ class DoseWindow(db.Model):
             time_to_compare.replace(time_now.year, time_now.month, time_now.day)
         # boundary condition
         return self.next_end_date - timedelta(days=1) > time_to_compare and self.next_start_date - timedelta(days=1) < time_to_compare
+
 
 
 class Medication(db.Model):
@@ -230,8 +264,8 @@ class Medication(db.Model):
         for dose_window in dose_windows:
             associate_medication_with_dose_window(self, dose_window, scheduler_tuple=scheduler_tuple)
 
-    def is_recorded_for_today(self, dose_window_obj):
-        start_of_day, end_of_day = self.user.current_day_bounds
+    def is_recorded_for_day(self, dose_window_obj, days_delta=0):
+        start_of_day, end_of_day = self.user.past_day_bounds(days_delta)
         relevant_medication_history_records = EventLog.query.filter(
             EventLog.dose_window_id == dose_window_obj.id,
             EventLog.medication_id == self.id,

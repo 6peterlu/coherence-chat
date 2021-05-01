@@ -458,7 +458,7 @@ def patient_data():
             event_data_by_time[get_time_of_day(current_dose_window)]["dose"] = DoseWindowSchema().dump(current_dose_window)
         paused_service = user.paused
         behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
-        dose_to_take_now = False if dose_window is None else not dose_window.is_recorded_for_today
+        dose_to_take_now = False if dose_window is None else not dose_window.is_recorded()
         dose_windows = [DoseWindowSchema().dump(dw) for dw in user.dose_windows]
         return jsonify({
             "phoneNumber": recovered_cookie,
@@ -612,7 +612,7 @@ def get_all_admin_data():
         }
         for dose_window in user.dose_windows:
             dose_window_json = DoseWindowSchema().dump(dose_window)
-            dose_window_json["action_required"] = not dose_window.is_recorded_for_today and dose_window.within_dosing_period()
+            dose_window_json["action_required"] = not dose_window.is_recorded() and dose_window.within_dosing_period()
             user_dict["dose_windows"].append(dose_window_json)
         for medication in user.doses:
             user_dict["medications"].append(MedicationSchema().dump(medication))
@@ -644,7 +644,6 @@ def get_nearest_dose_window(input_time, user):
         abs(dw.next_end_date - input_time),
         abs(dw.next_end_date - timedelta(days=1) - input_time)
     ))
-
     return nearest_dose_window, True
 
 def get_most_recent_matching_time(input_time_data, user):
@@ -689,8 +688,9 @@ def bot():
                     else:
                         input_time = get_time_now()
                     dose_window_to_mark, out_of_range = get_nearest_dose_window(input_time, user)
+                    days_delta = user.get_day_delta(input_time)
                     # dose_window_to_mark will never be None unless the user has no dose windows, but we'll handle that upstream
-                    if dose_window_to_mark.is_recorded_for_today:
+                    if dose_window_to_mark.is_recorded(days_delta=days_delta):
                         associated_doses = dose_window_to_mark.medications
                         for dose in associated_doses:
                             log_event_new("attempted_rerecord", user.id, dose_window_to_mark.id, dose.id, description=incoming_msg["raw"])
@@ -714,11 +714,11 @@ def bot():
                                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                 to=incoming_phone_number
                             )
-                        if dose_window and dose_window.is_recorded_for_today:  # not out of range, remove jobs
+                        if dose_window and dose_window.is_recorded():  # not out of range, remove jobs
                             remove_jobs_helper(dose_window.id, ["absent", "followup", "boundary"], new=True)
                 elif incoming_msg["type"] == "skip":
                     if dose_window is not None:
-                        if dose_window.is_recorded_for_today:
+                        if dose_window.is_recorded():
                             associated_doses = dose_window.medications
                             for dose in associated_doses:
                                 log_event_new("attempted_rerecord", user.id, dose_window.id, dose.id, description=incoming_msg["raw"])

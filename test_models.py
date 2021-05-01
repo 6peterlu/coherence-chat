@@ -260,17 +260,17 @@ def test_medication_schema(dose_window_record, medication_record, user_record):
     }
 
 def test_medication_is_not_recorded(dose_window_record, medication_record):
-    assert not medication_record.is_recorded_for_today(dose_window_record)
+    assert not medication_record.is_recorded_for_day(dose_window_record)
 
 
 @freeze_time("2012-01-01 17:00:00")
 def test_medication_is_recorded(dose_window_record, medication_record, take_event_record):
-    assert medication_record.is_recorded_for_today(dose_window_record)
+    assert medication_record.is_recorded_for_day(dose_window_record)
 
 
 @freeze_time("2012-01-02 17:00:00")
 def test_medication_is_recorded_out_of_range(dose_window_record, medication_record, take_event_record):
-    assert not medication_record.is_recorded_for_today(dose_window_record)
+    assert not medication_record.is_recorded_for_day(dose_window_record)
 
 
 @freeze_time("2012-01-02 17:00:00")
