@@ -202,8 +202,11 @@ class DoseWindow(db.Model):
             alarm_endtime += timedelta(days=1)
         return alarm_endtime
 
-    def within_dosing_period(self, time=None):
+    def within_dosing_period(self, time=None, day_agnostic=False):
         time_to_compare = get_time_now() if time is None else time
+        if day_agnostic:
+            time_now = get_time_now()
+            time_to_compare.replace(time_now.year, time_now.month, time_now.day)
         # boundary condition
         return self.next_end_date - timedelta(days=1) > time_to_compare and self.next_start_date - timedelta(days=1) < time_to_compare
 

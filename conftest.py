@@ -152,6 +152,18 @@ def medication_record_2(db_session, dose_window_record, user_record, scheduler):
     return medication_obj
 
 
+@pytest.fixture
+def medication_record_for_dose_window_out_of_range(db_session, dose_window_record_out_of_range, user_record, scheduler):
+    medication_obj = Medication(
+        user_id=user_record.id,
+        medication_name="Zoloft",
+        dose_windows=[dose_window_record_out_of_range],
+        scheduler_tuple=(scheduler, test_scheduled_function)
+    )
+    db_session.add(medication_obj)
+    db_session.commit()
+    return medication_obj
+
 
 @pytest.fixture
 def user_record_paused(db_session):

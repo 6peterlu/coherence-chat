@@ -79,7 +79,7 @@
             <button id="pauseButton" onclick="pauseService()" style="background-color: #f54242; color: #FBECB7; border: none; padding-top: 15px; padding-bottom: 15px; margin: 15px; border-radius: 30px; font-family: 'Lora', serif; text-align: center; font-size: 20px;">Pause</button>
             <p id="buttonActionExplainer" style="color:#FFF; font-size:12px; text-align: center;">Pausing will still allow you to tell us when you've taken or skipped a medication, but we will no longer remind you to take it.</p>
         </div>
-        <div style="background-color: rgb(233, 231, 220);">
+        <div style="background-color: rgb(233, 231, 220); padding: 10px;">
             <h3>Need help with anything?</h3>
             <p>Text us at (650) 667-1146‬, and we'll get back to you in less than one business day to help you out!</p>
         </div>
@@ -423,8 +423,8 @@
             const doseDataByTime = {}
             for (let dayOfMonth = 1; dayOfMonth <= 30; dayOfMonth++) {
                 // 2AM - 2AM to account for night doses
-                const startDate = new Date(2021, 3, dayOfMonth, 2, 0, 0, 0); // start time in GMT
-                const endDate = new Date(2021, 3, dayOfMonth + 1, 2, 0, 0, 0); // end time in GMT
+                const startDate = new Date(2021, 4, dayOfMonth, 2, 0, 0, 0); // start time in GMT
+                const endDate = new Date(2021, 4, dayOfMonth + 1, 2, 0, 0, 0); // end time in GMT
                 const satisfiedFields = [];
                 const skippedFields = [];
                 const missedFields = [];
@@ -492,7 +492,7 @@
                 afternoon: "Afternoon dose",
                 evening: "Evening dose"
             }
-            modalTitle.innerHTML = `April ${dayOfMonth}`;
+            modalTitle.innerHTML = `May ${dayOfMonth}`;
             modalBodyHTML = "";
             if (Object.keys(dayOfMonthData).length !== 0) {
                 const timeOfDayOrder = ["morning", "afternoon", "evening"];
@@ -524,11 +524,12 @@
                 <tbody>
             `;
             const dates = [
-                ["*28", "*29", "*30", "*31", "1", "2", "3"],
-                ["4", "5", "6", "7", "8", "9", "10"],
-                ["11", "12", "13", "14", "15", "16", "17"],
-                ["18", "19", "20", "21", "22", "23", "24"],
-                ["25", "26", "27", "28", "29", "30", "*1"],
+                ["*25", "*26", "*27", "*28", "*29", "*30", "1"],
+                ["2", "3", "4", "5", "6", "7", "8"],
+                ["9", "10", "11", "12", "13", "14", "15"],
+                ["16", "17", "18", "19", "20", "21", "22"],
+                ["23", "24", "25", "26", "27", "28", "29"],
+                ["30", "31", "*1", "*2", "*3", "*4", "*5"],
             ]
             const currentDate = new Date();
             const currentDayOfMonth = currentDate.getDate();

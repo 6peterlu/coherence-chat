@@ -173,25 +173,187 @@ def test_take_dose_already_recorded(
     assert all_events[1].medication_id == medication_record.id
     assert local_tz.localize(all_events[1].event_time) == datetime(2012, 1, 1, 17, tzinfo=utc)
 
+
 @freeze_time("2012-01-01 17:00:00")
 @mock.patch("bot.client.messages.create")
 @mock.patch("bot.segment_message")
 def test_take_dose_out_of_range(
     segment_message_mock, create_messages_mock,
-    client, db_session, user_record, dose_window_record_out_of_range
+    client, db_session, user_record, dose_window_record_out_of_range,
+    medication_record_for_dose_window_out_of_range
 ):
     local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
     segment_message_mock.return_value = [{'type': 'take', 'modifiers': {'emotion': 'neutral'}, "raw": "T"}]
     client.post("/bot", query_string={"From": "+13604508655"})
     assert create_messages_mock.called
     all_events = db_session.query(EventLog).all()
-    assert len(all_events) == 1  # first one is our inserted take record
-    # we expect it to record again since the record is outdated
-    assert all_events[0].event_type == "out_of_range"
+    assert len(all_events) == 1
+    assert all_events[0].event_type == "take"
     assert all_events[0].user_id == user_record.id
-    assert all_events[0].dose_window_id is None
-    assert all_events[0].medication_id is None
+    assert all_events[0].dose_window_id is dose_window_record_out_of_range.id
+    assert all_events[0].medication_id is medication_record_for_dose_window_out_of_range.id
     assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 17, tzinfo=utc)
+
+
+@freeze_time("2012-01-01 15:00:00")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.segment_message")
+def test_take_dose_out_of_range_multi_dose_window(
+    segment_message_mock, create_messages_mock,
+    client, db_session, user_record, dose_window_record_out_of_range,  # 20-22
+    medication_record_for_dose_window_out_of_range, dose_window_record,  # 16-18
+    medication_record
+):
+    local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
+    segment_message_mock.return_value = [{'type': 'take', 'modifiers': {'emotion': 'neutral'}, "raw": "T"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1
+    assert all_events[0].event_type == "take"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id is dose_window_record.id  # match the second one
+    assert all_events[0].medication_id is medication_record.id
+    assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 15, tzinfo=utc)
+
+
+@freeze_time("2012-01-01 23:00:00")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.segment_message")
+def test_take_dose_out_of_range_multi_dose_window_2(
+    segment_message_mock, create_messages_mock,
+    client, db_session, user_record, dose_window_record_out_of_range,  # 20-22
+    medication_record_for_dose_window_out_of_range, dose_window_record,  # 16-18
+    medication_record
+):
+    local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
+    segment_message_mock.return_value = [{'type': 'take', 'modifiers': {'emotion': 'neutral'}, "raw": "T"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1
+    assert all_events[0].event_type == "take"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id is dose_window_record_out_of_range.id  # match the second one
+    assert all_events[0].medication_id is medication_record_for_dose_window_out_of_range.id
+    assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 23, tzinfo=utc)
+
+
+@freeze_time("2012-01-01 19:30:00")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.segment_message")
+def test_take_dose_out_of_range_multi_dose_window_3(
+    segment_message_mock, create_messages_mock,
+    client, db_session, user_record, dose_window_record_out_of_range,  # 20-22
+    medication_record_for_dose_window_out_of_range, dose_window_record,  # 16-18
+    medication_record
+):
+    local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
+    segment_message_mock.return_value = [{'type': 'take', 'modifiers': {'emotion': 'neutral'}, "raw": "T"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1
+    assert all_events[0].event_type == "take"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id is dose_window_record_out_of_range.id  # match the second one
+    assert all_events[0].medication_id is medication_record_for_dose_window_out_of_range.id
+    assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 19, 30, tzinfo=utc)
+
+
+@freeze_time("2012-01-01 6:30:00")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.segment_message")
+def test_take_dose_out_of_range_multi_dose_window_4(
+    segment_message_mock, create_messages_mock,
+    client, db_session, user_record, dose_window_record_out_of_range,  # 20-22
+    medication_record_for_dose_window_out_of_range, dose_window_record,  # 16-18
+    medication_record
+):
+    local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
+    segment_message_mock.return_value = [{'type': 'take', 'modifiers': {'emotion': 'neutral'}, "raw": "T"}]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert create_messages_mock.called
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1
+    assert all_events[0].event_type == "take"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id is dose_window_record_out_of_range.id  # match the second one
+    assert all_events[0].medication_id is medication_record_for_dose_window_out_of_range.id
+    assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 6, 30, tzinfo=utc)
+
+
+@freeze_time("2012-01-02 4:30:00")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.segment_message")
+def test_take_with_input_time(
+    segment_message_mock, create_messages_mock,
+    client, db_session, user_record, dose_window_record,
+    medication_record
+):
+    local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
+    segment_message_mock.return_value = [{
+        'type': 'take',
+        'modifiers': {'emotion': 'neutral'},
+        "raw": "T", 'payload': {"time": datetime(2012, 1, 2, 16, 50, tzinfo=utc), "am_pm_defined": False}
+    }]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1
+    assert all_events[0].event_type == "take"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id is dose_window_record.id
+    assert all_events[0].medication_id is medication_record.id
+    assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 16, 50, tzinfo=utc)
+
+
+@freeze_time("2012-01-02 7:30:00")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.segment_message")
+def test_take_with_input_time_am_pm_defined(
+    segment_message_mock, create_messages_mock,
+    client, db_session, user_record, dose_window_record,
+    medication_record
+):
+    local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
+    segment_message_mock.return_value = [{
+        'type': 'take',
+        'modifiers': {'emotion': 'neutral'},
+        "raw": "T", 'payload': {"time": datetime(2012, 1, 2, 16, 50, tzinfo=utc), "am_pm_defined": True}
+    }]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1
+    assert all_events[0].event_type == "take"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id is dose_window_record.id
+    assert all_events[0].medication_id is medication_record.id
+    assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 16, 50, tzinfo=utc)
+
+
+@freeze_time("2012-01-02 7:30:00")
+@mock.patch("bot.client.messages.create")
+@mock.patch("bot.segment_message")
+def test_take_with_input_time_am_pm_defined_fuzzy(
+    segment_message_mock, create_messages_mock,
+    client, db_session, user_record, dose_window_record,
+    medication_record, dose_window_record_out_of_range,
+    medication_record_for_dose_window_out_of_range
+):
+    local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
+    segment_message_mock.return_value = [{
+        'type': 'take',
+        'modifiers': {'emotion': 'neutral'},
+        "raw": "T", 'payload': {"time": datetime(2012, 1, 2, 15, 0, tzinfo=utc), "am_pm_defined": True}
+    }]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1
+    assert all_events[0].event_type == "take"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id is dose_window_record.id
+    assert all_events[0].medication_id is medication_record.id
+    assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 15, 0, tzinfo=utc)
 
 
 @freeze_time("2012-01-01 17:00:00")  # within range of dose_window_record
