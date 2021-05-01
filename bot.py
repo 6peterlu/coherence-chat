@@ -257,8 +257,9 @@ def get_initial_message(dose_id, time_string, welcome_back=False, phone_number=N
         return f"{random.choice(TIME_OF_DAY_PREFIX_MAP[current_time_of_day])} {random.choice(INITIAL_SUFFIXES).substitute(time=time_string)}"
 
 def get_take_message_new(excited, user_obj, input_time=None):
-    datestring = get_time_now().astimezone(timezone(user_obj.timezone)).strftime('%b %d, %I:%M %p') if input_time is None else input_time.strftime('%b %d, %I:%M %p')
-    return TAKE_MSG_EXCITED.substitute(time=datestring) if excited else TAKE_MSG.substitute(time=datestring)
+    take_time = get_time_now() if input_time is None else input_time
+    timezone_translated_time = take_time.astimezone(timezone(user_obj.timezone)).strftime('%b %d, %I:%M %p')
+    return TAKE_MSG_EXCITED.substitute(time=timezone_translated_time) if excited else TAKE_MSG.substitute(time=timezone_translated_time)
 
 def get_absent_message():
     return random.choice(ABSENT_MSGS)
