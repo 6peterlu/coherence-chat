@@ -634,18 +634,10 @@ def toggle_manual_takeover_for_user():
 
 
 def get_nearest_dose_window(input_time, user):
-    print(input_time)
     for dose_window in user.dose_windows:
         if dose_window.within_dosing_period(input_time, day_agnostic=True):
             return dose_window, False  # not outside of dose window
     # dose window fuzzy matching
-    print("fuzzy matching")
-    for dw in user.dose_windows:
-        print("**")
-        print(abs(dw.next_start_date - input_time))
-        print(abs(dw.next_start_date - timedelta(days=1) - input_time))
-        print(abs(dw.next_end_date - input_time))
-        print(abs(dw.next_end_date - timedelta(days=1) - input_time))
     nearest_dose_window = min(user.dose_windows, key=lambda dw: min(
         abs(dw.next_start_date - input_time),
         abs(dw.next_start_date - timedelta(days=1) - input_time),
@@ -696,7 +688,7 @@ def bot():
                         input_time = get_most_recent_matching_time(input_time_data, user)
                     else:
                         input_time = get_time_now()
-                    dose_window_to_mark, out_of_range = get_nearest_dose_window(input_time, user) if dose_window is None else (dose_window, False)
+                    dose_window_to_mark, out_of_range = get_nearest_dose_window(input_time, user)
                     # dose_window_to_mark will never be None unless the user has no dose windows, but we'll handle that upstream
                     if dose_window_to_mark.is_recorded_for_today:
                         associated_doses = dose_window_to_mark.medications
