@@ -144,3 +144,5 @@ THANKS_MESSAGES = [
 ALREADY_RECORDED = "We already have a record of this dose. If you'd like to edit it, please go to https://www.coherence-chat.herokuapp.com and tap on the current day."
 
 REQUEST_WEBSITE = "You can access your medication take history and much more at https://coherence-chat.herokuapp.com. Also, you can text us at our customer service number (650) 667-1146‬, and we'll back to you within 1 business day."
+
+SUGGEST_DOSE_WINDOW_CHANGE = "It looks like you took this medication outside your dose window. If you'd like to update your dose window, you can do so at any time at https://coherence-chat.herokuapp.com."

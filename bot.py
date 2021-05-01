@@ -119,6 +119,7 @@ from constants import (
     REQUEST_WEBSITE,
     SECRET_CODE_MESSAGE,
     SKIP_MSG,
+    SUGGEST_DOSE_WINDOW_CHANGE,
     TAKE_MSG,
     TAKE_MSG_EXCITED,
     THANKS_MESSAGES,
@@ -631,7 +632,31 @@ def toggle_manual_takeover_for_user():
     return jsonify()
 
 
-def locate_correct_input_time(input_time, )
+def get_nearest_dose_window(input_time, user):
+    for dose_window in user.dose_windows:
+        if dose_window.within_dosing_period(input_time, day_agnostic=True):
+            return dose_window, False  # not outside of dose window
+    # dose window fuzzy matching
+    nearest_dose_window = min(user.dose_windows, key=lambda dw: min(
+        abs(dw.next_start_date - input_time),
+        abs(dw.next_start_date - timedelta(days=1) - input_time),
+        abs(dw.next_end_date - input_time),
+        abs(dw.next_end_date - timedelta(days=1) - input_time)
+    ))
+
+    return nearest_dose_window, True
+
+def get_most_recent_12_hour_time(input_time):
+    now = get_time_now()
+    most_recent_time = input_time
+    # cycle forward
+    while most_recent_time < now - timedelta(hours=12):
+        most_recent_time += timedelta(hours=12)
+    # cycle back
+    while most_recent_time > now:
+        most_recent_time -= timedelta(hours=12)
+    return most_recent_time
+
 
 @app.route('/bot', methods=['POST'])
 def bot():
@@ -649,41 +674,47 @@ def bot():
                 text_fallback(incoming_phone_number)
             else:
                 if incoming_msg["type"] == "take":
-                    if dose_window is not None:
-                        if dose_window.is_recorded_for_today():
-                            associated_doses = dose_window.medications
-                            for dose in associated_doses:
-                                log_event_new("attempted_rerecord", user.id, dose_window.id, dose.id, description=incoming_msg["raw"])
-                            client.messages.create(
-                                body=ALREADY_RECORDED,
-                                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                                to=incoming_phone_number
-                            )
-                        else:
-                            # all doses not recorded, we record now
-                            excited = incoming_msg["modifiers"]["emotion"] == "excited"
-                            # input_time = incoming_msg.get("payload")
-                            input_time = None  # TODO: start here
-                            outgoing_copy = get_take_message_new(excited, user, input_time=input_time)
-                            for dose in associated_doses:
-                                log_event_new("take", user.id, dose_window.id, dose.id, description=dose.id, event_time=input_time)
-                            # text patient confirmation
-                            client.messages.create(
-                                body=outgoing_copy,
-                                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                                to=incoming_phone_number
-                            )
-                            remove_jobs_helper(dose_window.id, ["absent", "followup", "boundary"], new=True)
+                    # all doses not recorded, we record now
+                    excited = incoming_msg["modifiers"]["emotion"] == "excited"
+                    input_time = incoming_msg.get("payload")
+                    dose_window_to_mark = None
+                    out_of_range = False
+                    if input_time is not None:
+                        input_time = get_most_recent_12_hour_time(input_time)
                     else:
-                        log_event_new("out_of_range", user.id, None, None, description=incoming_msg["raw"])
+                        input_time = get_time_now()
+                    dose_window_to_mark, out_of_range = get_nearest_dose_window(input_time, user) if dose_window is None else (dose_window, False)
+                    print(dose_window_to_mark)
+                    # dose_window_to_mark will never be None unless the user has no dose windows, but we'll handle that upstream
+                    if dose_window_to_mark.is_recorded_for_today:
+                        associated_doses = dose_window_to_mark.medications
+                        for dose in associated_doses:
+                            log_event_new("attempted_rerecord", user.id, dose_window_to_mark.id, dose.id, description=incoming_msg["raw"])
                         client.messages.create(
-                            body=ACTION_OUT_OF_RANGE_MSG,
+                            body=ALREADY_RECORDED,
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                             to=incoming_phone_number
                         )
+                    else: # we need to record the dose
+                        for medication in dose_window_to_mark.medications:
+                            log_event_new("take", user.id, dose_window_to_mark.id, medication.id, description=medication.id, event_time=input_time)
+                        outgoing_copy = get_take_message_new(excited, user, input_time=input_time)
+                        client.messages.create(
+                            body=outgoing_copy,
+                            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                            to=incoming_phone_number
+                        )
+                        if out_of_range:
+                            client.messages.create(
+                                body=SUGGEST_DOSE_WINDOW_CHANGE,
+                                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                                to=incoming_phone_number
+                            )
+                        else:  # not out of range, remove jobs
+                            remove_jobs_helper(dose_window.id, ["absent", "followup", "boundary"], new=True)
                 elif incoming_msg["type"] == "skip":
                     if dose_window is not None:
-                        if dose_window.is_recorded_for_today():
+                        if dose_window.is_recorded_for_today:
                             associated_doses = dose_window.medications
                             for dose in associated_doses:
                                 log_event_new("attempted_rerecord", user.id, dose_window.id, dose.id, description=incoming_msg["raw"])
@@ -695,7 +726,7 @@ def bot():
                         else:
                             # all doses not recorded, we record now
                             input_time = incoming_msg.get("payload")
-                            for dose in associated_doses:
+                            for dose in dose_window.medications:
                                 log_event_new("skip", user.id, dose_window.id, dose.id, description=dose.id, event_time=input_time)
                             # text patient confirmation
                             client.messages.create(
