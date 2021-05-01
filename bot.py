@@ -633,10 +633,18 @@ def toggle_manual_takeover_for_user():
 
 
 def get_nearest_dose_window(input_time, user):
+    print(input_time)
     for dose_window in user.dose_windows:
         if dose_window.within_dosing_period(input_time, day_agnostic=True):
             return dose_window, False  # not outside of dose window
     # dose window fuzzy matching
+    print("fuzzy matching")
+    for dw in user.dose_windows:
+        print("**")
+        print(abs(dw.next_start_date - input_time))
+        print(abs(dw.next_start_date - timedelta(days=1) - input_time))
+        print(abs(dw.next_end_date - input_time))
+        print(abs(dw.next_end_date - timedelta(days=1) - input_time))
     nearest_dose_window = min(user.dose_windows, key=lambda dw: min(
         abs(dw.next_start_date - input_time),
         abs(dw.next_start_date - timedelta(days=1) - input_time),
@@ -646,15 +654,17 @@ def get_nearest_dose_window(input_time, user):
 
     return nearest_dose_window, True
 
-def get_most_recent_12_hour_time(input_time):
+def get_most_recent_matching_time(input_time_data):
     now = get_time_now()
-    most_recent_time = input_time
+    most_recent_time = input_time_data["time"]
+    am_pm_defined = input_time_data["am_pm_defined"]
+    cycle_interval = 24 if am_pm_defined else 12
     # cycle forward
-    while most_recent_time < now - timedelta(hours=12):
-        most_recent_time += timedelta(hours=12)
+    while most_recent_time < now - timedelta(hours=cycle_interval):
+        most_recent_time += timedelta(hours=cycle_interval)
     # cycle back
     while most_recent_time > now:
-        most_recent_time -= timedelta(hours=12)
+        most_recent_time -= timedelta(hours=cycle_interval)
     return most_recent_time
 
 
@@ -676,15 +686,15 @@ def bot():
                 if incoming_msg["type"] == "take":
                     # all doses not recorded, we record now
                     excited = incoming_msg["modifiers"]["emotion"] == "excited"
-                    input_time = incoming_msg.get("payload")
+                    input_time_data = incoming_msg.get("payload")
                     dose_window_to_mark = None
                     out_of_range = False
-                    if input_time is not None:
-                        input_time = get_most_recent_12_hour_time(input_time)
+                    input_time = None
+                    if input_time_data is not None:
+                        input_time = get_most_recent_matching_time(input_time_data)
                     else:
                         input_time = get_time_now()
                     dose_window_to_mark, out_of_range = get_nearest_dose_window(input_time, user) if dose_window is None else (dose_window, False)
-                    print(dose_window_to_mark)
                     # dose_window_to_mark will never be None unless the user has no dose windows, but we'll handle that upstream
                     if dose_window_to_mark.is_recorded_for_today:
                         associated_doses = dose_window_to_mark.medications
@@ -710,7 +720,7 @@ def bot():
                                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                 to=incoming_phone_number
                             )
-                        else:  # not out of range, remove jobs
+                        if dose_window and dose_window.is_recorded_for_today:  # not out of range, remove jobs
                             remove_jobs_helper(dose_window.id, ["absent", "followup", "boundary"], new=True)
                 elif incoming_msg["type"] == "skip":
                     if dose_window is not None:

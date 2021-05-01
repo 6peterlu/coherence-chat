@@ -62,8 +62,15 @@ THANKS_VERSIONS = ["thank", "ty"]
 # re-integrate spacy later
 # SPACY_EMBEDDINGS = {token: nlp(token) for token in RECOGNIZED_ACTIVITIES}
 
-def get_datetime_obj_from_string(input_str, expanded_search=False, format_restrictions=False):
+
+# handle am/pm stuff
+def get_datetime_obj_from_string(
+    input_str,
+    expanded_search=False,
+    format_restrictions=False  # must explicitly be a time, aka have :, am, pm
+):
     output_time = None
+    am_pm_defined = False  # detects if user defined am/pm explicitly
     # search for time delays if flagged
     if expanded_search:
         extracted_time_delay = re.findall(TIME_DELAY_EXTRACTION_REGEX, input_str)
@@ -73,18 +80,24 @@ def get_datetime_obj_from_string(input_str, expanded_search=False, format_restri
             output_time = computed_time
     if output_time is None:
         if format_restrictions and not re.match(r'(pm|am|\:)', input_str):
-            return None
+            return None, False
         extracted_absolute_time = re.findall(ABSOLUTE_TIME_EXTRACTION_REGEX, input_str)
+        am_pm_present = re.findall(r'(pm|am)', input_str)
         if extracted_absolute_time:
             reconstructed_time = extracted_absolute_time[0][0]
             if len(reconstructed_time) <= 2 and ":" not in reconstructed_time:
                 reconstructed_time += ":00"
+            if am_pm_present:
+                am_pm_defined = True
+            if ":" in reconstructed_time:
+                if int(reconstructed_time.split(":")[0]) > 12:
+                    am_pm_defined = True
             if extracted_absolute_time[0][1]:
                 reconstructed_time += " " + extracted_absolute_time[0][1]
             computed_time, parse_status = cal.parseDT(reconstructed_time, tzinfo=pytzutc)
             if parse_status != 0:
                 output_time = computed_time
-    return output_time
+    return output_time, am_pm_defined
 
 def segment_message(raw_message_str):
     message_segments = []
@@ -100,16 +113,16 @@ def segment_message(raw_message_str):
     special_commands = re.findall(SPECIAL_COMMANDS_REGEX, processed_msg)
     website_request = re.findall(WEBSITE_REGEX, processed_msg)
 
-    extracted_time = get_datetime_obj_from_string(processed_msg, expanded_search=True, format_restrictions=True)
+    extracted_time, am_pm_defined = get_datetime_obj_from_string(processed_msg, expanded_search=True, format_restrictions=True)
 
     if taken_data:
-        next_alarm_time = get_datetime_obj_from_string(processed_msg, expanded_search=False)
+        next_alarm_time, am_pm_defined = get_datetime_obj_from_string(processed_msg, expanded_search=False)
         message_body = {"type": "take", "modifiers": {"emotion": "excited" if excited else "neutral"}}
         # only enabled for new data model
         if next_alarm_time is not None:
             # maybe this is only needed in the pm?
             # next_alarm_time -= timedelta(hours=12)  # go back to last referenced time
-            message_body["payload"] = next_alarm_time
+            message_body["payload"] = {"time": next_alarm_time, "am_pm_defined": am_pm_defined}
         message_segments.append(message_body)
     elif skip_data:
         message_segments.append({"type": "skip"})
