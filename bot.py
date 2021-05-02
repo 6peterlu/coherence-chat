@@ -464,6 +464,7 @@ def patient_data():
                     daily_event_summary["time_of_day"][time_of_day].append({"type": "taken", "time": event.event_time})
             daily_event_summary["day_status"] = day_status
             event_data.append(daily_event_summary)
+            current_day += timedelta(days=1)
 
         paused_service = user.paused
         behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
