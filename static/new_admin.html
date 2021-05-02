@@ -142,7 +142,8 @@
                 doseEndTime.setUTCHours(doseWindow.end_hour, doseWindow.end_minute)
                 htmlOut += `<div style='display: flex; flex-direction: row; ${doseWindow.action_required ? 'background-color: #bd5c59' : ''}'>`;
                 htmlOut += `
-                    <p style="padding-left: 20px;" id="doseTimeDisplay-${doseWindow.id}">${doseWindow.id} | ${doseStartTime.getHours()}:${checkTime(doseStartTime.getMinutes())}->${doseEndTime.getHours()}:${checkTime(doseEndTime.getMinutes())}</p>
+                    <button onclick="deactivateDoseWindow(\'${doseWindow.id}\')">X</button>
+                    <p id="doseTimeDisplay-${doseWindow.id}">${doseWindow.id} | ${doseStartTime.getHours()}:${checkTime(doseStartTime.getMinutes())}->${doseEndTime.getHours()}:${checkTime(doseEndTime.getMinutes())}</p>
                     <div id="doseWindowEditing-${doseWindow.id}" style="display:none; flex-direction:column;">
                         <input type="time" id="updatedDoseStartTime-${doseWindow.id}" value="${checkTime(doseStartTime.getHours())}:${checkTime(doseStartTime.getMinutes())}"/>
                         <input type="time" id="updatedDoseEndTime-${doseWindow.id}" value="${checkTime(doseEndTime.getHours())}:${checkTime(doseEndTime.getMinutes())}"/>
@@ -226,6 +227,11 @@
         }
         const addDoseWindow = (userId) => {
             post("admin/createDoseWindow", { userId }).then(response => response.json()).then(result => {
+                refreshData();
+            });
+        }
+        const deactivateDoseWindow = (doseWindowId) => {
+            post("admin/deactivateDoseWindow", { doseWindowId }).then(response => response.json()).then(result => {
                 refreshData();
             });
         }
