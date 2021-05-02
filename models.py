@@ -55,6 +55,10 @@ class User(db.Model):
         end_of_day = start_of_day + timedelta(days=1)
         return start_of_day, end_of_day
 
+    @property
+    def active_dose_windows(self):
+        return list(filter(lambda dw: dw.active, self.dose_windows))
+
     def past_day_bounds(self, days_delta=0):  # negative is past days
         start_of_day, end_of_day = self.current_day_bounds
         return start_of_day + timedelta(days=days_delta), end_of_day + timedelta(days=days_delta)
@@ -126,6 +130,13 @@ class DoseWindow(db.Model):
             if not self.active and scheduler_tuple:
                 self.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
         db.session.commit()
+
+    def deactivate(self, scheduler):
+        if self.active:
+            self.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
+            self.active = False
+            db.session.commit()
+
 
     def valid_hour(self, hour):
         return hour >= 0 and hour <= 23

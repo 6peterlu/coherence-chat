@@ -10,6 +10,7 @@ import tzlocal
 
 from models import (
     EventLog,
+    User,
     # schemas
     UserSchema,
 )
@@ -1021,3 +1022,26 @@ def test_admin_resume(
     })
     assert not mock_send_intro_text.called
     assert not mock_send_upcoming_dose_message.called
+
+
+def test_admin_create_user(client, db_session):
+    client.post("/admin/createUser", json={
+        "phoneNumber": "3604508655",
+        "name": "Peter"
+    })
+    users = db_session.query(User).all()
+    assert len(users) == 1
+
+def test_admin_create_dose_window(client, db_session, user_record):
+    client.post("/admin/createDoseWindow", json={
+        "userId": user_record.id
+    })
+    assert len(user_record.dose_windows) == 1
+    assert len(user_record.doses) == 1
+
+def test_admin_deactivate_dose_window(client, db_session, user_record, medication_record, dose_window_record):
+    client.post("/admin/deactivateDoseWindow", json={
+        "doseWindowId": dose_window_record.id
+    })
+    assert len(user_record.active_dose_windows) == 0
+    assert len(user_record.dose_windows) == 1

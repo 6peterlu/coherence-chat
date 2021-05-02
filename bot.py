@@ -395,7 +395,7 @@ def get_current_user_and_dose_window(truncated_phone_number):
     current_dose_window = None
     user = User.query.filter(User.phone_number == truncated_phone_number).one_or_none()
     if user is not None:
-        for dose_window in user.dose_windows:
+        for dose_window in user.active_dose_windows:
             if dose_window.within_dosing_period():
                 current_dose_window = dose_window
     return user, current_dose_window
@@ -454,12 +454,12 @@ def patient_data():
             if time_of_day not in event_data_by_time:
                 event_data_by_time[time_of_day] = {"events": []}
             event_data_by_time[time_of_day]["events"].append(EventLogSchema().dump(event))
-        for current_dose_window in user.dose_windows:
+        for current_dose_window in user.active_dose_windows:
             event_data_by_time[get_time_of_day(current_dose_window)]["dose"] = DoseWindowSchema().dump(current_dose_window)
         paused_service = user.paused
         behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
         dose_to_take_now = False if dose_window is None else not dose_window.is_recorded()
-        dose_windows = [DoseWindowSchema().dump(dw) for dw in user.dose_windows]
+        dose_windows = [DoseWindowSchema().dump(dw) for dw in user.active_dose_windows]
         return jsonify({
             "phoneNumber": recovered_cookie,
             "eventData": event_data_by_time,
@@ -610,7 +610,7 @@ def get_all_admin_data():
             "dose_windows": [],
             "medications": []
         }
-        for dose_window in user.dose_windows:
+        for dose_window in user.active_dose_windows:
             dose_window_json = DoseWindowSchema().dump(dose_window)
             dose_window_json["action_required"] = not dose_window.is_recorded() and dose_window.within_dosing_period()
             user_dict["dose_windows"].append(dose_window_json)
@@ -651,11 +651,11 @@ def admin_resume_user():
 
 
 def get_nearest_dose_window(input_time, user):
-    for dose_window in user.dose_windows:
+    for dose_window in user.active_dose_windows:
         if dose_window.within_dosing_period(input_time, day_agnostic=True):
             return dose_window, False  # not outside of dose window
     # dose window fuzzy matching
-    nearest_dose_window = min(user.dose_windows, key=lambda dw: min(
+    nearest_dose_window = min(user.active_dose_windows, key=lambda dw: min(
         abs(dw.next_start_date - input_time),
         abs(dw.next_start_date - timedelta(days=1) - input_time),
         abs(dw.next_end_date - input_time),
@@ -1078,6 +1078,43 @@ def admin_edit_dose_window():
             scheduler, send_intro_text_new, send_boundary_text_new
         )
     return jsonify()
+
+@app.route("/admin/createUser", methods=["POST"])
+def admin_create_user():
+    incoming_data = request.json
+    phone_number = incoming_data["phoneNumber"]
+    name = incoming_data["name"]
+    new_user = User(
+        phone_number=phone_number,
+        name=name,
+        paused=True  # user starts paused
+    )
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify()
+
+@app.route("/admin/createDoseWindow", methods=["POST"])
+def admin_create_dose_window_and_medication_for_user():
+    incoming_data = request.json
+    user_id = int(incoming_data["userId"])
+    if User.query.get(user_id) is not None:
+        new_dw = DoseWindow(0,0,0,0,user_id)
+        db.session.add(new_dw)
+        new_med = Medication(user_id, "", dose_windows=[new_dw])
+        db.session.add(new_med)
+        db.session.commit()
+    return jsonify()
+
+
+@app.route("/admin/deactivateDoseWindow", methods=["POST"])
+def admin_deactivate_dose_window():
+    incoming_data = request.json
+    dw_id = int(incoming_data["doseWindowId"])
+    dw = DoseWindow.query.get(dw_id)
+    if dw is not None:
+        dw.deactivate(scheduler)
+    return jsonify()
+
 
 @app.route("/user/updateDoseWindow", methods=["POST"])
 def user_edit_dose_window():

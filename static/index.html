@@ -154,13 +154,15 @@
         function randomChoice(arr) {
             return arr[Math.floor(arr.length * Math.random())];
         }
+        function randomHeaderEmoji() {
+            return randomChoice(["💫", "🌈", "🌱", "🏆", "📈", "💎", "💡", "🔆", "🔔"])
+        }
         function requestData() {
             fetch(`${apiURL}/patientData`, getInitDetails).then(response => response.json()).then(result => {
-                console.log(result);
                 modal.style.display = "none";
                 if (result.phoneNumber) {
                     loginScreen.style.display = "none";
-                    welcomeHeader.innerHTML = `Welcome to Coherence.`;
+                    welcomeHeader.innerHTML = `Welcome to Coherence ${randomHeaderEmoji()}`;
                     tracking.style.display = "block";
                     if (result.takeNow) {
                         takeNow.innerHTML = "You have a dose to take now."

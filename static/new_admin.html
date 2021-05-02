@@ -131,7 +131,10 @@
                     </button>
                 </div>
             `;
-            htmlOut += "<p style='font-weight:bold;'>Dose windows</p>";
+            htmlOut += `
+                <p style='font-weight:bold;'>Dose windows</p>
+                <button onclick="addDoseWindow(\'${userData.user.id}\')">Add dose window</button>
+            `;
             for (const doseWindow of userData.dose_windows) {
                 let doseStartTime = new Date();
                 let doseEndTime = new Date();
@@ -220,7 +223,11 @@
             post("admin/editDoseWindow", { startHour, startMinute, endHour, endMinute, doseWindowId }).then(response => response.json()).then(result => {
                 refreshData();
             });
-
+        }
+        const addDoseWindow = (userId) => {
+            post("admin/createDoseWindow", { userId }).then(response => response.json()).then(result => {
+                refreshData();
+            });
         }
         const refreshData = () => {
             get("admin/everything", {}).then(response => response.json()).then(result => {
