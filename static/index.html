@@ -474,8 +474,8 @@
             return (typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: tzString, hour: 'numeric', minute: 'numeric', hour12: true});
         }
         function getEventHTML(timeOfDayData) {
-            const eventType = timeOfDayData.eventType;
-            const eventTime = timeOfDayData.eventTime;
+            const eventType = timeOfDayData[0].eventType; // TODO: handle multiple
+            const eventTime = timeOfDayData[0].eventTime;
             if (eventType === "boundary") {
                 return "<p class=missedDose>🛑 Missed</p>";
             } else if (eventType === "take") {
