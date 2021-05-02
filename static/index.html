@@ -501,7 +501,7 @@
                 const timeOfDayOrder = ["morning", "afternoon", "evening"];
                 for (let timeOfDay of timeOfDayOrder) {
                     if (timeOfDay in dayOfMonthData) {
-                        const timeOfDayHTML = `<h3>${timeOfDayCopyMap[timeOfDay]}</h3>${adherenceHistory.doseDataByTime[timeOfDay].medication_name ? `<p>💊<span style="font-size:15px">${adherenceHistory.doseDataByTime[timeOfDay].medication_name}</span></p>` : ""}${getEventHTML(dayOfMonthData[timeOfDay])}`;
+                        const timeOfDayHTML = `<h3>${timeOfDayCopyMap[timeOfDay]}</h3>${getEventHTML(dayOfMonthData[timeOfDay])}`;
                         modalBodyHTML += timeOfDayHTML;
                     }
                 }
@@ -543,9 +543,6 @@
                     var processedDate = date;
                     var adherenceClass = "noAdherenceData";
                     const dayOfMonth = parseInt(processedDate);
-                    console.log("confusion")
-                    console.log(dayOfMonth)
-                    console.log(adherenceHistory)
                     if (!Number.isNaN(dayOfMonth)) {
                         if (adherenceHistory[dayOfMonth - 1].day_status == "taken") {
                             adherenceClass = "adherent";
