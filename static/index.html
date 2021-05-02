@@ -173,13 +173,13 @@
                         takeNow.style.backgroundColor = "#09ad56";
                         takeNow.style.color = "#FFF";
                     }
-                    adherenceHistory = processEventData(result.eventData);
+                    adherenceHistory = result.eventData;
                     activityAnalytics = {behaviorLearningScores: result.behaviorLearningScores};
                     servicePaused = result.pausedService;
                     doseWindows = result.doseWindows;
                     generateCalendar();
                     renderServicePaused();
-                    renderAnalytics();
+                    // renderAnalytics();
                     renderBehaviorLearningChart();
                     renderDoseWindows();
                 } else {
@@ -339,22 +339,22 @@
             const doseWindowEditingInterface = document.getElementById(`doseWindowEditingInterface-${doseWindowId}`);
             doseWindowEditingInterface.style.display = "none";
         }
-        function renderAnalytics() {
-            const timeOfDayOrder = ["morning", "afternoon", "evening"];
-            let innerHTML = "<p style='color: #FFF'>Average dose time 🕒</p>";
-            for (const field of timeOfDayOrder) {
-                if (field in adherenceHistory.averageDosingTime) {
-                    const { hours, minutes, pm } = adherenceHistory.averageDosingTime[field];
-                    let formattedMinutes = `${minutes}`;
-                    if (formattedMinutes.length === 1) {
-                        formattedMinutes = `0${formattedMinutes}`;
-                    }
-                    innerHTML += `<p style="color: #FFF; font-size: 12px;">${field} - ${hours}:${formattedMinutes} ${pm ? 'pm' : 'am'}</p>`;
-                }
-            }
-            const analyticsDiv = document.getElementById("averageDoseTaken");
-            analyticsDiv.innerHTML = innerHTML;
-        }
+        // function renderAnalytics() {
+        //     const timeOfDayOrder = ["morning", "afternoon", "evening"];
+        //     let innerHTML = "<p style='color: #FFF'>Average dose time 🕒</p>";
+        //     for (const field of timeOfDayOrder) {
+        //         if (field in adherenceHistory.averageDosingTime) {
+        //             const { hours, minutes, pm } = adherenceHistory.averageDosingTime[field];
+        //             let formattedMinutes = `${minutes}`;
+        //             if (formattedMinutes.length === 1) {
+        //                 formattedMinutes = `0${formattedMinutes}`;
+        //             }
+        //             innerHTML += `<p style="color: #FFF; font-size: 12px;">${field} - ${hours}:${formattedMinutes} ${pm ? 'pm' : 'am'}</p>`;
+        //         }
+        //     }
+        //     const analyticsDiv = document.getElementById("averageDoseTaken");
+        //     analyticsDiv.innerHTML = innerHTML;
+        // }
         function renderBehaviorLearningChart() {
             if (chartLibraryLoaded) {
                 if (activityAnalytics.behaviorLearningScores.length >= 2) {
@@ -486,7 +486,7 @@
             return "";
         }
         function openTableDetails(dayOfMonth) {
-            const dayOfMonthData = adherenceHistory.takeHistoryByDay[dayOfMonth];
+            const dayOfMonthData = adherenceHistory[dayOfMonth - 1].time_of_day;
             const modalTitle = document.getElementById("modalTitle");
             const modalBody = document.getElementById("modalBody");
             const timeOfDayCopyMap = {
@@ -542,11 +542,11 @@
                     var processedDate = date;
                     var adherenceClass = "noAdherenceData";
                     const dayOfMonth = parseInt(processedDate);
-                    if (adherenceHistory.adherentDays.includes(dayOfMonth)) {
+                    if (adherenceHistory[dayOfMonth - 1].day_status == "taken") {
                         adherenceClass = "adherent";
-                    } else if (adherenceHistory.missedDays.includes(dayOfMonth)) {
+                    } else if (adherenceHistory[dayOfMonth - 1].day_status == "missed") {
                         adherenceClass = "nonadherent";
-                    } else if (adherenceHistory.adherentWithSkipDays.includes(dayOfMonth)) {
+                    } else if (adherenceHistory[dayOfMonth - 1].day_status == "skip") {
                         adherenceClass = "adherentWithSkip";
                     }
                     if (dayOfMonth === currentDayOfMonth) {
