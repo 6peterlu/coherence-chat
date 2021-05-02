@@ -71,6 +71,7 @@ def get_datetime_obj_from_string(
 ):
     output_time = None
     am_pm_defined = False  # detects if user defined am/pm explicitly
+    needs_tz_convert = False
     # search for time delays if flagged
     if expanded_search:
         extracted_time_delay = re.findall(TIME_DELAY_EXTRACTION_REGEX, input_str)
@@ -80,7 +81,7 @@ def get_datetime_obj_from_string(
             output_time = computed_time
     if output_time is None:
         if format_restrictions and not re.search(r'(pm|am|(?:\d+\:\d))', input_str):
-            return None, False
+            return None, False, False
         extracted_absolute_time = re.findall(ABSOLUTE_TIME_EXTRACTION_REGEX, input_str)
         am_pm_present = re.findall(r'(pm|am)', input_str)
         if extracted_absolute_time:
@@ -97,7 +98,8 @@ def get_datetime_obj_from_string(
             computed_time, parse_status = cal.parseDT(reconstructed_time, tzinfo=pytzutc)
             if parse_status != 0:
                 output_time = computed_time
-    return output_time, am_pm_defined
+            needs_tz_convert = True
+    return output_time, am_pm_defined, needs_tz_convert
 
 def segment_message(raw_message_str):
     message_segments = []
@@ -113,20 +115,20 @@ def segment_message(raw_message_str):
     special_commands = re.findall(SPECIAL_COMMANDS_REGEX, processed_msg)
     website_request = re.findall(WEBSITE_REGEX, processed_msg)
 
-    extracted_time, am_pm_defined = get_datetime_obj_from_string(processed_msg, expanded_search=True, format_restrictions=True)
+    extracted_time, am_pm_defined, needs_tz_convert = get_datetime_obj_from_string(processed_msg, expanded_search=True, format_restrictions=True)
     if taken_data:
-        next_alarm_time, am_pm_defined = get_datetime_obj_from_string(processed_msg, expanded_search=False)
+        next_alarm_time, am_pm_defined, needs_tz_convert = get_datetime_obj_from_string(processed_msg, expanded_search=False)
         message_body = {"type": "take", "modifiers": {"emotion": "excited" if excited else "neutral"}}
         # only enabled for new data model
         if next_alarm_time is not None:
             # maybe this is only needed in the pm?
             # next_alarm_time -= timedelta(hours=12)  # go back to last referenced time
-            message_body["payload"] = {"time": next_alarm_time, "am_pm_defined": am_pm_defined}
+            message_body["payload"] = {"time": next_alarm_time, "am_pm_defined": am_pm_defined, "needs_tz_convert": needs_tz_convert}  # tz_convert is always true, but its here for consistency
         message_segments.append(message_body)
     elif skip_data:
         message_segments.append({"type": "skip"})
     elif extracted_time is not None:
-        message_segments.append({"type": "requested_alarm_time", "payload": extracted_time})
+        message_segments.append({"type": "requested_alarm_time", "payload": {"time": extracted_time, "am_pm_defined": am_pm_defined, "needs_tz_convert": needs_tz_convert}})
     else:
         if special_commands:
             command = special_commands[0]

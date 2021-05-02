@@ -646,18 +646,27 @@ def get_nearest_dose_window(input_time, user):
     ))
     return nearest_dose_window, True
 
-def get_most_recent_matching_time(input_time_data, user):
+def get_most_recent_matching_time(input_time_data, user, after=False):  # if after is true, get time after
     now = get_time_now()
-    local_tz = timezone(user.timezone)
-    most_recent_time = local_tz.localize(input_time_data["time"].replace(tzinfo=None))  # user enters in their local time
+    most_recent_time = input_time_data["time"]
+    if input_time_data["needs_tz_convert"]:  # nlp class requests tz convert for this time
+        local_tz = timezone(user.timezone)
+        most_recent_time = local_tz.localize(input_time_data["time"].replace(tzinfo=None))  # user enters in their local time
     am_pm_defined = input_time_data["am_pm_defined"]
     cycle_interval = 24 if am_pm_defined else 12
     # cycle forward
-    while most_recent_time < now - timedelta(hours=cycle_interval):
-        most_recent_time += timedelta(hours=cycle_interval)
-    # cycle back
-    while most_recent_time > now:
-        most_recent_time -= timedelta(hours=cycle_interval)
+    if after:
+        while most_recent_time > now + timedelta(hours=cycle_interval):
+            most_recent_time -= timedelta(hours=cycle_interval)
+        # cycle back
+        while most_recent_time < now:
+            most_recent_time += timedelta(hours=cycle_interval)
+    else:
+        while most_recent_time < now - timedelta(hours=cycle_interval):
+            most_recent_time += timedelta(hours=cycle_interval)
+        # cycle back
+        while most_recent_time > now:
+            most_recent_time -= timedelta(hours=cycle_interval)
     return most_recent_time
 
 
@@ -847,7 +856,7 @@ def bot():
                         )
                 if incoming_msg["type"] == "requested_alarm_time":
                     if dose_window is not None:
-                        next_alarm_time = convert_to_user_local_time(user, incoming_msg["payload"])
+                        next_alarm_time = get_most_recent_matching_time(user, incoming_msg["payload"])
                         print(next_alarm_time)
                         # TODO: remove repeated code block
                         too_close = False
