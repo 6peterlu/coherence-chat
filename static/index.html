@@ -174,7 +174,6 @@
                         takeNow.style.color = "#FFF";
                     }
                     adherenceHistory = result.eventData;
-                    console.log(adherenceHistory)
                     activityAnalytics = {behaviorLearningScores: result.behaviorLearningScores};
                     servicePaused = result.pausedService;
                     doseWindows = result.doseWindows;
@@ -237,7 +236,6 @@
             dayStart.setHours(2, 0, 0, 0); // 2 AM today.
             if (utc) {
                 time.setUTCHours(hour, minute, 0, 0);
-                console.log(time);
             } else {
                 time.setHours(hour, minute, 0, 0);
             }
@@ -481,14 +479,13 @@
             } else if (eventType === "taken") {
                 const eventTimeString = convertTZ(eventTime, "US/Pacific");
                 return `<p class=takenDose>✅ Taken at ${eventTimeString}</p>`;
-            } else if (eventType === "skip") {
+            } else if (eventType === "skipped") {
                 return "<p class=skippedDose>🟠 Skipped</p>";
             }
             return "";
         }
         function openTableDetails(dayOfMonth) {
             const dayOfMonthData = adherenceHistory[dayOfMonth - 1].time_of_day;
-            console.log(dayOfMonthData)
             const modalTitle = document.getElementById("modalTitle");
             const modalBody = document.getElementById("modalBody");
             const timeOfDayCopyMap = {
