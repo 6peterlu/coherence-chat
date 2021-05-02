@@ -429,7 +429,10 @@ def patient_data():
         ]
         combined_list = list(set(take_record_events) | set(user_driven_events))
         relevant_events = EventLog.query.filter(EventLog.event_type.in_(combined_list), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
-        requested_time_window = (timezone(user.timezone).localize(datetime(2021, 5, 1, tzinfo=None)), timezone(user.timezone).localize(datetime(2021, 6, 1, tzinfo=None)))
+        requested_time_window = (
+            timezone(user.timezone).localize(datetime(2021, 5, 1, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None),
+            timezone(user.timezone).localize(datetime(2021, 6, 1, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None)  # christ
+        )
         dose_history_events = list(filter(lambda event: (
             event.event_type in take_record_events and
             event.medication in user.doses and
