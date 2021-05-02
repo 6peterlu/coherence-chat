@@ -14,6 +14,11 @@
             <div id="eventListDiv" style="flex:1; max-height:400px; overflow-y: scroll;"></div>
         </div>
     </div>
+    <div>
+        <input id="newUserPhoneNumber" type="number" placeholder="3604508655"/>
+        <input id="newUserName" placeholder="name"/>
+        <button id="createNewUserButton" onclick="createNewUser()">Create new user</button>
+    </div>
     <div id="userDetailedData"></div>
     <script defer>
         const initDetails = {
@@ -193,6 +198,16 @@
             `;
             return htmlOut;
         }
+        const createNewUser = () => {
+            const phoneNumber = document.getElementById("newUserPhoneNumber").value;
+            const name = document.getElementById("newUserName").value;
+            const createButton = document.getElementById("createNewUserButton");
+            createButton.disabled = true;
+            createButton.innerHTML = "creating new user...";
+            post("admin/createUser", { phoneNumber, name }).then(result => {
+                refreshData();
+            });
+        }
         const editDoseWindow = (doseWindowId) => {
             const doseHeader = document.getElementById(`doseTimeDisplay-${doseWindowId}`);
             const doseEditingWindow = document.getElementById(`doseWindowEditing-${doseWindowId}`);
@@ -259,6 +274,9 @@
                 const onlineButton = document.getElementById("onlineToggleButton")
                 onlineButton.innerHTML = result.online ? "Go offline" : "Go online";
                 onlineButton.disabled = false;
+                const createUserButton = document.getElementById("createNewUserButton");
+                createUserButton.disabled = false;
+                createUserButton.innerHTML = "Create new user";
             });
             get("scheduler/jobs", {}).then(response => response.json()).then(result => {
                 renderJobs(result);
