@@ -543,6 +543,9 @@
                     var processedDate = date;
                     var adherenceClass = "noAdherenceData";
                     const dayOfMonth = parseInt(processedDate);
+                    console.log("confusion")
+                    console.log(dayOfMonth)
+                    console.log(adherenceHistory)
                     if (adherenceHistory[dayOfMonth - 1].day_status == "taken") {
                         adherenceClass = "adherent";
                     } else if (adherenceHistory[dayOfMonth - 1].day_status == "missed") {
