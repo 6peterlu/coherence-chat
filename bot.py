@@ -848,9 +848,11 @@ def bot():
                 if incoming_msg["type"] == "requested_alarm_time":
                     if dose_window is not None:
                         next_alarm_time = convert_to_user_local_time(user, incoming_msg["payload"])
+                        print(next_alarm_time)
                         # TODO: remove repeated code block
                         too_close = False
                         dose_end_time = dose_window.next_end_date - timedelta(days=1)
+                        print(dose_end_time)
                         if next_alarm_time > dose_end_time - timedelta(minutes=10):
                             next_alarm_time = dose_end_time - timedelta(minutes=10)
                             too_close = True
