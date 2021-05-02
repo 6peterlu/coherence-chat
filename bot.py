@@ -856,7 +856,7 @@ def bot():
                         )
                 if incoming_msg["type"] == "requested_alarm_time":
                     if dose_window is not None:
-                        next_alarm_time = get_most_recent_matching_time(user, incoming_msg["payload"])
+                        next_alarm_time = get_most_recent_matching_time(incoming_msg["payload"], user)
                         print(next_alarm_time)
                         # TODO: remove repeated code block
                         too_close = False
