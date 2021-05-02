@@ -55,6 +55,10 @@ class User(db.Model):
         end_of_day = start_of_day + timedelta(days=1)
         return start_of_day, end_of_day
 
+    @property
+    def active_dose_windows(self):
+        return list(filter(lambda dw: dw.active, self.dose_windows))
+
     def past_day_bounds(self, days_delta=0):  # negative is past days
         start_of_day, end_of_day = self.current_day_bounds
         return start_of_day + timedelta(days=days_delta), end_of_day + timedelta(days=days_delta)
@@ -64,26 +68,28 @@ class User(db.Model):
         return (input_time - start_of_day).days
 
 
-    def resume(self, scheduler, send_intro_text_new, send_upcoming_dose_message):
+    def resume(self, scheduler, send_intro_text_new, send_upcoming_dose_message, silent=False):
         if self.paused:
             self.paused = False
             sorted_dose_windows = sorted(self.dose_windows, key=lambda dw: dw.next_start_date)
             for i, dose_window in enumerate(sorted_dose_windows):
                 if dose_window.active:
                     dose_window.schedule_initial_job(scheduler, send_intro_text_new)
-                    # send resume messages
-                    if dose_window.within_dosing_period() and not dose_window.is_recorded():
-                        send_intro_text_new(dose_window.id, welcome_back=True)
-                    elif i == 0:  # upcoming dose
-                        send_upcoming_dose_message(self, dose_window)
+                    if not silent:
+                        # send resume messages
+                        if dose_window.within_dosing_period() and not dose_window.is_recorded():
+                            send_intro_text_new(dose_window.id, welcome_back=True)
+                        elif i == 0:  # upcoming dose
+                            send_upcoming_dose_message(self, dose_window)
             db.session.commit()
 
-    def pause(self, scheduler, send_pause_message):
+    def pause(self, scheduler, send_pause_message, silent=False):
         if not self.paused:
             self.paused = True
             for dose_window in self.dose_windows:
                 dose_window.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
-            send_pause_message(self)
+            if not silent:
+                send_pause_message(self)
             db.session.commit()
 
 class DoseWindow(db.Model):
@@ -124,6 +130,13 @@ class DoseWindow(db.Model):
             if not self.active and scheduler_tuple:
                 self.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
         db.session.commit()
+
+    def deactivate(self, scheduler):
+        if self.active:
+            self.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
+            self.active = False
+            db.session.commit()
+
 
     def valid_hour(self, hour):
         return hour >= 0 and hour <= 23

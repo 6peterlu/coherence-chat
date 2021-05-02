@@ -10,6 +10,7 @@ import tzlocal
 
 from models import (
     EventLog,
+    User,
     # schemas
     UserSchema,
 )
@@ -318,7 +319,7 @@ def test_take_with_input_time(
     segment_message_mock.return_value = [{
         'type': 'take',
         'modifiers': {'emotion': 'neutral'},
-        "raw": "T", 'payload': {"time":  datetime(2012, 1, 2, 16, 50, tzinfo=utc).astimezone(local_tz), "am_pm_defined": False}
+        "raw": "T", 'payload': {"time":  datetime(2012, 1, 2, 16, 50, tzinfo=utc).astimezone(local_tz), "am_pm_defined": False, "needs_tz_convert": False}
     }]
     client.post("/bot", query_string={"From": "+13604508655"})
     all_events = db_session.query(EventLog).all()
@@ -341,7 +342,7 @@ def test_take_with_input_time_rerecord(
     segment_message_mock.return_value = [{
         'type': 'take',
         'modifiers': {'emotion': 'neutral'},
-        "raw": "T", 'payload': {"time":  datetime(2012, 1, 2, 16, 50, tzinfo=utc).astimezone(local_tz), "am_pm_defined": False}
+        "raw": "T", 'payload': {"time":  datetime(2012, 1, 2, 16, 50, tzinfo=utc).astimezone(local_tz), "am_pm_defined": False, "needs_tz_convert": False}
     }]
     client.post("/bot", query_string={"From": "+13604508655"})
     client.post("/bot", query_string={"From": "+13604508655"})
@@ -367,7 +368,7 @@ def test_take_with_input_time_am_pm_defined(
     segment_message_mock.return_value = [{
         'type': 'take',
         'modifiers': {'emotion': 'neutral'},
-        "raw": "T", 'payload': {"time": datetime(2012, 1, 2, 16, 50, tzinfo=utc).astimezone(local_tz), "am_pm_defined": True}
+        "raw": "T", 'payload': {"time": datetime(2012, 1, 2, 16, 50, tzinfo=utc).astimezone(local_tz), "am_pm_defined": True, "needs_tz_convert": False}
     }]
     client.post("/bot", query_string={"From": "+13604508655"})
     all_events = db_session.query(EventLog).all()
@@ -392,7 +393,7 @@ def test_take_with_input_time_am_pm_defined_fuzzy(
     segment_message_mock.return_value = [{
         'type': 'take',
         'modifiers': {'emotion': 'neutral'},
-        "raw": "T", 'payload': {"time": datetime(2012, 1, 2, 15, 0, tzinfo=utc).astimezone(local_tz), "am_pm_defined": True}
+        "raw": "T", 'payload': {"time": datetime(2012, 1, 2, 15, 0, tzinfo=utc).astimezone(local_tz), "am_pm_defined": True, "needs_tz_convert": False}
     }]
     client.post("/bot", query_string={"From": "+13604508655"})
     all_events = db_session.query(EventLog).all()
@@ -417,7 +418,7 @@ def test_take_with_input_time_am_pm_defined_fuzzy_rerecord(
     segment_message_mock.return_value = [{
         'type': 'take',
         'modifiers': {'emotion': 'neutral'},
-        "raw": "T", 'payload': {"time": datetime(2012, 1, 2, 15, 0, tzinfo=utc).astimezone(local_tz), "am_pm_defined": True}
+        "raw": "T", 'payload': {"time": datetime(2012, 1, 2, 15, 0, tzinfo=utc).astimezone(local_tz), "am_pm_defined": True, "needs_tz_convert": False}
     }]
     client.post("/bot", query_string={"From": "+13604508655"})
     client.post("/bot", query_string={"From": "+13604508655"})  # rerecord
@@ -733,7 +734,7 @@ def test_requested_alarm_time(
     medication_record, scheduler
 ):
     user_tz = timezone(user_record.timezone)
-    segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': datetime(2012, 1, 1, 9, 30, tzinfo=user_tz), "raw": "30min"}]
+    segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': {"time": user_tz.localize(datetime(2012, 1, 1, 9, 30, tzinfo=None)), "am_pm_defined": True, "needs_tz_convert": False}, "raw": "30min"}]
     client.post("/bot", query_string={"From": "+13604508655"})
     assert create_messages_mock.called
     assert remove_jobs_mock.called
@@ -758,7 +759,7 @@ def test_requested_alarm_time_near_boundary(
     medication_record, scheduler
 ):
     user_tz = timezone(user_record.timezone)
-    segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': datetime(2012, 1, 1, 10, tzinfo=user_tz), "raw": "1hr"}]
+    segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': {"time": datetime(2012, 1, 1, 10, tzinfo=user_tz), "am_pm_defined": True, "needs_tz_convert": False}, "raw": "1hr"}]
     client.post("/bot", query_string={"From": "+13604508655"})
     assert create_messages_mock.called
     assert remove_jobs_mock.called
@@ -782,7 +783,7 @@ def test_requested_alarm_time_too_late(
     medication_record, scheduler
 ):
     user_tz = timezone(user_record.timezone)
-    segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': datetime(2012, 1, 1, 10, tzinfo=user_tz), "raw": "1hr"}]
+    segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': {"time": datetime(2012, 1, 1, 10, tzinfo=user_tz), "am_pm_defined": True, "needs_tz_convert": False}, "raw": "1hr"}]
     client.post("/bot", query_string={"From": "+13604508655"})
     assert create_messages_mock.called
     all_events = db_session.query(EventLog).all()
@@ -800,7 +801,7 @@ def test_requested_alarm_time_out_of_range(
 ):
     local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
     user_tz = timezone(user_record.timezone)
-    segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': datetime(2012, 1, 1, 10, tzinfo=user_tz), "raw": "1hr"}]
+    segment_message_mock.return_value = [{'type': 'requested_alarm_time', 'payload': {"time": datetime(2012, 1, 1, 10, tzinfo=user_tz), "am_pm_defined": True, "needs_tz_convert": False}, "raw": "1hr"}]
     client.post("/bot", query_string={"From": "+13604508655"})
     assert create_messages_mock.called
     all_events = db_session.query(EventLog).all()
@@ -1001,3 +1002,46 @@ def test_maybe_schedule_absent_new(mock_randint, dose_window_record, db_session,
 #         "reminderType": "initial",
 #         "manual_time": datetime
 #     })
+
+
+@mock.patch("bot.send_pause_message")
+def test_admin_pause(mock_send_pause_message, user_record, dose_window_record, medication_record, scheduler, client):
+    client.post("/admin/pauseUser", json={
+        "userId": user_record.id
+    })
+    assert not mock_send_pause_message.called
+
+@mock.patch("bot.send_upcoming_dose_message")
+@mock.patch("bot.send_intro_text_new")
+def test_admin_resume(
+    mock_send_intro_text, mock_send_upcoming_dose_message, user_record,
+    dose_window_record, medication_record, scheduler, client
+):
+    client.post("/admin/resumeUser", json={
+        "userId": user_record.id
+    })
+    assert not mock_send_intro_text.called
+    assert not mock_send_upcoming_dose_message.called
+
+
+def test_admin_create_user(client, db_session):
+    client.post("/admin/createUser", json={
+        "phoneNumber": "3604508655",
+        "name": "Peter"
+    })
+    users = db_session.query(User).all()
+    assert len(users) == 1
+
+def test_admin_create_dose_window(client, db_session, user_record):
+    client.post("/admin/createDoseWindow", json={
+        "userId": user_record.id
+    })
+    assert len(user_record.dose_windows) == 1
+    assert len(user_record.doses) == 1
+
+def test_admin_deactivate_dose_window(client, db_session, user_record, medication_record, dose_window_record):
+    client.post("/admin/deactivateDoseWindow", json={
+        "doseWindowId": dose_window_record.id
+    })
+    assert len(user_record.active_dose_windows) == 0
+    assert len(user_record.dose_windows) == 1

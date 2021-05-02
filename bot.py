@@ -133,7 +133,7 @@ from constants import (
 
 # allow no reminders to be set within 10 mins of boundary
 BUFFER_TIME_MINS = 10
-USER_TIMEZONE = "US/Pacific"
+ADMIN_TIMEZONE = "US/Pacific"
 TWILIO_PHONE_NUMBERS = {
     "local": "2813771848",
     "production": "2673824152"
@@ -142,36 +142,6 @@ TWILIO_PHONE_NUMBERS = {
 # numbers for which the person should NOT take it after the dose period.
 CLINICAL_BOUNDARY_PHONE_NUMBERS = ["8587761377"]
 
-
-PATIENT_DOSE_MAP = {
-    "+113604508655": {"morning": [85]},
-    "+113609042210": {"afternoon": [25], "evening": [15]},
-    "+113609049085": {"evening": [16]},
-    "+114152142478": {"morning": [26, 82, 92]},
-    "+116502690598": {"evening": [27]},
-    "+118587761377": {"morning": [29]},
-    "+113607738908": {"morning": [68, 87], "evening": [69, 81]},
-    "+115038871884": {"morning": [70], "afternoon": [71]},
-    "+113605214193": {"morning": [72], "evening": [74, 103]},
-    "+113605131225": {"morning": [75], "afternoon": [76], "evening": [77]},
-    "+113606064445": {"afternoon": [78, 88]},
-    "+113609010956": {"evening": [86]}
-}
-
-PATIENT_NAME_MAP = {
-    "+113604508655": "Peter",
-    "+113606064445": "Cheryl",
-    "+113609042210": "Steven",
-    "+113609049085": "Tao",
-    "+114152142478": "Miki",
-    "+116502690598": "Caroline",
-    "+118587761377": "Hadara",
-    "+113607738908": "Karrie",
-    "+115038871884": "Charles",
-    "+113605214193": "Leann",
-    "+113605131225": "Jeanette",
-    "+113609010956": "Andie"
-}
 
 SECRET_CODES = {
     "+113604508655": 123456,
@@ -185,7 +155,12 @@ SECRET_CODES = {
     "+115038871884": 474580,
     "+113605214193": 402913,
     "+113605131225": 846939,
-    "+113609010956": 299543
+    "+113609010956": 299543,
+    "+113609045470": 697892,
+    "+113609071578": 573240,
+    "+113609779451": 588404,
+    "+115097747287": 199146,
+    "+113606668268": 848330
 }
 
 ACTIVITY_BUCKET_SIZE_MINUTES = 10
@@ -242,16 +217,12 @@ def get_time_now(tzaware=True):
 def get_followup_message():
     return random.choice(FOLLOWUP_MSGS)
 
-def get_initial_message(dose_id, time_string, welcome_back=False, phone_number=None):
-    current_time_of_day = None
-    for phone_number in PATIENT_DOSE_MAP:
-        for time_of_day in PATIENT_DOSE_MAP[phone_number]:
-            if dose_id in PATIENT_DOSE_MAP[phone_number][time_of_day]:
-                current_time_of_day = time_of_day
+def get_initial_message(dose_window_obj, time_string, welcome_back=False, phone_number=None):
+    current_time_of_day = get_time_of_day(dose_window_obj)
     if welcome_back:
         return f"{random.choice(WELCOME_BACK_MESSAGES)} {random.choice(INITIAL_SUFFIXES).substitute(time=time_string)}"
     random_choice = random.random()
-    if random_choice < 0.8 or current_time_of_day is None or phone_number == "+114152142478":  # blacklist miki
+    if random_choice < 0.8 or current_time_of_day is None:
         return random.choice(INITIAL_MSGS).substitute(time=time_string)
     else:
         return f"{random.choice(TIME_OF_DAY_PREFIX_MAP[current_time_of_day])} {random.choice(INITIAL_SUFFIXES).substitute(time=time_string)}"
@@ -395,7 +366,7 @@ def get_current_user_and_dose_window(truncated_phone_number):
     current_dose_window = None
     user = User.query.filter(User.phone_number == truncated_phone_number).one_or_none()
     if user is not None:
-        for dose_window in user.dose_windows:
+        for dose_window in user.active_dose_windows:
             if dose_window.within_dosing_period():
                 current_dose_window = dose_window
     return user, current_dose_window
@@ -419,7 +390,7 @@ def patient_data():
     if recovered_cookie is None:
         return jsonify()  # empty response if no cookie
     phone_number = f"+11{recovered_cookie}"
-    if phone_number not in PATIENT_DOSE_MAP:
+    if phone_number not in SECRET_CODES:
         response = jsonify({"error": "The secret code was incorrect. Please double-check that you've entered it correctly."})
         response.set_cookie("phoneNumber", "", expires=0)
         return response
@@ -454,16 +425,16 @@ def patient_data():
             if time_of_day not in event_data_by_time:
                 event_data_by_time[time_of_day] = {"events": []}
             event_data_by_time[time_of_day]["events"].append(EventLogSchema().dump(event))
-        for current_dose_window in user.dose_windows:
+        for current_dose_window in user.active_dose_windows:
             event_data_by_time[get_time_of_day(current_dose_window)]["dose"] = DoseWindowSchema().dump(current_dose_window)
         paused_service = user.paused
         behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
         dose_to_take_now = False if dose_window is None else not dose_window.is_recorded()
-        dose_windows = [DoseWindowSchema().dump(dw) for dw in user.dose_windows]
+        dose_windows = [DoseWindowSchema().dump(dw) for dw in user.active_dose_windows]
         return jsonify({
             "phoneNumber": recovered_cookie,
             "eventData": event_data_by_time,
-            "patientName": PATIENT_NAME_MAP[phone_number],
+            "patientName": user.name,
             "takeNow": dose_to_take_now,
             "pausedService": bool(paused_service),
             "behaviorLearningScores": behavior_learning_scores,
@@ -570,7 +541,7 @@ def admin_get_messages_for_number():
         {
             "sender": "us" if message.from_ == f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}" else "them",
             "body": message.body,
-            "date_sent": message.date_sent.astimezone(timezone(USER_TIMEZONE)).strftime("%b %d, %I:%M%p")
+            "date_sent": message.date_sent.astimezone(timezone(ADMIN_TIMEZONE)).strftime("%b %d, %I:%M%p")
         }
         for message in combined_list
     ]
@@ -610,7 +581,7 @@ def get_all_admin_data():
             "dose_windows": [],
             "medications": []
         }
-        for dose_window in user.dose_windows:
+        for dose_window in user.active_dose_windows:
             dose_window_json = DoseWindowSchema().dump(dose_window)
             dose_window_json["action_required"] = not dose_window.is_recorded() and dose_window.within_dosing_period()
             user_dict["dose_windows"].append(dose_window_json)
@@ -632,13 +603,30 @@ def toggle_manual_takeover_for_user():
     db.session.commit()
     return jsonify()
 
+@app.route("/admin/pauseUser", methods=["POST"])
+def admin_pause_user():
+    user_id = int(request.json["userId"])
+    user = User.query.get(user_id)
+    if user is not None:
+        user.pause(scheduler, send_pause_message, silent=True)
+    return jsonify()
+
+
+@app.route("/admin/resumeUser", methods=["POST"])
+def admin_resume_user():
+    user_id = int(request.json["userId"])
+    user = User.query.get(user_id)
+    if user is not None:
+        user.resume(scheduler, send_intro_text_new, send_upcoming_dose_message, silent=True)
+    return jsonify()
+
 
 def get_nearest_dose_window(input_time, user):
-    for dose_window in user.dose_windows:
+    for dose_window in user.active_dose_windows:
         if dose_window.within_dosing_period(input_time, day_agnostic=True):
             return dose_window, False  # not outside of dose window
     # dose window fuzzy matching
-    nearest_dose_window = min(user.dose_windows, key=lambda dw: min(
+    nearest_dose_window = min(user.active_dose_windows, key=lambda dw: min(
         abs(dw.next_start_date - input_time),
         abs(dw.next_start_date - timedelta(days=1) - input_time),
         abs(dw.next_end_date - input_time),
@@ -646,18 +634,27 @@ def get_nearest_dose_window(input_time, user):
     ))
     return nearest_dose_window, True
 
-def get_most_recent_matching_time(input_time_data, user):
+def get_most_recent_matching_time(input_time_data, user, after=False):  # if after is true, get time after
     now = get_time_now()
-    local_tz = timezone(user.timezone)
-    most_recent_time = local_tz.localize(input_time_data["time"].replace(tzinfo=None))  # user enters in their local time
+    most_recent_time = input_time_data["time"]
+    if input_time_data["needs_tz_convert"]:  # nlp class requests tz convert for this time
+        local_tz = timezone(user.timezone)
+        most_recent_time = local_tz.localize(input_time_data["time"].replace(tzinfo=None))  # user enters in their local time
     am_pm_defined = input_time_data["am_pm_defined"]
     cycle_interval = 24 if am_pm_defined else 12
     # cycle forward
-    while most_recent_time < now - timedelta(hours=cycle_interval):
-        most_recent_time += timedelta(hours=cycle_interval)
-    # cycle back
-    while most_recent_time > now:
-        most_recent_time -= timedelta(hours=cycle_interval)
+    if after:
+        while most_recent_time > now + timedelta(hours=cycle_interval):
+            most_recent_time -= timedelta(hours=cycle_interval)
+        # cycle back
+        while most_recent_time < now:
+            most_recent_time += timedelta(hours=cycle_interval)
+    else:
+        while most_recent_time < now - timedelta(hours=cycle_interval):
+            most_recent_time += timedelta(hours=cycle_interval)
+        # cycle back
+        while most_recent_time > now:
+            most_recent_time -= timedelta(hours=cycle_interval)
     return most_recent_time
 
 
@@ -779,7 +776,7 @@ def bot():
                                 client.messages.create(
                                     body=REMINDER_TOO_CLOSE_MSG.substitute(
                                         time=dose_end_time.astimezone(timezone(user.timezone)).strftime("%I:%M"),
-                                        reminder_time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")
+                                        reminder_time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")
                                     ),
                                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                     to=incoming_phone_number
@@ -847,19 +844,21 @@ def bot():
                         )
                 if incoming_msg["type"] == "requested_alarm_time":
                     if dose_window is not None:
-                        next_alarm_time = convert_to_user_local_time(user, incoming_msg["payload"])
+                        next_alarm_time = get_most_recent_matching_time(incoming_msg["payload"], user, after=True)
+                        print(next_alarm_time)
                         # TODO: remove repeated code block
                         too_close = False
                         dose_end_time = dose_window.next_end_date - timedelta(days=1)
+                        print(dose_end_time)
                         if next_alarm_time > dose_end_time - timedelta(minutes=10):
                             next_alarm_time = dose_end_time - timedelta(minutes=10)
                             too_close = True
                         if next_alarm_time > get_time_now():
-                            log_event_new("reminder_delay", user.id, dose_window.id, None, description=f"delayed to {next_alarm_time.astimezone(timezone(USER_TIMEZONE))}")
+                            log_event_new("reminder_delay", user.id, dose_window.id, None, description=f"delayed to {next_alarm_time.astimezone(timezone(user.timezone))}")
                             client.messages.create(
                                 body=REMINDER_TOO_CLOSE_MSG.substitute(
-                                    time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M"),
-                                    reminder_time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")
+                                    time=dose_end_time.astimezone(timezone(user.timezone)).strftime("%I:%M"),
+                                    reminder_time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")
                                 ),
                                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                 to=incoming_phone_number
@@ -873,7 +872,7 @@ def bot():
                             )
                         else:
                             client.messages.create(
-                                body=REMINDER_TOO_LATE_MSG.substitute(time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")),
+                                body=REMINDER_TOO_LATE_MSG.substitute(time=dose_end_time.astimezone(timezone(user.timezone)).strftime("%I:%M")),
                                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                 to=incoming_phone_number
                             )
@@ -896,7 +895,7 @@ def bot():
                             next_alarm_time = dose_end_time - timedelta(minutes=10)
                             too_close = True
                         if next_alarm_time > get_time_now():
-                            log_event_new("reminder_delay", user.id, dose_window.id, None, description=f"delayed to {next_alarm_time.astimezone(timezone(USER_TIMEZONE))}")
+                            log_event_new("reminder_delay", user.id, dose_window.id, None, description=f"delayed to {next_alarm_time.astimezone(timezone(user.timezone))}")
                             client.messages.create(
                                 body=incoming_msg["payload"]["response"],
                                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
@@ -911,7 +910,7 @@ def bot():
                             )
                         else:
                             client.messages.create(
-                                body=REMINDER_TOO_LATE_MSG.substitute(time=dose_end_time.astimezone(timezone(USER_TIMEZONE)).strftime("%I:%M")),
+                                body=REMINDER_TOO_LATE_MSG.substitute(time=dose_end_time.astimezone(timezone(user.timezone)).strftime("%I:%M")),
                                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                 to=incoming_phone_number
                             )
@@ -1051,6 +1050,43 @@ def admin_edit_dose_window():
         )
     return jsonify()
 
+@app.route("/admin/createUser", methods=["POST"])
+def admin_create_user():
+    incoming_data = request.json
+    phone_number = incoming_data["phoneNumber"]
+    name = incoming_data["name"]
+    new_user = User(
+        phone_number=phone_number,
+        name=name,
+        paused=True  # user starts paused
+    )
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify()
+
+@app.route("/admin/createDoseWindow", methods=["POST"])
+def admin_create_dose_window_and_medication_for_user():
+    incoming_data = request.json
+    user_id = int(incoming_data["userId"])
+    if User.query.get(user_id) is not None:
+        new_dw = DoseWindow(0,0,0,0,user_id)
+        db.session.add(new_dw)
+        new_med = Medication(user_id, "", dose_windows=[new_dw])
+        db.session.add(new_med)
+        db.session.commit()
+    return jsonify()
+
+
+@app.route("/admin/deactivateDoseWindow", methods=["POST"])
+def admin_deactivate_dose_window():
+    incoming_data = request.json
+    dw_id = int(incoming_data["doseWindowId"])
+    dw = DoseWindow.query.get(dw_id)
+    if dw is not None:
+        dw.deactivate(scheduler)
+    return jsonify()
+
+
 @app.route("/user/updateDoseWindow", methods=["POST"])
 def user_edit_dose_window():
     incoming_data = request.json
@@ -1149,7 +1185,7 @@ def send_boundary_text_new(dose_window_obj_id):
 def send_intro_text_new(dose_window_obj_id, manual=False, welcome_back=False):
     dose_window_obj = DoseWindow.query.get(dose_window_obj_id)
     client.messages.create(
-        body=f"{get_initial_message(dose_window_obj.id, get_time_now().astimezone(timezone(dose_window_obj.user.timezone)).strftime('%I:%M'), welcome_back, dose_window_obj.user.phone_number)}{ACTION_MENU}",
+        body=f"{get_initial_message(dose_window_obj, get_time_now().astimezone(timezone(dose_window_obj.user.timezone)).strftime('%I:%M'), welcome_back, dose_window_obj.user.phone_number)}{ACTION_MENU}",
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=f"+11{dose_window_obj.user.phone_number}"
     )

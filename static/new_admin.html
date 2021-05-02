@@ -14,6 +14,11 @@
             <div id="eventListDiv" style="flex:1; max-height:400px; overflow-y: scroll;"></div>
         </div>
     </div>
+    <div>
+        <input id="newUserPhoneNumber" type="number" placeholder="3604508655"/>
+        <input id="newUserName" placeholder="name"/>
+        <button id="createNewUserButton" onclick="createNewUser()">Create new user</button>
+    </div>
     <div id="userDetailedData"></div>
     <script defer>
         const initDetails = {
@@ -125,9 +130,16 @@
                 <div style='display: flex; flex-direction: row; ${userData.user.manual_takeover ? 'background-color: #bd5c59' : ''}'>
                     <p style="padding-left: 20px;">${userData.user.id} | ${userData.user.name}: ${userData.user.phone_number}</p>
                     <button style="margin: 10px;" id="manualTakeover-${userData.user.id}" onclick=toggleManualTakeover(\'${userData.user.id}\')>${userData.user.manual_takeover ? 'Stop taking over user' : 'Manually takeover user' }</button>
+                    <button style="margin: 10px;" id="pause-${userData.user.id}"
+                        onclick=${userData.user.paused  ? `resumeUser(\'${userData.user.id}\')` : `pauseUser(\'${userData.user.id}\')`}>
+                        ${userData.user.paused ? 'Resume user' : 'Pause user' }
+                    </button>
                 </div>
             `;
-            htmlOut += "<p style='font-weight:bold;'>Dose windows</p>";
+            htmlOut += `
+                <p style='font-weight:bold;'>Dose windows</p>
+                <button onclick="addDoseWindow(\'${userData.user.id}\')">Add dose window</button>
+            `;
             for (const doseWindow of userData.dose_windows) {
                 let doseStartTime = new Date();
                 let doseEndTime = new Date();
@@ -135,7 +147,8 @@
                 doseEndTime.setUTCHours(doseWindow.end_hour, doseWindow.end_minute)
                 htmlOut += `<div style='display: flex; flex-direction: row; ${doseWindow.action_required ? 'background-color: #bd5c59' : ''}'>`;
                 htmlOut += `
-                    <p style="padding-left: 20px;" id="doseTimeDisplay-${doseWindow.id}">${doseWindow.id} | ${doseStartTime.getHours()}:${checkTime(doseStartTime.getMinutes())}->${doseEndTime.getHours()}:${checkTime(doseEndTime.getMinutes())}</p>
+                    <button onclick="deactivateDoseWindow(\'${doseWindow.id}\')">X</button>
+                    <p id="doseTimeDisplay-${doseWindow.id}">${doseWindow.id} | ${doseStartTime.getHours()}:${checkTime(doseStartTime.getMinutes())}->${doseEndTime.getHours()}:${checkTime(doseEndTime.getMinutes())}</p>
                     <div id="doseWindowEditing-${doseWindow.id}" style="display:none; flex-direction:column;">
                         <input type="time" id="updatedDoseStartTime-${doseWindow.id}" value="${checkTime(doseStartTime.getHours())}:${checkTime(doseStartTime.getMinutes())}"/>
                         <input type="time" id="updatedDoseEndTime-${doseWindow.id}" value="${checkTime(doseEndTime.getHours())}:${checkTime(doseEndTime.getMinutes())}"/>
@@ -185,6 +198,16 @@
             `;
             return htmlOut;
         }
+        const createNewUser = () => {
+            const phoneNumber = document.getElementById("newUserPhoneNumber").value;
+            const name = document.getElementById("newUserName").value;
+            const createButton = document.getElementById("createNewUserButton");
+            createButton.disabled = true;
+            createButton.innerHTML = "creating new user...";
+            post("admin/createUser", { phoneNumber, name }).then(result => {
+                refreshData();
+            });
+        }
         const editDoseWindow = (doseWindowId) => {
             const doseHeader = document.getElementById(`doseTimeDisplay-${doseWindowId}`);
             const doseEditingWindow = document.getElementById(`doseWindowEditing-${doseWindowId}`);
@@ -216,7 +239,16 @@
             post("admin/editDoseWindow", { startHour, startMinute, endHour, endMinute, doseWindowId }).then(response => response.json()).then(result => {
                 refreshData();
             });
-
+        }
+        const addDoseWindow = (userId) => {
+            post("admin/createDoseWindow", { userId }).then(response => response.json()).then(result => {
+                refreshData();
+            });
+        }
+        const deactivateDoseWindow = (doseWindowId) => {
+            post("admin/deactivateDoseWindow", { doseWindowId }).then(response => response.json()).then(result => {
+                refreshData();
+            });
         }
         const refreshData = () => {
             get("admin/everything", {}).then(response => response.json()).then(result => {
@@ -242,17 +274,39 @@
                 const onlineButton = document.getElementById("onlineToggleButton")
                 onlineButton.innerHTML = result.online ? "Go offline" : "Go online";
                 onlineButton.disabled = false;
+                const createUserButton = document.getElementById("createNewUserButton");
+                createUserButton.disabled = false;
+                createUserButton.innerHTML = "Create new user";
             });
             get("scheduler/jobs", {}).then(response => response.json()).then(result => {
                 renderJobs(result);
             })
         }
         const toggleManualTakeover = (userId) => {
-            console.log("called");
             const manualTakeoverButton = document.getElementById(`manualTakeover-${userId}`);
             manualTakeoverButton.innerHTML = "switching modes..."
             manualTakeoverButton.disabled = true;
             post("admin/manualTakeover", { userId }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
+        }
+        const pauseUser = (userId) => {
+            const pauseUserButton = document.getElementById(`pause-${userId}`);
+            pauseUserButton.innerHTML = "pausing..."
+            pauseUserButton.disabled = true;
+            post("admin/pauseUser", { userId }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
+        }
+        const resumeUser = (userId) => {
+            const pauseUserButton = document.getElementById(`pause-${userId}`);
+            pauseUserButton.innerHTML = "resuming..."
+            pauseUserButton.disabled = true;
+            post("admin/resumeUser", { userId }).then(
                 response => response.json()).then(result => {
                     refreshData();
                 }
