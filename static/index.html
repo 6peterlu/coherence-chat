@@ -546,12 +546,14 @@
                     console.log("confusion")
                     console.log(dayOfMonth)
                     console.log(adherenceHistory)
-                    if (adherenceHistory[dayOfMonth - 1].day_status == "taken") {
-                        adherenceClass = "adherent";
-                    } else if (adherenceHistory[dayOfMonth - 1].day_status == "missed") {
-                        adherenceClass = "nonadherent";
-                    } else if (adherenceHistory[dayOfMonth - 1].day_status == "skip") {
-                        adherenceClass = "adherentWithSkip";
+                    if (Number.isNaN(dayOfMonth)) {
+                        if (adherenceHistory[dayOfMonth - 1].day_status == "taken") {
+                            adherenceClass = "adherent";
+                        } else if (adherenceHistory[dayOfMonth - 1].day_status == "missed") {
+                            adherenceClass = "nonadherent";
+                        } else if (adherenceHistory[dayOfMonth - 1].day_status == "skip") {
+                            adherenceClass = "adherentWithSkip";
+                        }
                     }
                     if (dayOfMonth === currentDayOfMonth) {
                         adherenceClass += " currentDate";
