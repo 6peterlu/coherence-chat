@@ -143,36 +143,6 @@ TWILIO_PHONE_NUMBERS = {
 CLINICAL_BOUNDARY_PHONE_NUMBERS = ["8587761377"]
 
 
-PATIENT_DOSE_MAP = {
-    "+113604508655": {"morning": [85]},
-    "+113609042210": {"afternoon": [25], "evening": [15]},
-    "+113609049085": {"evening": [16]},
-    "+114152142478": {"morning": [26, 82, 92]},
-    "+116502690598": {"evening": [27]},
-    "+118587761377": {"morning": [29]},
-    "+113607738908": {"morning": [68, 87], "evening": [69, 81]},
-    "+115038871884": {"morning": [70], "afternoon": [71]},
-    "+113605214193": {"morning": [72], "evening": [74, 103]},
-    "+113605131225": {"morning": [75], "afternoon": [76], "evening": [77]},
-    "+113606064445": {"afternoon": [78, 88]},
-    "+113609010956": {"evening": [86]}
-}
-
-PATIENT_NAME_MAP = {
-    "+113604508655": "Peter",
-    "+113606064445": "Cheryl",
-    "+113609042210": "Steven",
-    "+113609049085": "Tao",
-    "+114152142478": "Miki",
-    "+116502690598": "Caroline",
-    "+118587761377": "Hadara",
-    "+113607738908": "Karrie",
-    "+115038871884": "Charles",
-    "+113605214193": "Leann",
-    "+113605131225": "Jeanette",
-    "+113609010956": "Andie"
-}
-
 SECRET_CODES = {
     "+113604508655": 123456,
     "+113606064445": 110971,
@@ -242,16 +212,12 @@ def get_time_now(tzaware=True):
 def get_followup_message():
     return random.choice(FOLLOWUP_MSGS)
 
-def get_initial_message(dose_id, time_string, welcome_back=False, phone_number=None):
-    current_time_of_day = None
-    for phone_number in PATIENT_DOSE_MAP:
-        for time_of_day in PATIENT_DOSE_MAP[phone_number]:
-            if dose_id in PATIENT_DOSE_MAP[phone_number][time_of_day]:
-                current_time_of_day = time_of_day
+def get_initial_message(dose_window_obj, time_string, welcome_back=False, phone_number=None):
+    current_time_of_day = get_time_of_day(dose_window_obj)
     if welcome_back:
         return f"{random.choice(WELCOME_BACK_MESSAGES)} {random.choice(INITIAL_SUFFIXES).substitute(time=time_string)}"
     random_choice = random.random()
-    if random_choice < 0.8 or current_time_of_day is None or phone_number == "+114152142478":  # blacklist miki
+    if random_choice < 0.8 or current_time_of_day is None:
         return random.choice(INITIAL_MSGS).substitute(time=time_string)
     else:
         return f"{random.choice(TIME_OF_DAY_PREFIX_MAP[current_time_of_day])} {random.choice(INITIAL_SUFFIXES).substitute(time=time_string)}"
@@ -419,7 +385,7 @@ def patient_data():
     if recovered_cookie is None:
         return jsonify()  # empty response if no cookie
     phone_number = f"+11{recovered_cookie}"
-    if phone_number not in PATIENT_DOSE_MAP:
+    if phone_number not in SECRET_CODES:
         response = jsonify({"error": "The secret code was incorrect. Please double-check that you've entered it correctly."})
         response.set_cookie("phoneNumber", "", expires=0)
         return response
@@ -463,7 +429,7 @@ def patient_data():
         return jsonify({
             "phoneNumber": recovered_cookie,
             "eventData": event_data_by_time,
-            "patientName": PATIENT_NAME_MAP[phone_number],
+            "patientName": user.name,
             "takeNow": dose_to_take_now,
             "pausedService": bool(paused_service),
             "behaviorLearningScores": behavior_learning_scores,
@@ -1214,7 +1180,7 @@ def send_boundary_text_new(dose_window_obj_id):
 def send_intro_text_new(dose_window_obj_id, manual=False, welcome_back=False):
     dose_window_obj = DoseWindow.query.get(dose_window_obj_id)
     client.messages.create(
-        body=f"{get_initial_message(dose_window_obj.id, get_time_now().astimezone(timezone(dose_window_obj.user.timezone)).strftime('%I:%M'), welcome_back, dose_window_obj.user.phone_number)}{ACTION_MENU}",
+        body=f"{get_initial_message(dose_window_obj, get_time_now().astimezone(timezone(dose_window_obj.user.timezone)).strftime('%I:%M'), welcome_back, dose_window_obj.user.phone_number)}{ACTION_MENU}",
         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
         to=f"+11{dose_window_obj.user.phone_number}"
     )
