@@ -474,11 +474,11 @@
             return (typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: tzString, hour: 'numeric', minute: 'numeric', hour12: true});
         }
         function getEventHTML(timeOfDayData) {
-            const eventType = timeOfDayData[0].eventType; // TODO: handle multiple
-            const eventTime = timeOfDayData[0].eventTime;
-            if (eventType === "boundary") {
+            const eventType = timeOfDayData[0].type; // TODO: handle multiple
+            const eventTime = timeOfDayData[0].time;
+            if (eventType === "missed") {
                 return "<p class=missedDose>🛑 Missed</p>";
-            } else if (eventType === "take") {
+            } else if (eventType === "taken") {
                 const eventTimeString = convertTZ(eventTime, "US/Pacific");
                 return `<p class=takenDose>✅ Taken at ${eventTimeString}</p>`;
             } else if (eventType === "skip") {
@@ -488,6 +488,7 @@
         }
         function openTableDetails(dayOfMonth) {
             const dayOfMonthData = adherenceHistory[dayOfMonth - 1].time_of_day;
+            console.log(dayOfMonthData)
             const modalTitle = document.getElementById("modalTitle");
             const modalBody = document.getElementById("modalBody");
             const timeOfDayCopyMap = {
