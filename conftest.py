@@ -35,10 +35,10 @@ def database(request):
     pg_user = DB_OPTS.get("username")
     pg_db = DB_OPTS["database"]
 
-    DatabaseJanitor(pg_user, pg_host, pg_port, pg_db, 12.4).init()  # PG version: 12.4
+    DatabaseJanitor(pg_user, pg_host, pg_port, pg_db, 13.2).init()
     @request.addfinalizer
     def drop_database():
-        DatabaseJanitor(pg_user, pg_host, pg_port, pg_db, 12.4).drop()
+        DatabaseJanitor(pg_user, pg_host, pg_port, pg_db, 13.2).drop()
 
 
 @pytest.fixture(scope='session')
