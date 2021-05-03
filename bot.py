@@ -430,7 +430,7 @@ def patient_data():
         )
         dose_history_events = list(filter(lambda event: (
             event.event_type in take_record_events and
-            event.medication in user.doses and
+            event.dose_window in user.dose_windows and
             event.event_time < requested_time_window[1] and
             event.event_time > requested_time_window[0]
             ), relevant_events))
