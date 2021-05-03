@@ -32,6 +32,20 @@ def take_event_record(db_session, dose_window_record, medication_record):
     db_session.commit()
     return event_obj
 
+
+@pytest.fixture
+def boundary_event_record(db_session, dose_window_record):
+    event_obj = EventLog(
+        event_type="boundary",
+        user_id=dose_window_record.user.id,
+        event_time=datetime(2012, 1, 1, 10+7, 23, 15),
+        medication_id=None,
+        dose_window_id=dose_window_record.id
+    )
+    db_session.add(event_obj)
+    db_session.commit()
+    return event_obj
+
 # testing schemas
 def test_user_schema(user_record, dose_window_record, medication_record, medication_record_2):
     user_schema = UserSchema()
@@ -313,3 +327,10 @@ def test_associating_medication_scheduler_status(dose_window_record, medication_
     scheduled_job = scheduler.get_job(f"{dose_window_record.id}-initial-new")
     assert scheduled_job is not None
 
+
+@freeze_time("2012-01-02 17:00:00")  # jan 2 so boundary record is in the past
+def test_delete_past_boundary_record(dose_window_record, boundary_event_record, db_session):
+    dose_window_record.remove_boundary_event(days_delta=-2)
+    assert len(db_session.query(EventLog).all()) == 1
+    dose_window_record.remove_boundary_event(days_delta=-1)
+    assert len(db_session.query(EventLog).all()) == 0

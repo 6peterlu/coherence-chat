@@ -372,6 +372,17 @@ def get_current_user_and_dose_window(truncated_phone_number):
     return user, current_dose_window
 
 
+def translate_time_of_day(dt, user=None):
+    local_time = dt
+    if user is not None:
+        local_time = dt.astimezone(timezone(user.timezone))
+    if local_time.hour > 2 and local_time.hour < 12:
+        return "morning"
+    elif local_time.hour >= 12 and local_time.hour < 18:
+        return "afternoon"
+    return "evening"
+
+
 def get_time_of_day(dose_window_obj):
     if dose_window_obj is None:
         return None
@@ -417,23 +428,51 @@ def patient_data():
         ]
         combined_list = list(set(take_record_events) | set(user_driven_events))
         relevant_events = EventLog.query.filter(EventLog.event_type.in_(combined_list), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
-        dose_history_events = list(filter(lambda event: event.event_type in take_record_events and event.medication in user.doses, relevant_events))
+        requested_time_window = (
+            timezone(user.timezone).localize(datetime(2021, 5, 1, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None),
+            timezone(user.timezone).localize(datetime(2021, 6, 1, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None)  # christ
+        )
+        dose_history_events = list(filter(lambda event: (
+            event.event_type in take_record_events and
+            event.medication in user.doses and
+            event.event_time < requested_time_window[1] and
+            event.event_time > requested_time_window[0]
+            ), relevant_events))
         user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
-        event_data_by_time = {}
-        for event in dose_history_events:
-            time_of_day = get_time_of_day(event.dose_window)
-            if time_of_day not in event_data_by_time:
-                event_data_by_time[time_of_day] = {"events": []}
-            event_data_by_time[time_of_day]["events"].append(EventLogSchema().dump(event))
-        for current_dose_window in user.active_dose_windows:
-            event_data_by_time[get_time_of_day(current_dose_window)]["dose"] = DoseWindowSchema().dump(current_dose_window)
+        event_data = []
+        current_day = requested_time_window[0]
+        while current_day < requested_time_window[1]:
+            events_of_day = list(filter(
+                lambda event: event.event_time < current_day + timedelta(days=1) and event.event_time > current_day,
+                dose_history_events
+            ))
+            day_status = None
+            daily_event_summary = {"time_of_day":{}}
+            for event in events_of_day:
+                time_of_day = translate_time_of_day(event.event_time, user=user)
+                if time_of_day not in daily_event_summary:
+                    daily_event_summary["time_of_day"][time_of_day] = []
+                if event.event_type == "boundary":
+                    day_status = "missed"
+                    daily_event_summary["time_of_day"][time_of_day].append({"type": "missed"})
+                elif event.event_type == "skip":
+                    if day_status != "missed":
+                        day_status = "skip"
+                    daily_event_summary["time_of_day"][time_of_day].append({"type": "skipped"})
+                else:
+                    daily_event_summary["time_of_day"][time_of_day].append({"type": "taken", "time": event.event_time})
+                    day_status = "taken"
+            daily_event_summary["day_status"] = day_status
+            event_data.append(daily_event_summary)
+            current_day += timedelta(days=1)
+
         paused_service = user.paused
         behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
         dose_to_take_now = False if dose_window is None else not dose_window.is_recorded()
         dose_windows = [DoseWindowSchema().dump(dw) for dw in user.active_dose_windows]
         return jsonify({
             "phoneNumber": recovered_cookie,
-            "eventData": event_data_by_time,
+            "eventData": event_data,
             "patientName": user.name,
             "takeNow": dose_to_take_now,
             "pausedService": bool(paused_service),
@@ -699,6 +738,7 @@ def bot():
                     else: # we need to record the dose
                         for medication in dose_window_to_mark.medications:
                             log_event_new("take", user.id, dose_window_to_mark.id, medication.id, description=medication.id, event_time=input_time)
+
                         outgoing_copy = get_take_message_new(excited, user, input_time=input_time)
                         client.messages.create(
                             body=outgoing_copy,
