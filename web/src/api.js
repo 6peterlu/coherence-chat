@@ -10,6 +10,9 @@ const post = async (route, payload) => {
   const headers = {
     Accept: 'application/json',
     'Content-Type': 'application/json',
+    "Access-Control-Allow_Methods": "POST",
+    "Access-Control_Allow_Headers": "*",
+    "Access-Control-Allow-Origin": "*",
   };
   if (token) {
     headers.Authorization = token;
@@ -37,6 +40,9 @@ const get = async (route, params) => {
   const token = cookies.get('token');
   const headers = {
     Accept: 'application/json',
+    "Access-Control-Allow-Methods": "GET",
+    "Access-Control-Allow-Headers": "*",
+    "Access-Control-Allow-Origin": "*",
   };
   if (token) {
     headers.Authorization = token;
@@ -55,6 +61,7 @@ const get = async (route, params) => {
   return null;
 };
 
-const login = async (phoneNumber) => {
-    const response = await post("/login");
+export const login = async (phoneNumber, secretCode, password) => {
+    const response = await post("login/new", { phoneNumber, secretCode, password });
+    return response;
 }

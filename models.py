@@ -93,6 +93,9 @@ class User(db.Model):
                 send_pause_message(self)
             db.session.commit()
 
+    def verify_password(self, password):
+        return False  # nothing verifiable right now
+
 class DoseWindow(db.Model):
     __tablename__ = 'dose_window'
     id = db.Column(db.Integer, primary_key=True)

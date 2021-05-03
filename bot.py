@@ -533,42 +533,39 @@ def save_phone_number():
 
 @app.route("/login/new", methods=["POST"])
 def react_login():
-    phone_number = request.json["phoneNumber"]
+    phone_number = request.json.get("phoneNumber")
+    secret_code = request.json.get("secretCode")
+    password = request.json.get("password")
     numeric_filter = filter(str.isdigit, phone_number)
     phone_number = "".join(numeric_filter)
     if len(phone_number) == 11 and phone_number[0] == "1":
         phone_number = phone_number[1:]
+    print(phone_number)
     user = User.query.filter_by(phone_number=phone_number).one_or_none()
-    phone_number_formatted = f"+11{phone_number}"
     if not user:
         return jsonify(), 401
-    if not user.password_hash:
-        if "NOALERTS" not in os.environ:
-            client.messages.create(
-                body=SECRET_CODE_MESSAGE.substitute(code=SECRET_CODES[phone_number_formatted]),
-                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                to=phone_number_formatted
-            )
-        return jsonify({"status": "2fa"})
-    return jsonify({"status": "password"})
-
-@app.route("/login/requestCode", methods=["POST"])
-def request_secret_code():
-    phone_number = request.json["phoneNumber"]
-    numeric_filter = filter(str.isdigit, phone_number)
-    phone_number = "".join(numeric_filter)
-    if len(phone_number) == 11 and phone_number[0] == "1":
-        phone_number = phone_number[1:]
+    if user.verify_password(password):
+        return jsonify(), 200  # return token
+    if user.password_hash:
+        return jsonify(), 401
     phone_number_formatted = f"+11{phone_number}"
-    if phone_number_formatted in SECRET_CODES:
-        if "NOALERTS" not in os.environ:
-            client.messages.create(
-                body=SECRET_CODE_MESSAGE.substitute(code=SECRET_CODES[phone_number_formatted]),
-                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                to=phone_number_formatted
-            )
-        return jsonify()
-    return jsonify(), 401
+    secret_code_verified = str(SECRET_CODES[phone_number_formatted]) == secret_code
+    if not secret_code:
+        if not user.password_hash:
+            if "NOALERTS" not in os.environ:
+                client.messages.create(
+                    body=SECRET_CODE_MESSAGE.substitute(code=SECRET_CODES[phone_number_formatted]),
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                    to=phone_number_formatted
+                )
+            return jsonify({"status": "2fa"})
+        else:
+            return jsonify({"status": "password"})
+    if not secret_code_verified:
+        print("failed here")
+        return jsonify(), 401
+    return jsonify({"status": "register"})
+
 
 @app.route("/logout", methods=["GET"])
 def logout():
