@@ -227,13 +227,15 @@
             date.setDate(date.getDate() + days);
             return date;
         }
+
+        // TODO: make this less bad
         function getTimeFromHourMinute(hour, minute, utc=false) {
             let time = new Date();
             let dayStart = new Date();
-            if (dayStart.getHours() < 2) {
+            if (dayStart.getHours() < 4) {
                 dayStart.addDays(-1);
             }
-            dayStart.setHours(2, 0, 0, 0); // 2 AM today.
+            dayStart.setHours(4, 0, 0, 0); // 4 AM today.
             if (utc) {
                 time.setUTCHours(hour, minute, 0, 0);
             } else {
@@ -242,7 +244,7 @@
             if (time < dayStart) {  // UTC caused it to become the previous day.
                 time = time.addDays(1);
             }
-            if (time.getHours() < 2) {
+            if (time.getHours() < 4) {
                 time = time.addDays(1);
             }
             return time
