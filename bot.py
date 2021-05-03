@@ -726,6 +726,7 @@ def bot():
                         associated_doses = dose_window_to_mark.medications
                         for dose in associated_doses:
                             log_event_new("attempted_rerecord", user.id, dose_window_to_mark.id, dose.id, description=incoming_msg["raw"])
+                        dose_window_to_mark.remove_boundary_event(days_delta=days_delta)
                         client.messages.create(
                             body=ALREADY_RECORDED,
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
