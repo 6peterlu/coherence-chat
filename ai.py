@@ -2,7 +2,6 @@ import numpy as np
 from datetime import datetime, timedelta
 from pytz import utc, timezone
 from models import User
-import matplotlib.pyplot as plt
 
 
 raw_csv_data = np.genfromtxt("density.csv", delimiter=",", dtype=None, encoding="utf8")
