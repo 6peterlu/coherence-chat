@@ -430,7 +430,7 @@ def patient_data():
         )
         dose_history_events = list(filter(lambda event: (
             event.event_type in take_record_events and
-            event.medication in user.doses and
+            event.dose_window in user.dose_windows and
             event.event_time < requested_time_window[1] and
             event.event_time > requested_time_window[0]
             ), relevant_events))
@@ -457,7 +457,8 @@ def patient_data():
                     daily_event_summary["time_of_day"][time_of_day].append({"type": "skipped"})
                 else:
                     daily_event_summary["time_of_day"][time_of_day].append({"type": "taken", "time": event.event_time})
-                    day_status = "taken"
+                    if day_status is None:
+                        day_status = "taken"
             daily_event_summary["day_status"] = day_status
             event_data.append(daily_event_summary)
             current_day += timedelta(days=1)
@@ -726,6 +727,7 @@ def bot():
                         associated_doses = dose_window_to_mark.medications
                         for dose in associated_doses:
                             log_event_new("attempted_rerecord", user.id, dose_window_to_mark.id, dose.id, description=incoming_msg["raw"])
+                        dose_window_to_mark.remove_boundary_event(days_delta=days_delta)
                         client.messages.create(
                             body=ALREADY_RECORDED,
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
@@ -881,11 +883,9 @@ def bot():
                 if incoming_msg["type"] == "requested_alarm_time":
                     if dose_window is not None:
                         next_alarm_time = get_most_recent_matching_time(incoming_msg["payload"], user, after=True)
-                        print(next_alarm_time)
                         # TODO: remove repeated code block
                         too_close = False
                         dose_end_time = dose_window.next_end_date - timedelta(days=1)
-                        print(dose_end_time)
                         if next_alarm_time > dose_end_time - timedelta(minutes=10):
                             next_alarm_time = dose_end_time - timedelta(minutes=10)
                             too_close = True
