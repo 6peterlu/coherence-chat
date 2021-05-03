@@ -448,7 +448,9 @@ def patient_data():
                 time_of_day = translate_time_of_day(event.event_time, user=user)
                 if time_of_day not in daily_event_summary:
                     daily_event_summary["time_of_day"][time_of_day] = []
+                print(event.event_type)
                 if event.event_type == "boundary":
+                    print("found boundary")
                     day_status = "missed"
                     daily_event_summary["time_of_day"][time_of_day].append({"type": "missed"})
                 elif event.event_type == "skip":
@@ -457,6 +459,7 @@ def patient_data():
                     daily_event_summary["time_of_day"][time_of_day].append({"type": "skipped"})
                 else:
                     daily_event_summary["time_of_day"][time_of_day].append({"type": "taken", "time": event.event_time})
+                    print("found taken")
                     if day_status is None:
                         day_status = "taken"
             daily_event_summary["day_status"] = day_status
