@@ -1001,7 +1001,7 @@ def bot():
                     )
     if user and user.paused:
         client.messages.create(
-            body=MANUAL_TEXT_NEEDED_MSG.substitute(number=incoming_phone_number),
+            body=f"User {user.name} has responded to onboarding message.",
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
             to="+13604508655"  # admin phone #
         )
