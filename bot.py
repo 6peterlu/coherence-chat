@@ -185,7 +185,7 @@ class Config(object):
     SEND_FILE_MAX_AGE_DEFAULT = 0
 
 # create app
-app = Flask(__name__)
+app = Flask(__name__, static_folder='./web/build', static_url_path='/') if "REACT" in os.environ else Flask(__name__)
 app.config.from_object(Config())
 app.wsgi_app = ProxyFix(app.wsgi_app)
 CORS(app)
@@ -193,6 +193,9 @@ CORS(app)
 # sqlalchemy db
 db.app = app
 db.init_app(app)
+
+# needed for first init after db erasure
+# db.create_all()
 
 # parse datetime calendar object
 cal = parsedatetime.Calendar()
@@ -280,6 +283,7 @@ def add_header(resp):
 @app.route("/", methods=["GET"])
 def patient_page():
     return app.send_static_file('index.html')
+
 
 @app.route("/css/<path:path>", methods=["GET"])
 def serve_css(path):

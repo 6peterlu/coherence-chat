@@ -8,3 +8,4 @@ export TEST_DATABASE_URI=postgresql://peterlu@/coherencetest
 export FLASK_DEBUG=1
 export FLASK_ENV=local
 export NOALERTS=1
+export REACT=1
