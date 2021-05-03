@@ -25,6 +25,7 @@ class User(db.Model):
     manual_takeover = db.Column(db.Boolean, nullable=False)
     paused = db.Column(db.Boolean, nullable=False)
     timezone = db.Column(db.String, nullable=False)
+    password_hash = db.Column(db.Boolean, nullable=True)
 
     def __init__(
         self,
