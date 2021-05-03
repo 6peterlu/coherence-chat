@@ -722,6 +722,9 @@ def bot():
     incoming_msg_list = segment_message(request.values.get('Body', ''))
     incoming_phone_number = request.values.get('From', None)
     user, dose_window = get_current_user_and_dose_window(incoming_phone_number[2:])
+    print(f"user: {user}")
+    if user is not None:
+        print(f"paused: {user.paused}")
     if user and not user.paused:
         # we weren't able to parse any part of the message
         if len(incoming_msg_list) == 0:
@@ -996,7 +999,7 @@ def bot():
                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                         to=incoming_phone_number
                     )
-    if user.paused:
+    if user and user.paused:
         client.messages.create(
             body=MANUAL_TEXT_NEEDED_MSG.substitute(number=incoming_phone_number),
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
