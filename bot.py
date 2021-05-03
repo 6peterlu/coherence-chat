@@ -457,7 +457,8 @@ def patient_data():
                     daily_event_summary["time_of_day"][time_of_day].append({"type": "skipped"})
                 else:
                     daily_event_summary["time_of_day"][time_of_day].append({"type": "taken", "time": event.event_time})
-                    day_status = "taken"
+                    if day_status is None:
+                        day_status = "taken"
             daily_event_summary["day_status"] = day_status
             event_data.append(daily_event_summary)
             current_day += timedelta(days=1)
