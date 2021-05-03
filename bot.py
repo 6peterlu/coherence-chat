@@ -383,7 +383,6 @@ def translate_time_of_day(dt, user=None):
     return "evening"
 
 
-
 def get_time_of_day(dose_window_obj):
     if dose_window_obj is None:
         return None
@@ -739,6 +738,7 @@ def bot():
                     else: # we need to record the dose
                         for medication in dose_window_to_mark.medications:
                             log_event_new("take", user.id, dose_window_to_mark.id, medication.id, description=medication.id, event_time=input_time)
+
                         outgoing_copy = get_take_message_new(excited, user, input_time=input_time)
                         client.messages.create(
                             body=outgoing_copy,
