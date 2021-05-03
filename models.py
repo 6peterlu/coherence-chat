@@ -205,6 +205,16 @@ class DoseWindow(db.Model):
                 return False
         return True
 
+    def remove_boundary_event(self, days_delta=0):
+        start_of_day, end_of_day = self.user.past_day_bounds(days_delta)
+        EventLog.query.filter(
+            EventLog.dose_window_id == self.id,
+            EventLog.event_time >= start_of_day,
+            EventLog.event_time < end_of_day,
+            EventLog.event_type == "boundary"
+        ).delete(synchronize_session=False)
+        db.session.commit()
+
 
     @property
     def next_start_date(self):
@@ -284,7 +294,7 @@ class Medication(db.Model):
             EventLog.medication_id == self.id,
             EventLog.event_time >= start_of_day,
             EventLog.event_time < end_of_day,
-            EventLog.event_type.in_(["take", "skip", "boundary"])
+            EventLog.event_type.in_(["take", "skip"])
         ).all()
         return len(relevant_medication_history_records) > 0
 
