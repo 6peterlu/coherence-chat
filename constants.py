@@ -110,9 +110,9 @@ REMINDER_OUT_OF_RANGE_MSG = """I can tell you're trying to set a reminder, but t
 
 ACTION_OUT_OF_RANGE_MSG = """Thanks for letting me know. I don't have an active dose for you right now, but I'll look into it and make sure to record your doses correctly."""
 
-REMINDER_TOO_LATE_MSG = Template("""Sorry, I can't schedule a reminder after your latest dose time, which is $time.""")
+REMINDER_TOO_LATE_MSG = Template("""Sorry, I can't schedule a reminder within ten minutes of your your latest dose time, which is $time.""")
 
-REMINDER_TOO_CLOSE_MSG = Template("""I can't schedule a reminder after your latest dose time of $time, so I've scheduled it at $reminder_time. See you then!""")
+REMINDER_TOO_CLOSE_MSG = Template("""I can't schedule a reminder within ten minutes of your latest dose time of $time, so I've scheduled it at $reminder_time. See you then!""")
 
 MANUAL_TEXT_NEEDED_MSG = Template("""The phone number $number requires your manual intervention.""")
 

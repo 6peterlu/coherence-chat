@@ -28,3 +28,6 @@ Update twilio URL
 reset N commits locally: `git reset --hard HEAD~N`
 
 push a non master branch to heroku master: `git push heroku +HEAD:master`
+
+## data analysis
+dump prod DB to local: delete local analysis_db, then `heroku pg:pull postgresql-slippery-57674 analysis_db --app coherence-chat`

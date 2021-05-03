@@ -818,13 +818,13 @@ def test_requested_alarm_time_out_of_range(
 @mock.patch("bot.segment_message")
 @mock.patch("bot.client.messages.create")
 @mock.patch("bot.remove_jobs_helper")
-@mock.patch("bot.random.randint")
+@mock.patch("bot.get_reminder_time_within_range")
 def test_activity(
-    randint_mock, remove_jobs_mock, create_messages_mock, segment_message_mock,
+    get_reminder_time_mock, remove_jobs_mock, create_messages_mock, segment_message_mock,
     client, db_session, user_record, dose_window_record,
     medication_record, scheduler
 ):
-    randint_mock.return_value = 25
+    get_reminder_time_mock.return_value = datetime(2012, 1, 1, 17, 25, tzinfo=utc)
     segment_message_mock.return_value = [{
         'type': 'activity',
         'payload': {
@@ -855,13 +855,13 @@ def test_activity(
 @mock.patch("bot.segment_message")
 @mock.patch("bot.client.messages.create")
 @mock.patch("bot.remove_jobs_helper")
-@mock.patch("bot.random.randint")
+@mock.patch("bot.get_reminder_time_within_range")
 def test_activity_near_boundary(
-    randint_mock, remove_jobs_mock, create_messages_mock, segment_message_mock,
+    get_reminder_time_mock, remove_jobs_mock, create_messages_mock, segment_message_mock,
     client, db_session, user_record, dose_window_record,
     medication_record, scheduler
 ):
-    randint_mock.return_value = 60
+    get_reminder_time_mock.return_value = datetime(2012, 1, 1, 18, 0, tzinfo=utc)
     segment_message_mock.return_value = [{
         'type': 'activity',
         'payload': {
@@ -891,13 +891,13 @@ def test_activity_near_boundary(
 @freeze_time("2012-01-01 17:55:00")
 @mock.patch("bot.segment_message")
 @mock.patch("bot.client.messages.create")
-@mock.patch("bot.random.randint")
+@mock.patch("bot.get_reminder_time_within_range")
 def test_activity_too_late(
-    randint_mock, create_messages_mock, segment_message_mock,
+    get_reminder_time_mock, create_messages_mock, segment_message_mock,
     client, db_session, user_record, dose_window_record,
     medication_record, scheduler
 ):
-    randint_mock.return_value = 10
+    get_reminder_time_mock.return_value = datetime(2012, 1, 1, 18, 5, tzinfo=utc)
     segment_message_mock.return_value = [{
         'type': 'activity',
         'payload': {
@@ -960,7 +960,9 @@ def test_send_followup_text_new(mock_remove_jobs, mock_maybe_schedule_absent, do
 @freeze_time("2012-01-01 17:00:00")
 @mock.patch("bot.remove_jobs_helper")
 @mock.patch("bot.client.messages.create")
-def test_send_intro_text_new(mock_message_create, mock_remove_jobs, dose_window_record, db_session):
+@mock.patch("bot.get_reminder_time_within_range")
+def test_send_intro_text_new(mock_get_reminder_time, mock_message_create, mock_remove_jobs, dose_window_record, db_session):
+    mock_get_reminder_time.return_value = datetime(2012, 1, 1, 18, tzinfo=utc)
     send_intro_text_new(dose_window_record.id)
     assert mock_message_create.called
     all_event_logs = db_session.query(EventLog).all()
@@ -984,9 +986,9 @@ def test_send_absent_text_new(
     assert all_event_logs[0].event_type == "absent"
 
 @freeze_time("2012-01-01 17:00:00")
-@mock.patch("bot.random.randint")
-def test_maybe_schedule_absent_new(mock_randint, dose_window_record, db_session, scheduler):
-    mock_randint.return_value = 45
+@mock.patch("bot.get_reminder_time_within_range")
+def test_maybe_schedule_absent_new(mock_get_reminder_time, dose_window_record, db_session, scheduler):
+    mock_get_reminder_time.return_value = datetime(2012, 1, 1, 17, 45, tzinfo=utc)
     maybe_schedule_absent_new(dose_window_record)
     scheduled_job = scheduler.get_job(f"{dose_window_record.id}-absent-new")
     assert scheduled_job is not None

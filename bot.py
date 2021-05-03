@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 from sqlalchemy.sql.expression import false
 from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
 # import Flask-APScheduler
 from flask_apscheduler import APScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
@@ -30,6 +29,8 @@ from models import (
 
 from models import db
 from nlp import segment_message
+
+from ai import get_reminder_time_within_range
 
 from apscheduler.events import (
     EVENT_JOB_ERROR,
@@ -195,11 +196,6 @@ db.init_app(app)
 
 # parse datetime calendar object
 cal = parsedatetime.Calendar()
-
-
-# initialize tables
-# maybe we don't run this?
-# db.create_all()  # are there bad effects from running this every time? edit: I guess not
 
 # twilio objects
 account_sid = os.environ['TWILIO_ACCOUNT_SID']
@@ -926,7 +922,9 @@ def bot():
                 if incoming_msg["type"] == "activity":
                     if dose_window is not None:
                         log_event_new("activity", user.id, dose_window.id, None, description=incoming_msg["raw"])
-                        next_alarm_time = get_time_now() + (timedelta(minutes=random.randint(10, 30)) if incoming_msg["payload"]["type"] == "short" else timedelta(minutes=random.randint(30, 60)))
+                        reminder_range_start = get_time_now() + (timedelta(minutes=10) if incoming_msg["payload"]["type"] == "short" else timedelta(minutes=30))
+                        reminder_range_end = get_time_now() + (timedelta(minutes=30) if incoming_msg["payload"]["type"] == "short" else timedelta(minutes=60))
+                        next_alarm_time = get_reminder_time_within_range(reminder_range_start, reminder_range_end, user)
                         dose_end_time = dose_window.next_end_date - timedelta(days=1)
                         # TODO: remove repeated code block
                         too_close = False
@@ -1158,7 +1156,10 @@ def get_online_status():
 # NEW
 def maybe_schedule_absent_new(dose_window_obj):
     end_date = dose_window_obj.next_end_date - timedelta(days=1)
-    desired_absent_reminder = min(get_time_now() + timedelta(minutes=random.randint(45,75)), end_date - timedelta(minutes=BUFFER_TIME_MINS))
+    reminder_range_start = get_time_now() + timedelta(minutes=40)
+    reminder_range_end = get_time_now() + timedelta(minutes=90)
+    next_alarm_time = get_reminder_time_within_range(reminder_range_start, reminder_range_end, dose_window_obj.user)
+    desired_absent_reminder = min(next_alarm_time, end_date - timedelta(minutes=BUFFER_TIME_MINS))
     # room to schedule absent
     if desired_absent_reminder > get_time_now():
         scheduler.add_job(f"{dose_window_obj.id}-absent-new", send_absent_text_new,
