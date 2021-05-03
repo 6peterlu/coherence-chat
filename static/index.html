@@ -413,61 +413,6 @@
             // console.log(averageDate);
             return { hours, minutes, pm }
         }
-        // TODO: move this processing to the backend
-        function processEventData(eventData) {
-            const fieldsToSatisfy = Object.keys(eventData);
-            let adherentDays = [];
-            let adherentWithSkipDays = [];
-            let missedDays = [];
-            let insufficientDataDays = [];
-            const takeHistoryByDay = {};
-            const doseDataByTime = {}
-            for (let dayOfMonth = 1; dayOfMonth <= 30; dayOfMonth++) {
-                // 2AM - 2AM to account for night doses
-                const startDate = new Date(2021, 4, dayOfMonth, 2, 0, 0, 0); // start time in GMT
-                const endDate = new Date(2021, 4, dayOfMonth + 1, 2, 0, 0, 0); // end time in GMT
-                const satisfiedFields = [];
-                const skippedFields = [];
-                const missedFields = [];
-                takeHistoryByDay[dayOfMonth] = {}
-                for (const field of fieldsToSatisfy) {
-                    const eventDataForField = eventData[field];
-                    for (const event of eventDataForField.events) {
-                        const eventTimeObj = new Date(event.event_time);
-                        if (eventTimeObj > startDate && eventTimeObj < endDate) {
-                            if (event.event_type === "take") {
-                                satisfiedFields.push(event);
-                            } else if (event.event_type === "skip") {
-                                skippedFields.push(event);
-                            } else if (event.event_type === "boundary") {
-                                missedFields.push(event);
-                            }
-                            takeHistoryByDay[dayOfMonth][field] = {"eventType": event.event_type, "eventTime": event.event_time};
-                        }
-                    }
-                    if (!(field in doseDataByTime)) {
-                        doseDataByTime[field] = eventData[field].dose;
-                    }
-                }
-                if (satisfiedFields.length == fieldsToSatisfy.length) {
-                    adherentDays.push(dayOfMonth);
-                } else if (satisfiedFields.length + skippedFields.length == fieldsToSatisfy.length) {
-                    adherentWithSkipDays.push(dayOfMonth);
-                } else if (satisfiedFields.length + skippedFields.length + missedFields.length == fieldsToSatisfy.length) {
-                    missedDays.push(dayOfMonth);
-                } else {
-                    insufficientDataDays.push(dayOfMonth);
-                }
-            }
-            const averageDosingTime = {};
-            for (const field in eventData) {
-                const averageDate = getAverageDate(eventData[field].events);
-                if (averageDate) {
-                    averageDosingTime[field] = averageDate;
-                }
-            }
-            return { adherentDays, adherentWithSkipDays, missedDays, insufficientDataDays, takeHistoryByDay, doseDataByTime, averageDosingTime };
-        }
         function convertTZ(date, tzString) {
             return (typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: tzString, hour: 'numeric', minute: 'numeric', hour12: true});
         }
