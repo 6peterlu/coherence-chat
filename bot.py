@@ -530,6 +530,24 @@ def save_phone_number():
         return out
     return jsonify(), 401
 
+@app.route("/login/requestCode", methods=["POST"])
+def request_secret_code():
+    phone_number = request.json["phoneNumber"]
+    numeric_filter = filter(str.isdigit, phone_number)
+    phone_number = "".join(numeric_filter)
+    if len(phone_number) == 11 and phone_number[0] == "1":
+        phone_number = phone_number[1:]
+    phone_number_formatted = f"+11{phone_number}"
+    if phone_number_formatted in SECRET_CODES:
+        if "NOALERTS" not in os.environ:
+            client.messages.create(
+                body=SECRET_CODE_MESSAGE.substitute(code=SECRET_CODES[phone_number_formatted]),
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=phone_number_formatted
+            )
+        return jsonify()
+    return jsonify(), 401
+
 
 @app.route("/login/new", methods=["POST"])
 def react_login():
