@@ -2,6 +2,10 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta, timezone as dt_timezone
 from pytz import utc as pytzutc, timezone
 from marshmallow import Schema, fields
+from werkzeug.security import check_password_hash, generate_password_hash
+from itsdangerous import (TimedJSONWebSignatureSerializer
+                          as Serializer, BadSignature, SignatureExpired)
+import os
 
 db = SQLAlchemy()
 
@@ -25,6 +29,7 @@ class User(db.Model):
     manual_takeover = db.Column(db.Boolean, nullable=False)
     paused = db.Column(db.Boolean, nullable=False)
     timezone = db.Column(db.String, nullable=False)
+    password_hash = db.Column(db.String, nullable=True)
 
     def __init__(
         self,
@@ -46,7 +51,7 @@ class User(db.Model):
         self.paused = paused
         self.timezone = timezone
 
-    # TODO: determine bounds from dose window settings. for now, it's hardcoded to 2AM (which is not gonna work).
+    # TODO: determine bounds from dose window settings. for now, it's hardcoded to 4AM (which is not gonna work).
     @property
     def current_day_bounds(self):
         local_timezone = timezone(self.timezone)
@@ -91,6 +96,32 @@ class User(db.Model):
             if not silent:
                 send_pause_message(self)
             db.session.commit()
+
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+        db.session.commit()
+
+    def verify_password(self, password):
+        if not self.password_hash:
+            return False  # if password is not set, no authing
+        return check_password_hash(self.password_hash, password)
+
+    def generate_auth_token(self, expiration = 600):
+        s = Serializer(os.environ["TOKEN_SECRET"], expires_in = expiration)
+        return s.dumps({ 'id': self.id })
+
+    @staticmethod
+    def verify_auth_token(token):
+        s = Serializer(os.environ["TOKEN_SECRET"])
+        try:
+            data = s.loads(token)
+        except SignatureExpired:
+            return None # valid token, but expired
+        except BadSignature:
+            return None # invalid token
+        user = User.query.get(data['id'])
+        return user
 
 class DoseWindow(db.Model):
     __tablename__ = 'dose_window'
@@ -206,7 +237,9 @@ class DoseWindow(db.Model):
         return True
 
     def remove_boundary_event(self, days_delta=0):
+        print("remove boundary event called")
         start_of_day, end_of_day = self.user.past_day_bounds(days_delta)
+        print(start_of_day, end_of_day)
         EventLog.query.filter(
             EventLog.dose_window_id == self.id,
             EventLog.event_time >= start_of_day,
