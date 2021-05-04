@@ -1089,11 +1089,12 @@ def bot():
                 if incoming_msg["type"] == "thanks":
                     log_event_new("conversational", user.id, None, None, description=incoming_msg["raw"])
                     if "NOALERTS" not in os.environ:
-                        client.messages.create(
-                            body=get_thanks_message(),
-                            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                            to=incoming_phone_number
-                        )
+                        if random.random() < 0.5:  # only send thanks response 50% of the time to reduce staleness
+                            client.messages.create(
+                                body=get_thanks_message(),
+                                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                                to=incoming_phone_number
+                            )
                 if incoming_msg["type"] == "website_request":
                     log_event_new("website_request", user.id, None, None, description=incoming_msg["raw"])
                     if "NOALERTS" not in os.environ:

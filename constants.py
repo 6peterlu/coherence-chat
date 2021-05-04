@@ -138,7 +138,8 @@ THANKS_MESSAGES = [
     "Glad I could help out!",
     "(:",
     "Of course!",
-    "👍"
+    "👍",
+    "No problem at all."
 ]
 
 ALREADY_RECORDED = "We already have a record of this dose. If this is incorrect, feel free to report this error by texting 'x'."
