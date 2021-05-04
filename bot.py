@@ -102,6 +102,7 @@ TWILIO_PHONE_NUMBERS = {
 # numbers for which the person should NOT take it after the dose period.
 CLINICAL_BOUNDARY_PHONE_NUMBERS = ["8587761377"]
 
+ADMIN_PHONE_NUMBER = "3604508655"
 
 SECRET_CODES = {
     "+113604508655": 123456,
@@ -369,6 +370,12 @@ def get_time_of_day(dose_window_obj):
 @auth.login_required
 def auth_patient_data():
     user = g.user
+    if user.phone_number == ADMIN_PHONE_NUMBER:
+        impersonating_phone_number = request.args.get("phoneNumber")
+        if impersonating_phone_number is not None:
+            impersonated_user = User.query.filter_by(phone_number=impersonating_phone_number).one_or_none()
+            if impersonated_user is not None:
+                user = impersonated_user
     dose_window = None
     for user_dose_window in user.active_dose_windows:
         if user_dose_window.within_dosing_period():
@@ -444,7 +451,8 @@ def auth_patient_data():
         "takeNow": dose_to_take_now,
         "pausedService": bool(paused_service),
         "behaviorLearningScores": behavior_learning_scores,
-        "doseWindows": dose_windows
+        "doseWindows": dose_windows,
+        "impersonateList": User.query.with_entities(User.name, User.phone_number).all() if user.phone_number == ADMIN_PHONE_NUMBER else None
     })
 
 @app.route("/patientData", methods=["GET"])

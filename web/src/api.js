@@ -68,5 +68,10 @@ export const login = async (phoneNumber, secretCode, password) => {
 
 export const pullPatientData = async () => {
   const response = await get("patientData/new");
-  return response
+  return response;
+}
+
+export const pullPatientDataForNumber = async (phoneNumber) => {
+  const response = await get("patientData/new", { phoneNumber });
+  return response;
 }
