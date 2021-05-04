@@ -825,10 +825,10 @@ def bot():
                     days_delta = user.get_day_delta(input_time)
                     # dose_window_to_mark will never be None unless the user has no dose windows, but we'll handle that upstream
                     if dose_window_to_mark.is_recorded(days_delta=days_delta):
+                        print("attempted rerecord")
                         associated_doses = dose_window_to_mark.medications
                         for dose in associated_doses:
                             log_event_new("attempted_rerecord", user.id, dose_window_to_mark.id, dose.id, description=incoming_msg["raw"])
-                        dose_window_to_mark.remove_boundary_event(days_delta=days_delta)
                         if "NOALERTS" not in os.environ:
                             client.messages.create(
                                 body=ALREADY_RECORDED,
@@ -838,7 +838,7 @@ def bot():
                     else: # we need to record the dose
                         for medication in dose_window_to_mark.medications:
                             log_event_new("take", user.id, dose_window_to_mark.id, medication.id, description=medication.id, event_time=input_time)
-
+                        dose_window_to_mark.remove_boundary_event(days_delta=days_delta)
                         outgoing_copy = get_take_message_new(excited, user, input_time=input_time)
                         if "NOALERTS" not in os.environ:
                             client.messages.create(
@@ -1358,20 +1358,21 @@ def send_boundary_text_new(dose_window_obj_id):
 # NEW
 def send_intro_text_new(dose_window_obj_id, manual=False, welcome_back=False):
     dose_window_obj = DoseWindow.query.get(dose_window_obj_id)
-    if "NOALERTS" not in os.environ:
-        client.messages.create(
-            body=f"{get_initial_message(dose_window_obj, get_time_now().astimezone(timezone(dose_window_obj.user.timezone)).strftime('%I:%M'), welcome_back, dose_window_obj.user.phone_number)}{ACTION_MENU}",
-            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-            to=f"+11{dose_window_obj.user.phone_number}"
+    if not dose_window_obj.is_recorded():  # only send if the dose window object hasn't been recorded yet.
+        if "NOALERTS" not in os.environ:
+            client.messages.create(
+                body=f"{get_initial_message(dose_window_obj, get_time_now().astimezone(timezone(dose_window_obj.user.timezone)).strftime('%I:%M'), welcome_back, dose_window_obj.user.phone_number)}{ACTION_MENU}",
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=f"+11{dose_window_obj.user.phone_number}"
+            )
+        scheduler.add_job(f"{dose_window_obj.id}-boundary-new", send_boundary_text_new,
+            args=[dose_window_obj.id],
+            trigger="date",
+            run_date=dose_window_obj.next_end_date if manual else dose_window_obj.next_end_date - timedelta(days=1),  # HACK, assumes this executes after start_date
+            misfire_grace_time=5*60
         )
-    scheduler.add_job(f"{dose_window_obj.id}-boundary-new", send_boundary_text_new,
-        args=[dose_window_obj.id],
-        trigger="date",
-        run_date=dose_window_obj.next_end_date if manual else dose_window_obj.next_end_date - timedelta(days=1),  # HACK, assumes this executes after start_date
-        misfire_grace_time=5*60
-    )
-    maybe_schedule_absent_new(dose_window_obj)
-    log_event_new("initial", dose_window_obj.user.id, dose_window_obj.id)
+        maybe_schedule_absent_new(dose_window_obj)
+        log_event_new("initial", dose_window_obj.user.id, dose_window_obj.id)
 
 def scheduler_error_alert(event):
     if "NOALERTS" not in os.environ:

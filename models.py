@@ -237,7 +237,9 @@ class DoseWindow(db.Model):
         return True
 
     def remove_boundary_event(self, days_delta=0):
+        print("remove boundary event called")
         start_of_day, end_of_day = self.user.past_day_bounds(days_delta)
+        print(start_of_day, end_of_day)
         EventLog.query.filter(
             EventLog.dose_window_id == self.id,
             EventLog.event_time >= start_of_day,

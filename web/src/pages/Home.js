@@ -7,6 +7,7 @@ import Select from 'react-select'
 const Home = () => {
     const [cookies, _, removeCookie] = useCookies(['token']);
     const [patientData, setPatientData] = React.useState({});
+    const [impersonatedPatient, setImpersonatedPatient] = React.useState({});
 
 
     const options = [
