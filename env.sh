@@ -10,3 +10,4 @@ export FLASK_DEBUG=1
 export FLASK_ENV=local
 export NOALERTS=1
 export REACT=1
+export TOKEN_SECRET=narwhal

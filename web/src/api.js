@@ -15,7 +15,7 @@ const post = async (route, payload) => {
     "Access-Control-Allow-Origin": "*",
   };
   if (token) {
-    headers.Authorization = token;
+    headers.Authorization = 'Basic ' + btoa(token + ":unused");
   }
   const fetchResult = await fetch(`${apiServer}/${route}`, {
     method: 'post',
@@ -45,7 +45,7 @@ const get = async (route, params) => {
     "Access-Control-Allow-Origin": "*",
   };
   if (token) {
-    headers.Authorization = token;
+    headers.Authorization = 'Basic ' + btoa(token + ":unused");
   }
   const fetchResult = await fetch(url, {
     method: 'get',
@@ -64,4 +64,9 @@ const get = async (route, params) => {
 export const login = async (phoneNumber, secretCode, password) => {
     const response = await post("login/new", { phoneNumber, secretCode, password });
     return response;
+}
+
+export const pullPatientData = async () => {
+  const response = await get("patientData/new");
+  return response
 }

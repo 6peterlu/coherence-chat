@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, g
 from sqlalchemy.sql.expression import false
 from flask_cors import CORS
 # import Flask-APScheduler
@@ -37,46 +37,8 @@ from apscheduler.events import (
     EVENT_JOB_MISSED
 )
 
-# fuzzy nlp handling
-import spacy
+from flask_httpauth import HTTPBasicAuth
 
-nlp = spacy.load("en_core_web_sm")
-
-TOKENS_TO_RECOGNIZE = [
-    "dinner",
-    "breakfast",
-    "lunch",
-    "bathroom",
-    "reading",
-    "eating",
-    "out",
-    "call",
-    "meeting",
-    "walking",
-    "walk",
-    "busy",
-    "thanks",
-    "help",
-    "ok",
-    "great",
-    "no problem",
-    "hello",
-    "confused",
-    "run",
-    "running",
-    "sleeping",
-    "brunch",
-    "later",
-    "golf",
-    "tennis",
-    "swimming",
-    "basketball",
-    "shower",
-    "working",
-    "tv",
-    "yes",
-    "phone"
-]
 
 ALL_EVENTS = [
     "paused",
@@ -96,9 +58,6 @@ ALL_EVENTS = [
     "boundary",
     "initial"
 ]
-
-# load on server start
-SPACY_EMBED_MAP = {token: nlp(token) for token in TOKENS_TO_RECOGNIZE}
 
 import logging
 from constants import (
@@ -190,6 +149,8 @@ app.config.from_object(Config())
 app.wsgi_app = ProxyFix(app.wsgi_app)
 CORS(app)
 
+auth = HTTPBasicAuth()
+
 # sqlalchemy db
 db.app = app
 db.init_app(app)
@@ -270,6 +231,16 @@ def auth_required_post_delete(f):
         else:
             return f(*args, **kwargs)
     return decorated_function
+
+
+@auth.verify_password
+def verify_password(token, _):
+    # first try to authenticate by token
+    user = User.verify_auth_token(token)
+    if not user:
+        return False  # kick you to login screen
+    g.user = user
+    return True
 
 
 # makes sure our clients refresh their pages on update
@@ -394,6 +365,87 @@ def get_time_of_day(dose_window_obj):
         return "afternoon"
     return "evening"
 
+@app.route("/patientData/new", methods=["GET"])
+@auth.login_required
+def auth_patient_data():
+    user = g.user
+    dose_window = None
+    for user_dose_window in user.active_dose_windows:
+        if user_dose_window.within_dosing_period():
+            dose_window = user_dose_window
+    if request.remote_addr not in IP_BLACKLIST: # blacklist my IPs to reduce data pollution, but not really working
+        log_event_new("patient_portal_load", user.id, dose_window.id if dose_window else None, description=request.remote_addr)
+    # grab data from user object
+    take_record_events = [
+        "take",
+        "skip",
+        "boundary"
+    ]
+    user_driven_events = [
+        "take",
+        "skip",
+        "paused",
+        "resumed",
+        "user_reported_error",
+        "out_of_range",
+        "not_interpretable",
+        "requested_time_delay",
+        "activity"
+    ]
+    combined_list = list(set(take_record_events) | set(user_driven_events))
+    relevant_events = EventLog.query.filter(EventLog.event_type.in_(combined_list), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
+    requested_time_window = (
+        timezone(user.timezone).localize(datetime(2021, 5, 1, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None),
+        timezone(user.timezone).localize(datetime(2021, 6, 1, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None)  # christ
+    )
+    dose_history_events = list(filter(lambda event: (
+        event.event_type in take_record_events and
+        event.dose_window in user.dose_windows and
+        event.event_time < requested_time_window[1] and
+        event.event_time > requested_time_window[0]
+        ), relevant_events))
+    user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
+    event_data = []
+    current_day = requested_time_window[0]
+    while current_day < requested_time_window[1]:
+        events_of_day = list(filter(
+            lambda event: event.event_time < current_day + timedelta(days=1) and event.event_time > current_day,
+            dose_history_events
+        ))
+        day_status = None
+        daily_event_summary = {"time_of_day":{}}
+        for event in events_of_day:
+            time_of_day = translate_time_of_day(event.event_time, user=user)
+            if time_of_day not in daily_event_summary:
+                daily_event_summary["time_of_day"][time_of_day] = []
+            if event.event_type == "boundary":
+                day_status = "missed"
+                daily_event_summary["time_of_day"][time_of_day].append({"type": "missed"})
+            elif event.event_type == "skip":
+                if day_status != "missed":
+                    day_status = "skip"
+                daily_event_summary["time_of_day"][time_of_day].append({"type": "skipped"})
+            else:
+                daily_event_summary["time_of_day"][time_of_day].append({"type": "taken", "time": event.event_time})
+                if day_status is None:
+                    day_status = "taken"
+        daily_event_summary["day_status"] = day_status
+        event_data.append(daily_event_summary)
+        current_day += timedelta(days=1)
+
+    paused_service = user.paused
+    behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
+    dose_to_take_now = False if dose_window is None else not dose_window.is_recorded()
+    dose_windows = [DoseWindowSchema().dump(dw) for dw in user.active_dose_windows]
+    return jsonify({
+        "phoneNumber": user.phone_number,
+        "eventData": event_data,
+        "patientName": user.name,
+        "takeNow": dose_to_take_now,
+        "pausedService": bool(paused_service),
+        "behaviorLearningScores": behavior_learning_scores,
+        "doseWindows": dose_windows
+    })
 
 @app.route("/patientData", methods=["GET"])
 def patient_data():
@@ -563,8 +615,9 @@ def react_login():
     if not user:
         return jsonify(), 401
     if user.verify_password(password):
-        return jsonify(), 200  # return token
-    if user.password_hash:
+        print("returning token")
+        return jsonify({"token": user.generate_auth_token().decode('ascii'), "status": "success"}), 200  # return token
+    if user.password_hash and password:
         return jsonify(), 401
     phone_number_formatted = f"+11{phone_number}"
     secret_code_verified = str(SECRET_CODES[phone_number_formatted]) == secret_code
@@ -582,8 +635,10 @@ def react_login():
     if not secret_code_verified:
         print("failed here")
         return jsonify(), 401
-    return jsonify({"status": "register"})
-
+    if not password:
+        return jsonify({"status": "register"})
+    user.set_password(password)
+    return jsonify({"status": "success", "token": user.generate_auth_token()})
 
 @app.route("/logout", methods=["GET"])
 def logout():
