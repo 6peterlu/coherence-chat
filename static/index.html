@@ -98,6 +98,7 @@
             <div id="averageDoseTaken"></div>
             <div id="behaviorLearningChartTitle"></div>
             <div id="behaviorLearningChart"></div>
+            <p id="notEnoughDataYet">You must be new! We don't have enough data yet for insights. Check back soon for more.</p>
         </div>
         <div style="background-color: rgb(233, 231, 220); padding: 10px;">
             <h3>Dose windows</h3>
@@ -425,6 +426,11 @@
 
                     var chart = new google.visualization.LineChart(document.getElementById('behaviorLearningChart'));
                     chart.draw(data, options);
+                    const newUserMessage = document.getElementById("notEnoughDataYet");
+                    newUserMessage.style.display = "none";
+                } else {
+                    const newUserMessage = document.getElementById("notEnoughDataYet");
+                    newUserMessage.style.display = "inline";
                 }
             } else {
                 google.charts.setOnLoadCallback(() => {
