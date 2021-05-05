@@ -29,7 +29,7 @@ from models import (
 )
 
 from models import db
-from nlp import segment_message
+from nlp import segment_message, get_datetime_obj_from_string
 
 from ai import get_reminder_time_within_range
 
@@ -68,6 +68,7 @@ from constants import (
     BOUNDARY_MSG,
     CLINICAL_BOUNDARY_MSG,
     CONFIRMATION_MSG,
+    COULDNT_PARSE_DATE,
     COULDNT_PARSE_NUMBER,
     FUTURE_MESSAGE_SUFFIXES,
     INITIAL_MSGS,
@@ -1155,36 +1156,45 @@ def bot():
                 if len(dose_window_end_events) == num_dose_windows:
                     print("in here3")
                     pass  # we're done with onboarding flow
-                elif len(dose_window_start_events) == num_dose_windows:
-                    print("in here4")
-                    new_event = EventLog("dw_end_time", user.id, None, None)
-                    db.session.add(new_event)
-                    db.session.commit()
-                    client.messages.create(
-                        body=ONBOARDING_COMPLETE,
-                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                        to=incoming_phone_number
-                    )
-                elif len(dose_window_end_events) == len(dose_window_start_events):
-                    print("in here5")
-                    new_event = EventLog("dw_start_time", user.id, None, None)
-                    db.session.add(new_event)
-                    db.session.commit()
-                    client.messages.create(
-                        body=REQUEST_DOSE_WINDOW_END_TIME.substitute(count=len(dose_window_start_events) + 1),
-                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                        to=incoming_phone_number
-                    )
                 else:
-                    print("in here6")
-                    new_event = EventLog("dw_end_time", user.id, None, None)
-                    db.session.add(new_event)
-                    db.session.commit()
-                    client.messages.create(
-                        body=REQUEST_DOSE_WINDOW_START_TIME.substitute(count=len(dose_window_start_events) + 1),
-                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                        to=incoming_phone_number
-                    )
+                    extracted_dt, _, __ = get_datetime_obj_from_string(raw_message, format_restrictions=True)
+                    if extracted_dt is None:
+                        client.messages.create(
+                            body=COULDNT_PARSE_DATE,
+                            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                            to=incoming_phone_number
+                        )
+                    else:  # date parseable
+                        if len(dose_window_start_events) == num_dose_windows:
+                            print("in here4")
+                            new_event = EventLog("dw_end_time", user.id, None, None)
+                            db.session.add(new_event)
+                            db.session.commit()
+                            client.messages.create(
+                                body=ONBOARDING_COMPLETE,
+                                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                                to=incoming_phone_number
+                            )
+                        elif len(dose_window_end_events) == len(dose_window_start_events):
+                            print("in here5")
+                            new_event = EventLog("dw_start_time", user.id, None, None)
+                            db.session.add(new_event)
+                            db.session.commit()
+                            client.messages.create(
+                                body=REQUEST_DOSE_WINDOW_END_TIME.substitute(count=len(dose_window_start_events) + 1),
+                                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                                to=incoming_phone_number
+                            )
+                        else:
+                            print("in here6")
+                            new_event = EventLog("dw_end_time", user.id, None, None)
+                            db.session.add(new_event)
+                            db.session.commit()
+                            client.messages.create(
+                                body=REQUEST_DOSE_WINDOW_START_TIME.substitute(count=len(dose_window_start_events) + 1),
+                                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                                to=incoming_phone_number
+                            )
             client.messages.create(
                 body=f"User {user.name} has responded to onboarding message.",
                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
