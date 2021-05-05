@@ -19,7 +19,7 @@ cal = parsedatetime.Calendar()
 
 USER_TIMEZONE = "US/Pacific"
 
-MEDICATION_TAKEN_REGEX = r'(?:\W|^)(taken|take|t)(?:\W|$)'
+MEDICATION_TAKEN_REGEX = r'(?:\W|^)(taken|take|t|took)(?:\W|$)'
 TIME_DELAY_EXTRACTION_REGEX = r'(\d+)\s*(minutes|minute|mins|min|hours|hour|hr)'
 ABSOLUTE_TIME_EXTRACTION_REGEX = r'(\d+(?:\:\d+)?)\s*(am|pm)?'
 SKIP_REGEX = r'(?:\W|^)(skipped|skipping|skip|s)(?:\W|$)'

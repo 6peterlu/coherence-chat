@@ -44,3 +44,4 @@ def test_segment_message_take():
     assert segment_message("T!")[0] == {'type': 'take', 'modifiers': {'emotion': 'excited'}, "raw": "T!"}
     assert segment_message("T. Thanks!")[0] == {'modifiers': {'emotion': 'excited'}, 'type': 'take', "raw": "T. Thanks!"}
     assert segment_message("T. Thanks!")[1] == {'modifiers': {'emotion': 'excited'}, 'type': 'thanks', "raw": "T. Thanks!"}
+    assert segment_message("I actually took it at 9pm, then went to sleep without phone near.")[0] == {'type': 'take', 'modifiers': {'emotion': 'neutral'}, 'payload': {'time': datetime(2000, 1, 1, 21, 0, tzinfo=utc), 'am_pm_defined': True, 'needs_tz_convert': True}, 'raw': 'I actually took it at 9pm, then went to sleep without phone near.'}
