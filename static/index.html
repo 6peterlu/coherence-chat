@@ -29,13 +29,43 @@
                 <input id="secretCodeEntry" placeholder="Secret 6-digit code" style="padding: 10px; border-color: #002864; font-family: 'Lora', serif;"/>
                 <button id="login" onclick="login()" style="background-color: #002864; color: #FBECB7; border: none; padding-top: 15px; padding-bottom: 15px; margin: 15px; border-radius: 30px; font-family: 'Lora', serif;">Login</button>
             </div>
-
         </div>
     </div>
     <div id="trackingDisplay">
         <div style="background-color: #002864; padding: 20px">
             <h2 id="welcomeHeader" style="color:white">Welcome!</h2>
             <h4 id="takeNow" style="text-align: center; padding:10px; border-radius: 10px;"></h4>
+            <div id="howToUse">
+                <div style="flex-direction: row; display: flex; justify-content: space-between;">
+                    <p style="color: #FFF">Usage guide</p>
+                    <button id="expandGuideButton" style="margin-top: 10px; background: #09ad56; border: none; color:#FFF; border-radius: 10px; font-family: Lora;" onclick="toggleGuide()">Expand</button>
+                </div>
+                <div id="guide" style="display: none;">
+                    <p style="text-align: center; color: #FFF;">What can I text Coherence?</p>
+                    <div style="display:grid; grid-template-columns: 25% 75%; grid-template-rows: max-content; color: #FFF; font-size:12px; column-gap: 5px;">
+                        <p>T, taken</p>
+                        <p>Mark your dose as taken at the current time</p>
+                        <p>T @ 5pm, Taken at 5:00pm</p>
+                        <p>Mark your dose as taken at 5pm</p>
+                        <p>S</p>
+                        <p>Skip current dose</p>
+                        <p>1</p>
+                        <p>Delay reminder for ten minutes</p>
+                        <p>2</p>
+                        <p>Delay reminder for a half hour</p>
+                        <p>3</p>
+                        <p>Delay reminder for an hour</p>
+                        <p>20 min</p>
+                        <p>Delay reminder for 20 minutes</p>
+                        <p>Eating, going for a walk, etc</p>
+                        <p>Tell Coherence you're busy with a particular activity</p>
+                        <p>W, website, site</p>
+                        <p>Request the website link</p>
+                        <p>X</p>
+                        <p>Report an error</p>
+                    </div>
+                </div>
+            </div>
             <!-- <button onclick="logout()">Log out (testing only)</button> -->
         </div>
         <div style="background-color: rgb(233, 231, 220); padding: 10px">
@@ -151,6 +181,20 @@
             },
             mode: "cors",
         };
+        const toggleGuide = () => {
+            const guideDiv = document.getElementById("guide");
+            const expandButton = document.getElementById("expandGuideButton");
+            const guideExpanded = guideDiv.style.display === "block";
+            if (guideExpanded) {
+                expandButton.innerHTML = "Expand";
+                expandButton.style.backgroundColor = "#09ad56";
+                guideDiv.style.display = "none";
+            } else {
+                expandButton.innerHTML = "Hide";
+                expandButton.style.backgroundColor = "#f54242";
+                guideDiv.style.display = "block";
+            }
+        }
         function randomChoice(arr) {
             return arr[Math.floor(arr.length * Math.random())];
         }
