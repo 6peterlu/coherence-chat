@@ -1172,7 +1172,7 @@ def bot():
                         db.session.add(new_event)
                         db.session.commit()
                         client.messages.create(
-                            body=REQUEST_DOSE_WINDOW_END_TIME.substitute(count=len(dose_window_start_events)),
+                            body=REQUEST_DOSE_WINDOW_END_TIME.substitute(count=len(dose_window_start_events) + 1),
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                             to=incoming_phone_number
                         )
