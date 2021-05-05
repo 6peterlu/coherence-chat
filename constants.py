@@ -147,3 +147,13 @@ ALREADY_RECORDED = "We already have a record of this dose. If this is incorrect,
 REQUEST_WEBSITE = "You can access your medication take history and much more at https://coherence-chat.herokuapp.com. Also, you can text us at our customer service number (650) 667-1146‬, and we'll back to you within 1 business day."
 
 SUGGEST_DOSE_WINDOW_CHANGE = "It looks like you took this medication outside your dose window. If you'd like to update your dose window, you can do so at any time at https://coherence-chat.herokuapp.com."
+
+REQUEST_DOSE_WINDOW_COUNT = "Glad to hear it. How many dose windows would you like to set up?"
+
+COULDNT_PARSE_NUMBER = "Sorry, I can only understand a number input, like 2."
+
+REQUEST_DOSE_WINDOW_START_TIME = Template("When would you like dose window $count to start?")
+
+REQUEST_DOSE_WINDOW_END_TIME = Template("When would you like dose window $count to end?")
+
+ONBOARDING_COMPLETE = "Great, you'll get your first Coherence reminders starting tomorrow. Thanks again for trying us out!"

@@ -1,3 +1,4 @@
+from posix import CLD_EXITED
 from flask import Flask, request, jsonify, send_from_directory, g
 from sqlalchemy.sql.expression import false
 from flask_cors import CORS
@@ -67,15 +68,20 @@ from constants import (
     BOUNDARY_MSG,
     CLINICAL_BOUNDARY_MSG,
     CONFIRMATION_MSG,
+    COULDNT_PARSE_NUMBER,
     FUTURE_MESSAGE_SUFFIXES,
     INITIAL_MSGS,
     FOLLOWUP_MSGS,
     INITIAL_SUFFIXES,
     MANUAL_TEXT_NEEDED_MSG,
+    ONBOARDING_COMPLETE,
     PAUSE_MESSAGE,
     REMINDER_OUT_OF_RANGE_MSG,
     REMINDER_TOO_CLOSE_MSG,
     REMINDER_TOO_LATE_MSG,
+    REQUEST_DOSE_WINDOW_COUNT,
+    REQUEST_DOSE_WINDOW_END_TIME,
+    REQUEST_DOSE_WINDOW_START_TIME,
     REQUEST_WEBSITE,
     SECRET_CODE_MESSAGE,
     SKIP_MSG,
@@ -1105,6 +1111,70 @@ def bot():
                         )
     if user and user.paused:
         if "NOALERTS" not in os.environ:
+            raw_message = request.values.get('Body', '')
+            onboarding_events = ["confirm_join_trial", "num_dose_windows", "dw_start_time", "dw_end_time"]
+            relevant_events = EventLog.query.filter(EventLog.event_type.in_(onboarding_events), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
+            confirm_join_event = list(filter(lambda e: e.event_type == "confirm_join_trial", relevant_events))
+            num_dose_windows_event = list(filter(lambda e: e.event_type == "num_dose_windows", relevant_events))
+            dose_window_start_events = list(filter(lambda e: e.event_type == "dw_start_time", relevant_events))
+            dose_window_end_events = list(filter(lambda e: e.event_type == "dw_end_time", relevant_events))
+            if raw_message.lower() == "c" and not confirm_join_event:
+                new_event = EventLog("confirm_join_trial", user.id, None, None)
+                db.session.add(new_event)
+                db.session.commit()
+                client.messages.create(
+                    body=REQUEST_DOSE_WINDOW_COUNT,
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                    to=incoming_phone_number
+                )
+            elif confirm_join_event and not num_dose_windows_event:
+                try:
+                    num_dose_windows = int(raw_message)
+                    new_event = EventLog("num_dose_windows", user.id, None, None, description=num_dose_windows)
+                    db.session.add(new_event)
+                    db.session.commit()
+                    client.messages.create(
+                        body=REQUEST_DOSE_WINDOW_START_TIME.substitute(count=1),
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                        to=incoming_phone_number
+                    )
+                except ValueError:
+                    client.messages.create(
+                        body=COULDNT_PARSE_NUMBER,
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                        to=incoming_phone_number
+                    )
+            elif confirm_join_event and num_dose_windows_event:
+                num_dose_windows = int(num_dose_windows_event[0].description)
+                if len(dose_window_end_events) == num_dose_windows:
+                    pass  # we're done with onboarding flow
+                elif len(dose_window_start_events) == num_dose_windows:
+                    new_event = EventLog("dw_end_time", user.id, None, None)
+                    db.session.add(new_event)
+                    db.session.commit()
+                    client.messages.create(
+                        body=ONBOARDING_COMPLETE,
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                        to=incoming_phone_number
+                    )
+                elif len(dose_window_end_events) == len(dose_window_start_events):
+                    new_event = EventLog("dw_start_time", user.id, None, None)
+                    db.session.add(new_event)
+                    db.session.commit()
+                    client.messages.create(
+                        body=REQUEST_DOSE_WINDOW_START_TIME.substitute(count=len(dose_window_start_events) + 1),
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                        to=incoming_phone_number
+                    )
+                else:
+                    new_event = EventLog("dw_end_time", user.id, None, None)
+                    db.session.add(new_event)
+                    db.session.commit()
+                    client.messages.create(
+                        body=REQUEST_DOSE_WINDOW_END_TIME.substitute(count=len(dose_window_start_events)),
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                        to=incoming_phone_number
+                    )
             client.messages.create(
                 body=f"User {user.name} has responded to onboarding message.",
                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",

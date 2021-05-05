@@ -28,8 +28,12 @@ def convert_minute_to_current_day_time(minute, user):
     return add_minutes
 
 def get_reminder_time_within_range(start_time, end_time, user):
+    print(start_time)
+    print(end_time)
     start_minute = convert_utc_dt_to_minute(start_time, user)
     end_minute = convert_utc_dt_to_minute(end_time, user)
+    print(start_minute)
+    print(end_minute)
     activity_density = activity_by_user.get(user.name, np.zeros(end_minute - start_minute))
     minute_range = activity_density[start_minute:end_minute]
     non_zero = minute_range[np.nonzero(minute_range)]
