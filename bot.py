@@ -177,6 +177,11 @@ client = Client(account_sid, auth_token)
 # initialize scheduler
 scheduler = APScheduler()
 
+def get_random_emoji():
+    return random.choice(["💫", "🌈", "🌱", "🏆", "📈", "💎", "💡", "🔆", "🔔"])
+
+def append_emoji_suffix(input_str):
+    return f"{input_str} {get_random_emoji()}"
 # not calling this with false anywhere
 def get_time_now(tzaware=True):
     return datetime.now(pytzutc) if tzaware else datetime.utcnow()
@@ -889,7 +894,7 @@ def bot():
                             # text patient confirmation
                             if "NOALERTS" not in os.environ:
                                 client.messages.create(
-                                    body=SKIP_MSG,
+                                    body=f"{SKIP_MSG}{f' {get_random_emoji()}' if incoming_msg['modifiers']['emotion'] == 'smiley' else ''}",
                                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                     to=incoming_phone_number
                                 )
@@ -934,10 +939,14 @@ def bot():
                             if next_alarm_time > get_time_now():
                                 log_event_new("reminder_delay", user.id, dose_window.id, None, description=f"delayed to {next_alarm_time.astimezone(timezone(user.timezone))}")
                                 if "NOALERTS" not in os.environ:
+                                    confirmation_msg = CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(user.timezone)).strftime('%I:%M'))
+                                    if incoming_msg['modifiers']['emotion'] == 'smiley':
+                                        confirmation_msg = append_emoji_suffix(confirmation_msg)
                                     client.messages.create(
-                                        body=REMINDER_TOO_CLOSE_MSG.substitute(
+                                        body=(REMINDER_TOO_CLOSE_MSG.substitute(
                                             time=dose_end_time.astimezone(timezone(user.timezone)).strftime("%I:%M"),
-                                            reminder_time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")
+                                            reminder_time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M"))
+                                            if too_close else confirmation_msg
                                         ),
                                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                         to=incoming_phone_number
@@ -978,11 +987,14 @@ def bot():
                         if next_alarm_time > get_time_now():
                             log_event_new("reminder_delay", user.id, dose_window.id, None, description=f"delayed to {next_alarm_time.astimezone(timezone(user.timezone))}")
                             if "NOALERTS" not in os.environ:
+                                confirmation_msg = CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M"))
+                                if incoming_msg['modifiers']['emotion'] == 'smiley':
+                                    confirmation_msg = append_emoji_suffix(confirmation_msg)
                                 client.messages.create(
-                                    body=REMINDER_TOO_CLOSE_MSG.substitute(
+                                    body=(REMINDER_TOO_CLOSE_MSG.substitute(
                                         time=dose_end_time.astimezone(timezone(user.timezone)).strftime("%I:%M"),
-                                        reminder_time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")
-                                    ),
+                                        reminder_time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")) if too_close
+                                        else confirmation_msg),
                                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                     to=incoming_phone_number
                                 )
@@ -1020,10 +1032,14 @@ def bot():
                         if next_alarm_time > get_time_now():
                             log_event_new("reminder_delay", user.id, dose_window.id, None, description=f"delayed to {next_alarm_time.astimezone(timezone(user.timezone))}")
                             if "NOALERTS" not in os.environ:
+                                confirmation_msg = CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M"))
+                                if incoming_msg['modifiers']['emotion'] == 'smiley':
+                                    confirmation_msg = append_emoji_suffix(confirmation_msg)
                                 client.messages.create(
-                                    body=REMINDER_TOO_CLOSE_MSG.substitute(
+                                    body=(REMINDER_TOO_CLOSE_MSG.substitute(
                                         time=dose_end_time.astimezone(timezone(user.timezone)).strftime("%I:%M"),
-                                        reminder_time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")
+                                        reminder_time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M"))
+                                        if too_close else confirmation_msg
                                     ),
                                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                     to=incoming_phone_number
@@ -1066,8 +1082,11 @@ def bot():
                         if next_alarm_time > get_time_now():
                             log_event_new("reminder_delay", user.id, dose_window.id, None, description=f"delayed to {next_alarm_time.astimezone(timezone(user.timezone))}")
                             if "NOALERTS" not in os.environ:
+                                canned_response = incoming_msg["payload"]["response"]
+                                if incoming_msg['modifiers']['emotion'] == 'smiley':
+                                    canned_response = append_emoji_suffix(canned_response)
                                 client.messages.create(
-                                    body=incoming_msg["payload"]["response"],
+                                    body=canned_response,
                                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                     to=incoming_phone_number
                                 )
