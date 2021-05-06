@@ -178,7 +178,7 @@ client = Client(account_sid, auth_token)
 scheduler = APScheduler()
 
 def get_random_emoji():
-    return random.choice(["💫", "🌈", "🌱", "🏆", "📈", "💎", "💡", "🔆", "🔔"])
+    return random.choice(["💫", "🌈", "🌱", "🏆", "💎", "💡", "🔆", "(:", "☺️", "👍", "😇", "😊"])
 
 def append_emoji_suffix(input_str):
     return f"{input_str} {get_random_emoji()}"
