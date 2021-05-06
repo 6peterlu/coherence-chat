@@ -352,9 +352,9 @@ def get_current_user_and_dose_window(truncated_phone_number):
 
 
 def translate_time_of_day(dt, user=None):
-    local_time = dt
+    utc_time = pytzutc.localize(dt)
     if user is not None:
-        local_time = dt.astimezone(timezone(user.timezone))
+        local_time = utc_time.astimezone(timezone(user.timezone))
     if local_time.hour > 2 and local_time.hour < 12:
         return "morning"
     elif local_time.hour >= 12 and local_time.hour < 18:

@@ -4,8 +4,9 @@ import { Redirect } from 'react-router-dom';
 import { pullPatientData, pullPatientDataForNumber } from '../api';
 import Select from 'react-select';
 import { Box, Button, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Spinner } from "grommet";
-import { CheckboxSelected, Close } from "grommet-icons";
+import { CheckboxSelected, Close, FormNextLink, Time } from "grommet-icons";
 import { DateTime } from 'luxon';
+import TimeInput from "../components/TimeInput"
 
 const Home = () => {
     const [cookies, _, removeCookie] = useCookies(['token']);
@@ -14,12 +15,12 @@ const Home = () => {
     const [impersonating, setImpersonating] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
     const [selectedDay, setSelectedDay] = React.useState(null);
+    const [editingDoseWindow, setEditingDoseWindow] = React.useState(null);
+    const [updatedDoseWindow, setUpdatedDoseWindow] = React.useState(null);
 
     const dateRange = [DateTime.local(2021, 5, 1), DateTime.local(2021, 5, 31)]
-    console.log(DateTime.local(2021, 5, 1).toString());
 
     React.useEffect(() => {
-        console.log("running")
         const loadData = async () => {
             const loadedData = await pullPatientData();
             if (loadedData === null) {
@@ -32,6 +33,7 @@ const Home = () => {
                     loadedData.impersonateList.map((tuple_data) => { return { label: tuple_data[0], value: tuple_data[1]}})
                 );
             }
+            console.log(loadedData);
             setLoading(false);
         }
         if (cookies.token && !patientData) {
@@ -51,10 +53,9 @@ const Home = () => {
         removeCookie("token");
     }
 
-    const renderDay = ({date}) => {
+    const renderDay = React.useCallback(({date}) => {
         const dt = DateTime.fromJSDate(date);
         const day = dt.day;
-        console.log(day);
         const dayOfMonthData = patientData.eventData[day - 1];
         let dayColor = null;
         if (dt.month === 5) {
@@ -73,7 +74,30 @@ const Home = () => {
                 </Box>
             </Box>
         );
-    }
+    }, [patientData]);
+
+    // TODO: start here
+    const renderDoseWindowEditFields = React.useCallback(() => {
+        const startTime = DateTime.utc(2021, 5, 1, editingDoseWindow.start_hour, editingDoseWindow.start_minute);
+        const endTime = DateTime.utc(2021, 5, 1, editingDoseWindow.end_hour, editingDoseWindow.end_minute);
+        return (
+            <>
+                <TimeInput value={startTime.setZone('local').toLocaleString(DateTime.TIME_SIMPLE)} onChangeTime={
+                    (newTime) => {
+                        const newDwTime = DateTime.utc(2021, 5, 1, newTime.hour, newTime.minute).setZone('local');
+                        setEditingDoseWindow({...editingDoseWindow, start_hour: newDwTime.hour, start_minute: newDwTime.minute});
+                    }}
+                />
+                <TimeInput value={endTime.setZone('local').toLocaleString(DateTime.TIME_SIMPLE)} onChangeTime={
+                    (newTime) => {
+                        const newDwTime = DateTime.utc(2021, 5, 1, newTime.hour, newTime.minute).setZone('local');
+                        setEditingDoseWindow({...editingDoseWindow, end_hour: newDwTime.hour, end_minute: newDwTime.minute});
+                    }}
+                />
+                <Button>Update dose window</Button>
+            </>
+        )
+    }, [editingDoseWindow]);
 
     if (!cookies.token) {
         return <Redirect to="/login"/>;
@@ -150,12 +174,16 @@ const Home = () => {
                             dropAlign={{ top: 'bottom' }}
                         />
                     </Box>
-                    <Box pad={{horizontal: "medium"}}>
+                    <Box pad="medium" background={{color: "light-3"}}>
                         <Paragraph textAlign="center" margin={{vertical: "none"}}>Medication history</Paragraph>
                         <Calendar
                             date={(new Date()).toISOString()}
                             fill={true}
-                            onSelect={setSelectedDay}
+                            onSelect={(date) => {
+                                const dt = DateTime.fromISO(date);
+                                console.log(dt.day);
+                                setSelectedDay(dt.day);
+                            }}
                             showAdjacentDays={true}
                             bounds={dateRange.map((date) => {return date.toString()})}
                             children={renderDay}
@@ -167,9 +195,66 @@ const Home = () => {
                             onClickOutside={() => setSelectedDay(false)}
                             responsive={false}
                         >
-                            <Box margin="large">
-                                <Button icon={<Close />} onClick={() => setSelectedDay(false)} />
-                                <Paragraph>Selected day was {selectedDay}!</Paragraph>
+                            <Box width="70vw" pad="large">
+                                <Box direction="row" justify="between">
+                                    <Paragraph size="large">May {selectedDay}</Paragraph>
+                                    <Button icon={<Close />} onClick={() => setSelectedDay(false)} />
+                                </Box>
+                                {
+                                    patientData.eventData[selectedDay - 1].day_status ?
+                                    Object.keys(patientData.eventData[selectedDay - 1].time_of_day).map((key) => {
+                                        console.log(typeof patientData.eventData[selectedDay - 1].time_of_day[key][0].time);
+                                        return (
+                                            <>
+                                                <Paragraph key={`tod-${key}`}>{key} dose</Paragraph>
+                                                <Box key={`todStatusContainer-${key}`} pad={{left: "medium"}}>
+                                                    <Paragraph key={`todStatus-${key}`}>
+                                                        {patientData.eventData[selectedDay - 1].time_of_day[key][0].type}{patientData.eventData[selectedDay - 1].time_of_day[key][0].time ? ` at ${DateTime.fromJSDate(new Date(patientData.eventData[selectedDay - 1].time_of_day[key][0].time)).toLocaleString(DateTime.TIME_SIMPLE)}` : ''}
+                                                    </Paragraph>
+                                                </Box>
+                                            </>
+                                        )
+                                    }) :
+                                    <Paragraph>No data for this day.</Paragraph>
+                                }
+                            </Box>
+                        </Layer>
+                    )}
+                    <Box align="center">
+                        <Paragraph textAlign="center" margin={{vertical: "none"}}>Dose windows</Paragraph>
+                            {
+                                patientData.doseWindows.map((dw) => {
+                                    console.log(dw.start_hour);
+                                    const startTime = DateTime.utc(2021, 5, 1, dw.start_hour, dw.start_minute);
+                                    // startTime.set
+                                    const endTime = DateTime.utc(2021, 5, 1, dw.end_hour, dw.end_minute);
+                                    return (
+                                        <Grid columns={["small", "xsmall"]} align="center" pad={{horizontal: "large"}} alignContent="center" justifyContent="center" justify="center">
+                                            <Box direction="row" align="center">
+                                                <Paragraph>{startTime.setZone('local').toLocaleString(DateTime.TIME_SIMPLE)}</Paragraph>
+                                                <FormNextLink/>
+                                                <Paragraph>{endTime.setZone('local').toLocaleString(DateTime.TIME_SIMPLE)}</Paragraph>
+                                            </Box>
+                                            <Button label="edit" onClick={() => setEditingDoseWindow(dw)}/>
+                                        </Grid>
+                                    )
+                                })
+                            }
+                    </Box>
+                    {editingDoseWindow && (
+                        <Layer
+                            onEsc={() => setEditingDoseWindow(null)}
+                            onClickOutside={() => setEditingDoseWindow(null)}
+                            responsive={false}
+                        >
+                            <Box width="70vw" pad="large">
+                                <Box direction="row" justify="between">
+                                    <Paragraph size="large">Edit dose window</Paragraph>
+                                    <Button icon={<Close />} onClick={() => setEditingDoseWindow(null)} />
+                                </Box>
+                                <Box>
+                                    {renderDoseWindowEditFields(editingDoseWindow)}
+                                </Box>
                             </Box>
                         </Layer>
                     )}
