@@ -49,7 +49,7 @@ const Intro = () => {
                     value={secretCode}
                     onChange={(event) => {setSecretCode(event.target.value)}}
                 />
-                {authError ? <Paragraph>Invalid phone number.</Paragraph> : null}
+                {authError ? <Paragraph>Invalid secret code.</Paragraph> : null}
             </>
         } else if (componentToDisplay === "password") {
             return <>
@@ -62,7 +62,7 @@ const Intro = () => {
                     onChange={(event) => {setPassword(event.target.value)}}
                     type="password"
                 />
-                {authError ? <Paragraph>Invalid phone number.</Paragraph> : null}
+                {authError ? <Paragraph>Invalid password.</Paragraph> : null}
             </>
         } else if (componentToDisplay === "register") {
             return <>

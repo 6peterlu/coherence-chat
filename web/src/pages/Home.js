@@ -1,10 +1,10 @@
 import React from "react";
 import { useCookies } from 'react-cookie';
 import { Redirect } from 'react-router-dom';
-import { pullPatientData, pullPatientDataForNumber } from '../api';
+import { pullPatientData, pullPatientDataForNumber, updateDoseWindow } from '../api';
 import Select from 'react-select';
 import { Box, Button, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Spinner } from "grommet";
-import { CheckboxSelected, Close, FormNextLink, Time } from "grommet-icons";
+import { CheckboxSelected, Close, FormNextLink } from "grommet-icons";
 import { DateTime } from 'luxon';
 import TimeInput from "../components/TimeInput"
 
@@ -33,7 +33,6 @@ const Home = () => {
                     loadedData.impersonateList.map((tuple_data) => { return { label: tuple_data[0], value: tuple_data[1]}})
                 );
             }
-            console.log(loadedData);
             setLoading(false);
         }
         if (cookies.token && !patientData) {
@@ -76,28 +75,60 @@ const Home = () => {
         );
     }, [patientData]);
 
+    const nextDayConversion = (dt) => {
+        if (dt.hour < 4) {
+            return dt.plus({days: 1});
+        }
+        return dt;
+    }
+
+    const validDoseWindows = React.useMemo(() => {
+        if (editingDoseWindow === null) {
+            return true; // if you're not editing anything you're valid
+        };
+        if (patientData === null) {
+            return true;  // if we have no patient data your dose windows are fine
+        };
+        const editingStartTime = nextDayConversion(DateTime.utc(2021, 5, 1, editingDoseWindow.start_hour, editingDoseWindow.start_minute).setZone("local").set({month: 5, day: 1}));
+        const editingEndTime = nextDayConversion(DateTime.utc(2021, 5, 1, editingDoseWindow.end_hour, editingDoseWindow.end_minute).setZone("local").set({month: 5, day: 1}));
+        for (const dw of patientData.doseWindows) {
+            if (dw.id === editingDoseWindow.id) {
+                continue;  // we don't compare to the one we're editing
+            }
+            const existingStartTime = nextDayConversion(DateTime.utc(2021, 5, 1, dw.start_hour, dw.start_minute).setZone("local").set({month: 5, day: 1}));
+            const existingEndTime = nextDayConversion(DateTime.utc(2021, 5, 1, dw.end_hour, dw.end_minute).setZone("local").set({month: 5, day: 1}));
+            if (editingStartTime <= existingStartTime && existingStartTime <= editingEndTime) {
+                return false;
+            }
+            if (editingStartTime <= existingEndTime && existingEndTime <= editingEndTime) {
+                return false;
+            }
+        }
+        return true;
+    }, [editingDoseWindow, patientData])
+
     // TODO: start here
     const renderDoseWindowEditFields = React.useCallback(() => {
         const startTime = DateTime.utc(2021, 5, 1, editingDoseWindow.start_hour, editingDoseWindow.start_minute);
         const endTime = DateTime.utc(2021, 5, 1, editingDoseWindow.end_hour, editingDoseWindow.end_minute);
         return (
             <>
-                <TimeInput value={startTime.setZone('local').toLocaleString(DateTime.TIME_SIMPLE)} onChangeTime={
+                <TimeInput value={startTime.setZone('local')} onChangeTime={
                     (newTime) => {
-                        const newDwTime = DateTime.utc(2021, 5, 1, newTime.hour, newTime.minute).setZone('local');
+                        const newDwTime = DateTime.local(2021, 5, 1, newTime.hour, newTime.minute).setZone("UTC");
                         setEditingDoseWindow({...editingDoseWindow, start_hour: newDwTime.hour, start_minute: newDwTime.minute});
                     }}
                 />
-                <TimeInput value={endTime.setZone('local').toLocaleString(DateTime.TIME_SIMPLE)} onChangeTime={
+                <TimeInput value={endTime.setZone('local')} onChangeTime={
                     (newTime) => {
-                        const newDwTime = DateTime.utc(2021, 5, 1, newTime.hour, newTime.minute).setZone('local');
+                        const newDwTime = DateTime.local(2021, 5, 1, newTime.hour, newTime.minute).setZone("UTC");
                         setEditingDoseWindow({...editingDoseWindow, end_hour: newDwTime.hour, end_minute: newDwTime.minute});
                     }}
                 />
-                <Button>Update dose window</Button>
+                {<Button onClick={() => {updateDoseWindow(editingDoseWindow)}} label="Update" disabled={!validDoseWindows}/>}
             </>
         )
-    }, [editingDoseWindow]);
+    }, [editingDoseWindow, validDoseWindows]);
 
     if (!cookies.token) {
         return <Redirect to="/login"/>;
@@ -181,7 +212,6 @@ const Home = () => {
                             fill={true}
                             onSelect={(date) => {
                                 const dt = DateTime.fromISO(date);
-                                console.log(dt.day);
                                 setSelectedDay(dt.day);
                             }}
                             showAdjacentDays={true}
@@ -203,7 +233,6 @@ const Home = () => {
                                 {
                                     patientData.eventData[selectedDay - 1].day_status ?
                                     Object.keys(patientData.eventData[selectedDay - 1].time_of_day).map((key) => {
-                                        console.log(typeof patientData.eventData[selectedDay - 1].time_of_day[key][0].time);
                                         return (
                                             <>
                                                 <Paragraph key={`tod-${key}`}>{key} dose</Paragraph>
@@ -224,7 +253,6 @@ const Home = () => {
                         <Paragraph textAlign="center" margin={{vertical: "none"}}>Dose windows</Paragraph>
                             {
                                 patientData.doseWindows.map((dw) => {
-                                    console.log(dw.start_hour);
                                     const startTime = DateTime.utc(2021, 5, 1, dw.start_hour, dw.start_minute);
                                     // startTime.set
                                     const endTime = DateTime.utc(2021, 5, 1, dw.end_hour, dw.end_minute);
@@ -247,7 +275,7 @@ const Home = () => {
                             onClickOutside={() => setEditingDoseWindow(null)}
                             responsive={false}
                         >
-                            <Box width="70vw" pad="large">
+                            <Box width="90vw" pad="large">
                                 <Box direction="row" justify="between">
                                     <Paragraph size="large">Edit dose window</Paragraph>
                                     <Button icon={<Close />} onClick={() => setEditingDoseWindow(null)} />

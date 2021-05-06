@@ -75,3 +75,8 @@ export const pullPatientDataForNumber = async (phoneNumber) => {
   const response = await get("patientData/new", { phoneNumber });
   return response;
 }
+
+export const updateDoseWindow = async (updatedDoseWindow) => {
+  const response = await post("doseWindow/update", { updatedDoseWindow });
+  return response;
+}
