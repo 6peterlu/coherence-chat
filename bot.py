@@ -655,7 +655,7 @@ def react_login():
     if not password:
         return jsonify({"status": "register"})
     user.set_password(password)
-    return jsonify({"status": "success", "token": user.generate_auth_token()})
+    return jsonify({"status": "success", "token": user.generate_auth_token().decode('ascii')})
 
 @app.route("/logout", methods=["GET"])
 def logout():

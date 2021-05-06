@@ -2,6 +2,8 @@ import React from "react";
 import { login } from "../api";
 import { useCookies } from 'react-cookie';
 import { Redirect } from 'react-router-dom';
+import { Box, Paragraph, Heading, Button, TextInput } from "grommet";
+import { Phone, Login, Fireball, Lock } from "grommet-icons";
 
 const Intro = () => {
     const [phoneNumber, setPhoneNumber] = React.useState("");
@@ -27,41 +29,74 @@ const Intro = () => {
     const getInputField = React.useCallback(() => {
         if (componentToDisplay === "phoneNumber") {
             return <>
-                <p>Enter phone number</p>
-                <input type="text" onChange={(event) => {setPhoneNumber(event.target.value)}} value={phoneNumber}/>
-                <button onClick={submitAll}>Submit</button>
-                {authError ? <p>Invalid phone number.</p> : null}
+                <Paragraph textAlign="center" size="small">Enter phone number.</Paragraph>
+                <TextInput
+                    icon={<Phone/>}
+                    placeholder="(555) 555-5555"
+                    size="small"
+                    value={phoneNumber}
+                    onChange={(event) => {setPhoneNumber(event.target.value)}}
+                />
+                {authError ? <Paragraph>Invalid phone number.</Paragraph> : null}
             </>
         } else if (componentToDisplay === "2fa") {
             return <>
-                <p>Enter secret code</p>
-                <input type="text" onChange={(event) => {setSecretCode(event.target.value)}} value={secretCode}/>
-                <button onClick={submitAll}>Submit</button>
-                {authError ? <p>Invalid secret code.</p> : null}
+                <Paragraph textAlign="center" size="small">We've texted you a secret code, enter it below.</Paragraph>
+                <TextInput
+                    icon={<Fireball />}
+                    placeholder="123456"
+                    size="small"
+                    value={secretCode}
+                    onChange={(event) => {setSecretCode(event.target.value)}}
+                />
+                {authError ? <Paragraph>Invalid phone number.</Paragraph> : null}
             </>
         } else if (componentToDisplay === "password") {
             return <>
-                <p>Enter password</p>
-                <input type="text" onChange={(event) => {setPassword(event.target.value)}} value={password}/>
-                <button onClick={submitAll}>Submit</button>
-                {authError ? <p>Invalid password.</p> : null}
+                <Paragraph textAlign="center" size="small">Enter password.</Paragraph>
+                <TextInput
+                    icon={<Lock />}
+                    placeholder="•••••••••"
+                    size="small"
+                    value={password}
+                    onChange={(event) => {setPassword(event.target.value)}}
+                    type="password"
+                />
+                {authError ? <Paragraph>Invalid phone number.</Paragraph> : null}
             </>
         } else if (componentToDisplay === "register") {
             return <>
-                <p>Create your password</p>
-                <input type="text" onChange={(event) => {setPassword(event.target.value)}} value={password}/>
-                <button onClick={submitAll}>Submit</button>
+                <Paragraph textAlign="center" size="small">Create your password.</Paragraph>
+                <TextInput
+                    icon={<Lock />}
+                    placeholder="•••••••••"
+                    size="small"
+                    value={password}
+                    onChange={(event) => {setPassword(event.target.value)}}
+                    type="password"
+                />
             </>
         }
-    }, [authError, componentToDisplay, password, phoneNumber, secretCode, submitAll])
+    }, [authError, componentToDisplay, password, phoneNumber, secretCode])
     if (cookies.token) {
         return <Redirect to="/"/>;
     }
     return (
-        <>
-            <p>intro</p>
-            { getInputField() }
-        </>
+        <Box height="100vh" flex="grow" background={{"position":"center","dark":false,"opacity":"strong"}}>
+            <Box height="40vh" align="center" justify="center" pad="large">
+                <Paragraph>welcome to</Paragraph>
+                <Heading>coherence</Heading>
+            </Box>
+            <Box height="60vh" align="center" justify="between" background={{color: "neutral-2", dark: true}} pad="large">
+                <Paragraph color="white" textAlign="center">Peace of mind with your medications is just around the corner.</Paragraph>
+                <Box>
+                    <Box width="200px" margin={{bottom: "medium", top: "xsmall"}}>
+                        {getInputField()}
+                    </Box>
+                    <Button label="submit" icon={<Login/>} onClick={submitAll}/>
+                </Box>
+            </Box>
+        </Box>
     )
 }
 

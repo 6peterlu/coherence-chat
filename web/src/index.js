@@ -4,11 +4,14 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { CookiesProvider } from 'react-cookie';
+import { Grommet } from "grommet";
 
 ReactDOM.render(
   <React.StrictMode>
     <CookiesProvider>
-      <App />
+      <Grommet>
+        <App />
+      </Grommet>
     </CookiesProvider>
   </React.StrictMode>,
   document.getElementById('root')

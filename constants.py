@@ -152,7 +152,7 @@ REQUEST_DOSE_WINDOW_COUNT = "Glad to hear it. How many dose windows would you li
 
 COULDNT_PARSE_NUMBER = "Sorry, I can only understand a number input, like 2."
 
-COULDNT_PARSE_DATE = "Sorry, I couldn't figure out what time you meant. Try typing the time in a more standard format, such as 5:00 PM. Thanks! If you get stuck here, text us at (650) 667-1146, and we'll get it sorted out ASAP."
+COULDNT_PARSE_DATE = "Sorry, I couldn't figure out what time you meant. Try typing the time in a more standard format, such as 5:00 PM. If you get stuck here, text us at (650) 667-1146, and we'll get it sorted out ASAP. Thanks!"
 
 REQUEST_DOSE_WINDOW_START_TIME = Template("When would you like dose window $count to start?")
 
