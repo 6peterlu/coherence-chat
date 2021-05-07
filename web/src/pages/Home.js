@@ -2,7 +2,7 @@ import React from "react";
 import { useCookies } from 'react-cookie';
 import { Redirect } from 'react-router-dom';
 import { pauseUser, pullPatientData, pullPatientDataForNumber, resumeUser, updateDoseWindow } from '../api';
-import { Box, Button, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select, Spinner } from "grommet";
+import { Box, Button, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select } from "grommet";
 import { Checkmark, CircleInformation, Clear, Close, FormNextLink} from "grommet-icons";
 import { DateTime } from 'luxon';
 import TimeInput from "../components/TimeInput";
@@ -342,7 +342,7 @@ const Home = () => {
                             // startTime.set
                             const endTime = DateTime.utc(2021, 5, 1, dw.end_hour, dw.end_minute);
                             return (
-                                <Grid columns={["small", "xsmall"]} align="center" pad={{horizontal: "large"}} alignContent="center" justifyContent="center" justify="center">
+                                <Grid key={`doseWindowContainer-${dw.id}`} columns={["small", "xsmall"]} align="center" pad={{horizontal: "large"}} alignContent="center" justifyContent="center" justify="center">
                                     <Box direction="row" align="center">
                                         <Paragraph>{startTime.setZone('local').toLocaleString(DateTime.TIME_SIMPLE)}</Paragraph>
                                         <FormNextLink/>
