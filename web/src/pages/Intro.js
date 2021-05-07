@@ -9,6 +9,7 @@ const Intro = () => {
     const [phoneNumber, setPhoneNumber] = React.useState("");
     const [secretCode, setSecretCode] = React.useState("");
     const [password, setPassword] = React.useState("");
+    const [passwordConfirm, setPasswordConfirm] = React.useState("");
     const [componentToDisplay, setComponentToDisplay] = React.useState("phoneNumber");
     const [cookies, setCookie] = useCookies(["token"]);
     const [authError, setAuthError] = React.useState(false);
@@ -58,7 +59,10 @@ const Intro = () => {
                     placeholder="•••••••••"
                     size="small"
                     value={password}
-                    onChange={(event) => {setPassword(event.target.value)}}
+                    onChange={(event) => {
+                        setPassword(event.target.value);
+                        setPasswordConfirm(event.target.value);
+                    }}
                     type="password"
                 />
                 {authError ? <Paragraph size="small">Invalid password. If you'd like us to reset it, give us a text at (650) 667-1146.</Paragraph> : null}
@@ -68,15 +72,24 @@ const Intro = () => {
                 <Paragraph textAlign="center" size="small">Create your password.</Paragraph>
                 <TextInput
                     icon={<Lock />}
-                    placeholder="•••••••••"
+                    placeholder="Enter password"
                     size="small"
                     value={password}
                     onChange={(event) => {setPassword(event.target.value)}}
                     type="password"
                 />
+                <TextInput
+                    icon={<Lock />}
+                    placeholder="Type it again"
+                    size="small"
+                    value={passwordConfirm}
+                    onChange={(event) => {setPasswordConfirm(event.target.value)}}
+                    type="password"
+                />
+                {password !== passwordConfirm ? <Paragraph size="small">Passwords don't match.</Paragraph> : null}
             </>
         }
-    }, [authError, componentToDisplay, password, phoneNumber, secretCode])
+    }, [authError, componentToDisplay, password, passwordConfirm, phoneNumber, secretCode])
     if (cookies.token) {
         return <Redirect to="/"/>;
     }
@@ -92,7 +105,7 @@ const Intro = () => {
                     <Box width="200px" margin={{bottom: "medium", top: "xsmall"}}>
                         {getInputField()}
                     </Box>
-                    <Button label="submit" icon={<Login/>} onClick={submitAll}/>
+                    <Button label="submit" icon={<Login/>} onClick={submitAll} disabled={password !== passwordConfirm}/>
                 </Box>
             </Box>
         </Box>
