@@ -162,9 +162,8 @@ const Home = () => {
         return arr[Math.floor(arr.length * Math.random())];
     }
     const randomHeaderEmoji = React.useMemo(() =>  {
-        return randomChoice(["💫", "🌈", "🌱", "🏆", "📈", "💎", "💡", "🔆", "🔔"])
+        return randomChoice(["💫", "🌈", "🌱", "🏆", "📈", "💎", "💡", "🔆", "🔔"]);
     }, [])
-    console.log(calendarMonth);
 
     const renderDoseWindowEditFields = React.useCallback(() => {
         const startTime = DateTime.utc(2021, 5, 1, editingDoseWindow.start_hour, editingDoseWindow.start_minute);
@@ -214,14 +213,17 @@ const Home = () => {
         // </>
         <Box>
             {impersonateOptions !== null ?
-                <Select
-                    options={impersonateOptions}
-                    children={renderImpersonateListItem}
-                    onChange={({option}) => {
-                        console.log("setting");
-                        setImpersonating(option);
-                    }}
-                /> : null}
+                <Box direction="row" align="center" gap="small" pad={{"horizontal": "medium"}}>
+                    <Paragraph>Impersonating:</Paragraph>
+                    <Select
+                        options={impersonateOptions}
+                        children={renderImpersonateListItem}
+                        onChange={({option}) => {
+                            console.log("setting");
+                            setImpersonating(option);
+                        }}
+                    />
+                </Box> : null}
             <Box align="center">
                 <Heading size="small">Good {currentTimeOfDay}{patientData ? `, ${patientData.patientName}` : ""}.</Heading>
             </Box>

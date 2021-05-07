@@ -14,13 +14,12 @@ const Intro = () => {
     const [authError, setAuthError] = React.useState(false);
     const submitAll = React.useCallback(async () => {
         const response = await login(phoneNumber, secretCode, password);
-        console.log(response);
         if (response === null) {
             setAuthError(true);
         } else {
             if (response.status === "success") {
                 console.log("setting cookie");
-                setCookie("token", response.token);
+                setCookie("token", response.token, {secure: true});
             }
             setComponentToDisplay(response.status);
             setAuthError(false);
@@ -37,7 +36,7 @@ const Intro = () => {
                     value={phoneNumber}
                     onChange={(event) => {setPhoneNumber(event.target.value)}}
                 />
-                {authError ? <Paragraph>Invalid phone number.</Paragraph> : null}
+                {authError ? <Paragraph size="small">Invalid phone number.</Paragraph> : null}
             </>
         } else if (componentToDisplay === "2fa") {
             return <>
@@ -49,7 +48,7 @@ const Intro = () => {
                     value={secretCode}
                     onChange={(event) => {setSecretCode(event.target.value)}}
                 />
-                {authError ? <Paragraph>Invalid secret code.</Paragraph> : null}
+                {authError ? <Paragraph size="small">Invalid secret code.</Paragraph> : null}
             </>
         } else if (componentToDisplay === "password") {
             return <>
@@ -62,7 +61,7 @@ const Intro = () => {
                     onChange={(event) => {setPassword(event.target.value)}}
                     type="password"
                 />
-                {authError ? <Paragraph>Invalid password.</Paragraph> : null}
+                {authError ? <Paragraph size="small">Invalid password. If you'd like us to reset it, give us a text at (650) 667-1146.</Paragraph> : null}
             </>
         } else if (componentToDisplay === "register") {
             return <>
