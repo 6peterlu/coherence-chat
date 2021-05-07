@@ -382,12 +382,16 @@ def get_time_of_day(dose_window_obj):
 @auth.login_required
 def auth_patient_data():
     user = g.user
+    calendar_month = int(request.args.get("calendarMonth"))
+    print(calendar_month)
+    impersonating = False
     if user.phone_number == ADMIN_PHONE_NUMBER:
         impersonating_phone_number = request.args.get("phoneNumber")
         if impersonating_phone_number is not None:
             impersonated_user = User.query.filter_by(phone_number=impersonating_phone_number).one_or_none()
             if impersonated_user is not None:
                 user = impersonated_user
+                impersonating = True
     dose_window = None
     for user_dose_window in user.active_dose_windows:
         if user_dose_window.within_dosing_period():
@@ -414,8 +418,8 @@ def auth_patient_data():
     combined_list = list(set(take_record_events) | set(user_driven_events))
     relevant_events = EventLog.query.filter(EventLog.event_type.in_(combined_list), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
     requested_time_window = (
-        timezone(user.timezone).localize(datetime(2021, 5, 1, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None),
-        timezone(user.timezone).localize(datetime(2021, 6, 1, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None)  # christ
+        timezone(user.timezone).localize(datetime(2021, calendar_month, 1, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None),
+        timezone(user.timezone).localize(datetime(2021, calendar_month + 1, 1, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None)  # christ
     )
     dose_history_events = list(filter(lambda event: (
         event.event_type in take_record_events and
@@ -464,7 +468,9 @@ def auth_patient_data():
         "pausedService": bool(paused_service),
         "behaviorLearningScores": behavior_learning_scores,
         "doseWindows": dose_windows,
-        "impersonateList": User.query.with_entities(User.name, User.phone_number).all() if user.phone_number == ADMIN_PHONE_NUMBER else None
+        "impersonateList": User.query.with_entities(User.name, User.phone_number).all() if user.phone_number == ADMIN_PHONE_NUMBER else None,
+        "month": calendar_month,
+        "impersonating": impersonating
     })
 
 @app.route("/doseWindow/update/new", methods=["POST"])
