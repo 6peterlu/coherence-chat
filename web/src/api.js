@@ -3,7 +3,8 @@ import Cookies from 'universal-cookie';
 
 const cookies = new Cookies();
 
-const apiServer = process.env.NODE_ENV === "production" ? "https://www.coherence-chat.herokuapp.com" : 'http://localhost:5000';
+console.log(process.env.NODE_ENV);
+const apiServer = process.env.NODE_ENV.trim() === "production" ? "https://www.coherence-chat.herokuapp.com" : 'http://localhost:5000';
 
 const post = async (route, payload) => {
   const token = cookies.get('token');
