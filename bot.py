@@ -268,6 +268,10 @@ def add_header(resp):
 def patient_page():
     return app.send_static_file('index.html')
 
+@app.errorhandler(404)
+def not_found(_):
+    return app.send_static_file('index.html')
+
 
 @app.route("/css/<path:path>", methods=["GET"])
 def serve_css(path):
