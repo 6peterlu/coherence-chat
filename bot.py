@@ -270,6 +270,7 @@ def patient_page():
 
 @app.errorhandler(404)
 def not_found(_):
+    print("404")
     return app.send_static_file('index.html')
 
 
@@ -464,7 +465,6 @@ def auth_patient_data():
     behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
     dose_to_take_now = False if dose_window is None else not dose_window.is_recorded()
     dose_windows = [DoseWindowSchema().dump(dw) for dw in user.active_dose_windows]
-    print(event_data)
     return jsonify({
         "phoneNumber": user.phone_number,
         "eventData": event_data,
