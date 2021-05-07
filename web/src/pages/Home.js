@@ -83,7 +83,7 @@ const Home = () => {
                         dayColor = "status-ok";
                     } else if (dayOfMonthData.day_status === "missed") {
                         dayColor = "status-error";
-                    } else if (dayOfMonthData.day_status === "missed") {
+                    } else if (dayOfMonthData.day_status === "skipped") {
                         dayColor = "status-warning";
                     }
                 }
