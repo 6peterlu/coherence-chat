@@ -87,7 +87,7 @@ const Intro = () => {
                 <Paragraph>welcome to</Paragraph>
                 <Heading>coherence</Heading>
             </Box>
-            <Box height="60vh" align="center" justify="between" background={{color: "neutral-2", dark: true}} pad="large">
+            <Box height="60vh" align="center" justify="between" background={{color: "brand", dark: true}} pad="large">
                 <Paragraph color="white" textAlign="center">Peace of mind with your medications is just around the corner.</Paragraph>
                 <Box>
                     <Box width="200px" margin={{bottom: "medium", top: "xsmall"}}>

@@ -1,12 +1,12 @@
 import React from "react";
 import { useCookies } from 'react-cookie';
 import { Redirect } from 'react-router-dom';
-import { pullPatientData, pullPatientDataForNumber, updateDoseWindow } from '../api';
-import Select from 'react-select';
+import { pauseUser, pullPatientData, pullPatientDataForNumber, resumeUser, updateDoseWindow } from '../api';
 import { Box, Button, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Spinner } from "grommet";
-import { CheckboxSelected, Close, FormNextLink } from "grommet-icons";
+import { CheckboxSelected, CircleInformation, Close, FormNextLink} from "grommet-icons";
 import { DateTime } from 'luxon';
-import TimeInput from "../components/TimeInput"
+import TimeInput from "../components/TimeInput";
+import AnimatingButton from "../components/AnimatingButton";
 
 const Home = () => {
     const [cookies, _, removeCookie] = useCookies(['token']);
@@ -17,29 +17,32 @@ const Home = () => {
     const [selectedDay, setSelectedDay] = React.useState(null);
     const [editingDoseWindow, setEditingDoseWindow] = React.useState(null);
     const [updatedDoseWindow, setUpdatedDoseWindow] = React.useState(null);
+    const [animating, setAnimating] = React.useState(false);  // this is setting animating for ALL buttons for now
 
     const dateRange = [DateTime.local(2021, 5, 1), DateTime.local(2021, 5, 31)]
 
-    React.useEffect(() => {
-        const loadData = async () => {
-            const loadedData = await pullPatientData();
-            if (loadedData === null) {
-                removeCookie("token");
-                return;
-            }
-            setPatientData(loadedData);
-            if (loadedData.impersonateList) {
-                setImpersonateOptions(
-                    loadedData.impersonateList.map((tuple_data) => { return { label: tuple_data[0], value: tuple_data[1]}})
-                );
-            }
-            setLoading(false);
+    const loadData = React.useCallback(async () => {
+        const loadedData = await pullPatientData();
+        if (loadedData === null) {
+            removeCookie("token");
+            return;
         }
+        setPatientData(loadedData);
+        if (loadedData.impersonateList) {
+            setImpersonateOptions(
+                loadedData.impersonateList.map((tuple_data) => { return { label: tuple_data[0], value: tuple_data[1]}})
+            );
+        }
+        setAnimating(false);
+        setLoading(false);
+    }, [removeCookie])
+
+    React.useEffect(() => {
         if (cookies.token && !patientData) {
             setLoading(true);
             loadData();
         }
-    }, [cookies.token, removeCookie, patientData]);
+    }, [cookies.token, removeCookie, patientData, loadData]);
 
 
     const loadDataForUser = async (selectedUser) => {
@@ -83,6 +86,7 @@ const Home = () => {
     }
 
     const validDoseWindows = React.useMemo(() => {
+        console.log("recomputing")
         if (editingDoseWindow === null) {
             return true; // if you're not editing anything you're valid
         };
@@ -91,6 +95,9 @@ const Home = () => {
         };
         const editingStartTime = nextDayConversion(DateTime.utc(2021, 5, 1, editingDoseWindow.start_hour, editingDoseWindow.start_minute).setZone("local").set({month: 5, day: 1}));
         const editingEndTime = nextDayConversion(DateTime.utc(2021, 5, 1, editingDoseWindow.end_hour, editingDoseWindow.end_minute).setZone("local").set({month: 5, day: 1}));
+        if (editingEndTime < editingStartTime.plus({minutes: 30})) {
+            return false; // dose window is too short
+        }
         for (const dw of patientData.doseWindows) {
             if (dw.id === editingDoseWindow.id) {
                 continue;  // we don't compare to the one we're editing
@@ -105,33 +112,61 @@ const Home = () => {
             }
         }
         return true;
-    }, [editingDoseWindow, patientData])
+    }, [editingDoseWindow, patientData]);
 
-    // TODO: start here
+    const currentTimeOfDay = React.useMemo(() => {
+        const currentTime = DateTime.local();
+        if (currentTime.hour > 4 && currentTime.hour < 12) {
+            return "morning";
+        } else if (currentTime.hour > 12 && currentTime.hour < 18) {
+            return "afternoon";
+        } else {
+            return "evening"
+        }
+    }, []);
+
     const renderDoseWindowEditFields = React.useCallback(() => {
         const startTime = DateTime.utc(2021, 5, 1, editingDoseWindow.start_hour, editingDoseWindow.start_minute);
         const endTime = DateTime.utc(2021, 5, 1, editingDoseWindow.end_hour, editingDoseWindow.end_minute);
         return (
             <>
-                <TimeInput value={startTime.setZone('local')} onChangeTime={
+                <TimeInput value={startTime.setZone('local')} color="dark-3" onChangeTime={
                     (newTime) => {
                         const newDwTime = DateTime.local(2021, 5, 1, newTime.hour, newTime.minute).setZone("UTC");
                         setEditingDoseWindow({...editingDoseWindow, start_hour: newDwTime.hour, start_minute: newDwTime.minute});
                     }}
                 />
-                <TimeInput value={endTime.setZone('local')} onChangeTime={
+                <TimeInput value={endTime.setZone('local')} color="dark-3" onChangeTime={
                     (newTime) => {
+                        console.log(`changed time to ${JSON.stringify(newTime)}`)
                         const newDwTime = DateTime.local(2021, 5, 1, newTime.hour, newTime.minute).setZone("UTC");
                         setEditingDoseWindow({...editingDoseWindow, end_hour: newDwTime.hour, end_minute: newDwTime.minute});
                     }}
                 />
-                {<Button onClick={() => {updateDoseWindow(editingDoseWindow)}} label="Update" disabled={!validDoseWindows}/>}
+                {<AnimatingButton
+                    onClick={() => {
+                        setAnimating(true);
+                        updateDoseWindow(editingDoseWindow);
+                        loadData();
+                        setEditingDoseWindow(null);
+                    }}
+                    label={validDoseWindows ? "Update" : "Invalid dose window"}
+                    disabled={!validDoseWindows}
+                    animating={animating}
+                />}
             </>
         )
-    }, [editingDoseWindow, validDoseWindows]);
+    }, [animating, editingDoseWindow, loadData, validDoseWindows]);
 
     if (!cookies.token) {
         return <Redirect to="/login"/>;
+    }
+
+    const randomChoice = (arr) => {
+        return arr[Math.floor(arr.length * Math.random())];
+    }
+    const randomHeaderEmoji = () =>  {
+        return randomChoice(["💫", "🌈", "🌱", "🏆", "📈", "💎", "💡", "🔆", "🔔"])
     }
 
     return (
@@ -148,10 +183,10 @@ const Home = () => {
                 :
                 <>
                     <Box align="center">
-                        <Heading size="small">Good morning, Peter ☀️</Heading>
+                        <Heading size="small">Good {currentTimeOfDay}, {patientData.patientName}.</Heading>
                     </Box>
                     <Box>
-                        {true ?
+                        {patientData.doseToTakeNow ?
                             <Box
                                 align="center"
                                 background={{"color":"status-warning", "dark": true}}
@@ -160,20 +195,17 @@ const Home = () => {
                                 pad={{vertical: "medium"}}
                                 animation={{"type":"pulse","size":"medium","duration":2000}}
                             >
-                                <Paragraph alignSelf="center" margin={{top: "none"}}>Dose to take now!</Paragraph>
-                                <Box direction="row" justify="between" gap="medium">
-                                    <Button label="Take" icon={<CheckboxSelected/>} primary/>
-                                    <Button label="Skip"/>
-                                </Box>
+                                <Paragraph alignSelf="center" margin={{vertical: "none"}}>Dose to take now!</Paragraph>
                             </Box>
                             :
-                            <Box align="center" background={{"color":"status-ok", "dark": true}} round="medium" margin={{horizontal: "large"}}>
-                                <Paragraph>You're all clear.</Paragraph>
+                            <Box align="center" background={{"color":"brand", "dark": true}} round="medium" margin={{horizontal: "large"}}>
+                                <Paragraph>No doses to take right now. {randomHeaderEmoji()}</Paragraph>
                             </Box>
                         }
                     </Box>
                     <Box margin={{vertical: "medium"}} pad={{horizontal: "large"}}>
                         <DropButton
+                            icon={<CircleInformation/>}
                             label="How do I use Coherence?"
                             dropContent={
                                 <Box pad={{horizontal: "small"}}>
@@ -214,9 +246,10 @@ const Home = () => {
                                 const dt = DateTime.fromISO(date);
                                 setSelectedDay(dt.day);
                             }}
-                            showAdjacentDays={true}
+                            showAdjacentDays={false}
                             bounds={dateRange.map((date) => {return date.toString()})}
                             children={renderDay}
+                            daysOfWeek={true}
                         />
                     </Box>
                     {selectedDay && (
@@ -249,7 +282,7 @@ const Home = () => {
                             </Box>
                         </Layer>
                     )}
-                    <Box align="center">
+                    <Box align="center" pad={{vertical: "medium"}} margin={{horizontal: "xlarge"}} border="bottom">
                         <Paragraph textAlign="center" margin={{vertical: "none"}}>Dose windows</Paragraph>
                             {
                                 patientData.doseWindows.map((dw) => {
@@ -286,6 +319,30 @@ const Home = () => {
                             </Box>
                         </Layer>
                     )}
+                    <Box align="center" pad={{vertical: "medium"}}>
+                        <Paragraph textAlign="center" margin={{vertical: "none"}}>Pause / resume Coherence</Paragraph>
+                        <Paragraph size="small" color="dark-3">Coherence is currently {patientData.pausedService ? "paused" : "active"}.</Paragraph>
+                        <AnimatingButton
+                            background={patientData.pausedService ? {"dark": true} : null}
+                            animating={animating}
+                            style={{padding: "10px"}}
+                            primary={patientData.pausedService}
+                            // primary={patientData.pausedService}
+                            onClick={async () => {
+                                setAnimating(true);
+                                if (patientData.pausedService) {
+                                    await resumeUser();
+                                } else {
+                                    await pauseUser();
+                                }
+                                loadData();
+                            }}>{patientData.pausedService ? "Resume" : "Pause"} Coherence</AnimatingButton>
+                        {patientData.pausedService ? <Paragraph size="small" color="status-warning" textAlign="center">While Coherence is paused, we can't respond to any texts you send us, or remind you about your medications.</Paragraph> : null}
+                    </Box>
+                    <Box align="center" pad={{vertical: "medium"}} margin={{horizontal: "xlarge"}} border="top">
+                    <Paragraph textAlign="center" margin={{vertical: "none"}}>Need help with anything?</Paragraph>
+                    <Paragraph size="small" color="dark-3">Our customer service is just a text away at (650) 667-1146. Reach out any time and we'll get back to you in a few hours!</Paragraph>
+                    </Box>
                 </>
             }
 

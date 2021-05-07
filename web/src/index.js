@@ -6,10 +6,29 @@ import reportWebVitals from './reportWebVitals';
 import { CookiesProvider } from 'react-cookie';
 import { Grommet } from "grommet";
 
+const grommetTheme = {
+  global: {
+    colors: {
+      brand: "#002864",
+      text: {light: "#002864"},
+      paragraph: {light: "#002864"},
+      background: "#FFF"
+    }
+  },
+  spinner: {
+    container: {
+      color: {
+        light: "#002864",
+        dark: "FFF"
+      }
+    }
+  }
+}
+
 ReactDOM.render(
   <React.StrictMode>
     <CookiesProvider>
-      <Grommet>
+      <Grommet theme={grommetTheme} themeMode="light">
         <App />
       </Grommet>
     </CookiesProvider>

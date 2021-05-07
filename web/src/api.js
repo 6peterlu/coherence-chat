@@ -77,6 +77,16 @@ export const pullPatientDataForNumber = async (phoneNumber) => {
 }
 
 export const updateDoseWindow = async (updatedDoseWindow) => {
-  const response = await post("doseWindow/update", { updatedDoseWindow });
+  const response = await post("doseWindow/update/new", { updatedDoseWindow });
+  return response;
+}
+
+export const pauseUser = async () => {
+  const response = await post("user/pause/new");
+  return response;
+}
+
+export const resumeUser = async () => {
+  const response = await post("user/resume/new");
   return response;
 }

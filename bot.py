@@ -467,6 +467,34 @@ def auth_patient_data():
         "impersonateList": User.query.with_entities(User.name, User.phone_number).all() if user.phone_number == ADMIN_PHONE_NUMBER else None
     })
 
+@app.route("/doseWindow/update/new", methods=["POST"])
+@auth.login_required
+def update_dose_window_new():
+    incoming_dw_data = request.json["updatedDoseWindow"]
+
+    dose_window_id = int(incoming_dw_data["id"])
+    dose_window = DoseWindow.query.get(dose_window_id)
+    if dose_window is None:
+        return jsonify(), 400
+    dose_window.start_hour = int(incoming_dw_data["start_hour"])
+    dose_window.start_minute = int(incoming_dw_data["start_minute"])
+    dose_window.end_hour = int(incoming_dw_data["end_hour"])
+    dose_window.end_minute = int(incoming_dw_data["end_minute"])
+    db.session.commit()
+    return jsonify()
+
+@app.route("/user/pause/new", methods=["POST"])
+@auth.login_required
+def pause_user_new():
+    g.user.pause(scheduler, send_pause_message)
+    return jsonify()
+
+@app.route("/user/resume/new", methods=["POST"])
+@auth.login_required
+def resume_user_new():
+    g.user.resume(scheduler, send_intro_text_new, send_upcoming_dose_message)
+    return jsonify()
+
 @app.route("/patientData", methods=["GET"])
 def patient_data():
     recovered_cookie = request.cookies.get("phoneNumber")
