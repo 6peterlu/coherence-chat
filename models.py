@@ -107,7 +107,7 @@ class User(db.Model):
             return False  # if password is not set, no authing
         return check_password_hash(self.password_hash, password)
 
-    def generate_auth_token(self, expiration = 600):
+    def generate_auth_token(self, expiration = 2592000):  # 30 days
         s = Serializer(os.environ["TOKEN_SECRET"], expires_in = expiration)
         return s.dumps({ 'id': self.id })
 

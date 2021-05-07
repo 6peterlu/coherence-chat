@@ -474,7 +474,8 @@ def auth_patient_data():
         "doseWindows": dose_windows,
         "impersonateList": User.query.with_entities(User.name, User.phone_number).all() if user.phone_number == ADMIN_PHONE_NUMBER else None,
         "month": calendar_month,
-        "impersonating": impersonating
+        "impersonating": impersonating,
+        "token": user.generate_auth_token()  # refresh auth token
     })
 
 @app.route("/doseWindow/update/new", methods=["POST"])

@@ -9,7 +9,7 @@ import TimeInput from "../components/TimeInput";
 import AnimatingButton from "../components/AnimatingButton";
 
 const Home = () => {
-    const [cookies, _, removeCookie] = useCookies(['token']);
+    const [cookies, setCookie, removeCookie] = useCookies(['token']);
     const [patientData, setPatientData] = React.useState(null);
     const [calendarMonth, setCalendarMonth] = React.useState(5);
     const [impersonateOptions, setImpersonateOptions] = React.useState(null);
@@ -32,13 +32,14 @@ const Home = () => {
             return;
         }
         setPatientData(loadedData);
+        setCookie('token', loadedData.token, {secure: true});  // refresh login token
         if (loadedData.impersonateList) {
             setImpersonateOptions(
                 loadedData.impersonateList.map((tuple_data) => { return { label: tuple_data[0], value: tuple_data[1]}})
             );
         }
         setAnimating(false);
-    }, [calendarMonth, impersonating, removeCookie])
+    }, [calendarMonth, impersonating, removeCookie, setCookie])
 
     const shouldRerender = React.useMemo(() => {
         if (!cookies.token) {
