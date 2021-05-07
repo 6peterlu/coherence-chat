@@ -1,0 +1,381 @@
+<head>
+</head>
+<body>
+    <h1 id="header"></h1>
+    <button onclick="refreshData()">Pull data</button>
+    <button onclick="toggleOnlineStatus()" id="onlineToggleButton">Go online</button>
+    <div id="overviewDiv" style="display:flex; flex-direction: row; justify-content: space-between;">
+        <div>
+            <p>Job list:</p>
+            <div id="jobListDiv" style="flex:2; max-height:400px; overflow-y: scroll;"></div>
+        </div>
+        <div>
+            <p>Recent events:</p>
+            <div id="eventListDiv" style="flex:1; max-height:400px; overflow-y: scroll;"></div>
+        </div>
+    </div>
+    <div>
+        <input id="newUserPhoneNumber" type="number" placeholder="3604508655"/>
+        <input id="newUserName" placeholder="name"/>
+        <button id="createNewUserButton" onclick="createNewUser()">Create new user</button>
+    </div>
+    <div id="userDetailedData"></div>
+    <script defer>
+        const initDetails = {
+            method: 'get',
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow_Methods": "GET",
+                "Access-Control_Allow_Headers": "*",
+                "Cache-Control": "no-cache"
+            },
+            mode: "cors"
+        };
+        const apiURL = "https://coherence-chat.herokuapp.com";
+        // HTTP helpers
+        const get = async (route, queryArgs) => {
+            const queryArgsList = [];
+            for (const arg in queryArgs) {
+                queryArgsList.push(`${arg}=${queryArgs[arg]}`);
+            }
+            const queryString = queryArgsList.length > 0 ? `?${queryArgsList.join("&")}` : "";
+            return await fetch(`${apiURL}/${route}${queryString}`, initDetails);
+        }
+        const post = async (route, body) => {
+            const initDetails = {
+                method: 'post',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "POST",
+                    "Access-Control_Allow_Headers": "*",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors",
+                body: JSON.stringify(body)
+            };
+            return await fetch(`${apiURL}/${route}`, initDetails);
+        }
+        // we can't use delete, its reserved.
+        async function httpDelete(route, body) {
+            const initDetails = {
+                method: 'delete',
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow_Methods": "DELETE",
+                    "Access-Control_Allow_Headers": "*",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-cache"
+                },
+                mode: "cors",
+                body: JSON.stringify(body)
+            };
+            return await fetch(`${apiURL}/${route}`, initDetails);
+        }
+        function checkTime(i) {
+            if (i < 10) {
+                i = "0" + i;
+            }
+            return i;
+        }
+
+        function convertTZ(date, tzString) {
+            return new Date((typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: tzString}));
+        }
+
+        function renderJobs(jobData) {
+            const jobComparator = (job1, job2) => {
+                if (job1.name > job2.name) {
+                    return 1;
+                }
+                if (job2.name > job1.name) {
+                    return -1;
+                }
+                return 0;
+            }
+            const sortedJobList = jobData.sort(jobComparator);
+            const rows = sortedJobList.map(job => {
+                if (job.trigger === "interval") {
+                    return `
+                        <li>
+                            <p style="display:inline">${job.name}:${job.trigger}:${convertTZ(job.start_date, "US/Pacific")}</p>
+                            <button onclick="deleteJob(\'${job.id}\')">delete job</button>
+                        </li>
+                    `
+                } else {
+                    return `
+                        <li>
+                            <p style="display:inline">${job.name}:${job.trigger}:${convertTZ(job.run_date)}</p>
+                            <button onclick="deleteJob(\'${job.id}\')">delete job</button>
+                        </li>
+                    `
+                }
+            });
+            const html = `<ul>${rows.join("")}</ul>`;
+            const jobListDiv = document.getElementById("jobListDiv");
+            jobListDiv.innerHTML = html;
+        }
+
+        function deleteJob(id) {
+            httpDelete(`scheduler/jobs/${id}`, {}).then(() => {
+                refreshData();
+            })
+        }
+        const renderUser = (userData) => {
+            let htmlOut = "<div style='margin: 10px; padding: 10px; background-color: #8ad1c2; display: flex; flex-direction: row; justify-content: space-between;'>";
+            // user data div
+            htmlOut += "<div>";
+            htmlOut += "<p style='font-weight:bold;'>Name</p>";
+            htmlOut += `
+                <div style='display: flex; flex-direction: row; ${userData.user.manual_takeover ? 'background-color: #bd5c59' : ''}'>
+                    <p style="padding-left: 20px;">${userData.user.id} | ${userData.user.name}: ${userData.user.phone_number}</p>
+                    <button style="margin: 10px;" id="manualTakeover-${userData.user.id}" onclick=toggleManualTakeover(\'${userData.user.id}\')>${userData.user.manual_takeover ? 'Stop taking over user' : 'Manually takeover user' }</button>
+                    <button style="margin: 10px;" id="pause-${userData.user.id}"
+                        onclick=${userData.user.paused  ? `resumeUser(\'${userData.user.id}\')` : `pauseUser(\'${userData.user.id}\')`}>
+                        ${userData.user.paused ? 'Resume user' : 'Pause user' }
+                    </button>
+                </div>
+            `;
+            htmlOut += `
+                <p style='font-weight:bold;'>Dose windows</p>
+                <button onclick="addDoseWindow(\'${userData.user.id}\')">Add dose window</button>
+            `;
+            for (const doseWindow of userData.dose_windows) {
+                let doseStartTime = new Date();
+                let doseEndTime = new Date();
+                doseStartTime.setUTCHours(doseWindow.start_hour, doseWindow.start_minute)
+                doseEndTime.setUTCHours(doseWindow.end_hour, doseWindow.end_minute)
+                htmlOut += `<div style='display: flex; flex-direction: row; ${doseWindow.action_required ? 'background-color: #bd5c59' : ''}'>`;
+                htmlOut += `
+                    <button onclick="deactivateDoseWindow(\'${doseWindow.id}\')">X</button>
+                    <p id="doseTimeDisplay-${doseWindow.id}">${doseWindow.id} | ${doseStartTime.getHours()}:${checkTime(doseStartTime.getMinutes())}->${doseEndTime.getHours()}:${checkTime(doseEndTime.getMinutes())}</p>
+                    <div id="doseWindowEditing-${doseWindow.id}" style="display:none; flex-direction:column;">
+                        <input type="time" id="updatedDoseStartTime-${doseWindow.id}" value="${checkTime(doseStartTime.getHours())}:${checkTime(doseStartTime.getMinutes())}"/>
+                        <input type="time" id="updatedDoseEndTime-${doseWindow.id}" value="${checkTime(doseEndTime.getHours())}:${checkTime(doseEndTime.getMinutes())}"/>
+                        <button id="updateDoseWindow-${doseWindow.id}" onclick=updateDoseWindow(\'${doseWindow.id}\')>Save changes</button>
+                    </div>
+                    <button id="editDoseWindow-${doseWindow.id}" onclick="editDoseWindow(\'${doseWindow.id}\')" style="margin: 10px;" onclick>Edit dose window</button>
+                `
+                htmlOut += `
+                    <div style="padding: 5px; display: flex; flex-direction: row;">
+                        <select name="reminderType-${doseWindow.id}" id='reminderType-${doseWindow.id}' style="margin: 5px;">
+                            <option value="absent">absent</option>
+                            <option value="followup">followup</option>
+                            <option value="initial">initial</option>
+                        </select>
+                        <input id="manualReminderTime-${doseWindow.id}" type="datetime-local" style="margin-top: 5px; margin-bottom: 5px; padding-left: 5px;" placeholder="2018-06-12T19:30"/>
+                        <button id="scheduleManualReminder" onclick="scheduleManualReminder(\'${doseWindow.id}\')" style="margin: 5px;">Send manual reminder</button>
+                        <div style="border-left: 2px solid black;">
+                            <select name="eventType-${doseWindow.id}" id='eventType-${doseWindow.id}' style="margin: 5px;">
+                                <option value="take">take</option>
+                                <option value="skip">skip</option>
+                                <option value="boundary">boundary</option>
+                            </select>
+                            <input id="manualEventTime-${doseWindow.id}" type="datetime-local" style="margin: 5px;" placeholder="2018-06-12T19:30"/>
+                            <button id="createEvent" onclick="createEventLog(\'${doseWindow.id}\')" style="margin: 5px;">Create event</button>
+                        </div>
+                    </div>
+                `;
+                htmlOut += "</div>";
+                htmlOut += `<p style="padding-left: 40px;">Medications: ${doseWindow.medications.map((medication) => {return `${medication.id} | ${medication.medication_name != "" ? medication.medication_name : "No name provided"}`}).join(", ")}`
+            }
+            htmlOut += "</div>";
+            // controls div
+            htmlOut += `
+                <div>
+                    <div style="margin: 5px;">
+                        <textarea id="customTextMessage-${userData.user.id}" placeholder="Say something..."></textarea>
+                        <button onclick="sendCustomText(\'${userData.user.id}\', '${userData.user.phone_number}')">Send text</button>
+                    </div>
+                    <div style="margin: 5px;">
+                        <div style="display:flex; flex-direction:row;">
+                            <input id="loadTextDayLimit-${userData.user.id}" placeholder="Days to load" type="number"/>
+                            <button onclick="loadTextConversation(\'${userData.user.id}\', '${userData.user.phone_number}')">Load text conversation</button>
+                        </div>
+                        <div id="conversationHistory-${userData.user.id}" style="max-width: 400px; max-height: 400px; overflow-y: scroll;""></div>
+                    </div>
+                </div>
+            `;
+            return htmlOut;
+        }
+        const createNewUser = () => {
+            const phoneNumber = document.getElementById("newUserPhoneNumber").value;
+            const name = document.getElementById("newUserName").value;
+            const createButton = document.getElementById("createNewUserButton");
+            createButton.disabled = true;
+            createButton.innerHTML = "creating new user...";
+            post("admin/createUser", { phoneNumber, name }).then(result => {
+                refreshData();
+            });
+        }
+        const editDoseWindow = (doseWindowId) => {
+            const doseHeader = document.getElementById(`doseTimeDisplay-${doseWindowId}`);
+            const doseEditingWindow = document.getElementById(`doseWindowEditing-${doseWindowId}`);
+            doseHeader.style.display = 'none';
+            doseEditingWindow.style.display = 'flex';
+            const editButton = document.getElementById(`editDoseWindow-${doseWindowId}`);
+            editButton.onclick = () => {stopEditingDoseWindow(doseWindowId)};
+            editButton.innerHTML = "Stop editing dose window";
+        }
+        const stopEditingDoseWindow = (doseWindowId) => {
+            const doseHeader = document.getElementById(`doseTimeDisplay-${doseWindowId}`);
+            const doseEditingWindow = document.getElementById(`doseWindowEditing-${doseWindowId}`);
+            doseHeader.style.display = 'inline';  // p tag
+            doseEditingWindow.style.display = 'none';
+            const editButton = document.getElementById(`editDoseWindow-${doseWindowId}`);
+            editButton.onclick = () => {editDoseWindow(doseWindowId)};
+            editButton.innerHTML = "Edit dose window";
+        }
+        const updateDoseWindow = (doseWindowId) => {
+            const startTime = document.getElementById(`updatedDoseStartTime-${doseWindowId}`).value;
+            const endTime = document.getElementById(`updatedDoseEndTime-${doseWindowId}`).value;
+            const splitStartTime = startTime.split(":");
+            const splitEndTime = endTime.split(":");
+            const startHour = (parseInt(splitStartTime[0]) + 7) % 24;  // convert to UTC (only needs to be done because admin has no user account)
+            const startMinute = parseInt(splitStartTime[1]);
+            const endHour = (parseInt(splitEndTime[0]) + 7) % 24;
+            console.log(endHour);
+            const endMinute = parseInt(splitEndTime[1]);
+            post("admin/editDoseWindow", { startHour, startMinute, endHour, endMinute, doseWindowId }).then(response => response.json()).then(result => {
+                refreshData();
+            });
+        }
+        const addDoseWindow = (userId) => {
+            post("admin/createDoseWindow", { userId }).then(response => response.json()).then(result => {
+                refreshData();
+            });
+        }
+        const deactivateDoseWindow = (doseWindowId) => {
+            post("admin/deactivateDoseWindow", { doseWindowId }).then(response => response.json()).then(result => {
+                refreshData();
+            });
+        }
+        const refreshData = () => {
+            get("admin/everything", {}).then(response => response.json()).then(result => {
+                const userDetailedDataDiv = document.getElementById("userDetailedData");
+                const portedUsers = [];
+                userDetailedDataDiv.innerHTML = '';
+                for (const userData of result.users) {
+                    portedUsers.push(userData.user.name);
+                    userDetailedDataDiv.innerHTML += renderUser(userData);
+                }
+                // render event list
+                const eventListDiv = document.getElementById("eventListDiv");
+                eventListDiv.innerHTML = '';
+                for (const event of result.events) {
+                    eventListDiv.innerHTML += `
+                        <div style="display:flex; flex-direction:row;">
+                            <button onclick="deleteEvent(\'${event.id}\')" style="margin:10px;">Delete event</button>
+                            <p>${event.user.name} | dw${event.dose_window ? event.dose_window.id : null}: ${event.event_type} / ${event.event_time}: ${event.description}</p>
+                        </div>
+                    `;
+                }
+
+                const onlineButton = document.getElementById("onlineToggleButton")
+                onlineButton.innerHTML = result.online ? "Go offline" : "Go online";
+                onlineButton.disabled = false;
+                const createUserButton = document.getElementById("createNewUserButton");
+                createUserButton.disabled = false;
+                createUserButton.innerHTML = "Create new user";
+            });
+            get("scheduler/jobs", {}).then(response => response.json()).then(result => {
+                renderJobs(result);
+            })
+        }
+        const toggleManualTakeover = (userId) => {
+            const manualTakeoverButton = document.getElementById(`manualTakeover-${userId}`);
+            manualTakeoverButton.innerHTML = "switching modes..."
+            manualTakeoverButton.disabled = true;
+            post("admin/manualTakeover", { userId }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
+        }
+        const pauseUser = (userId) => {
+            const pauseUserButton = document.getElementById(`pause-${userId}`);
+            pauseUserButton.innerHTML = "pausing..."
+            pauseUserButton.disabled = true;
+            post("admin/pauseUser", { userId }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
+        }
+        const resumeUser = (userId) => {
+            const pauseUserButton = document.getElementById(`pause-${userId}`);
+            pauseUserButton.innerHTML = "resuming..."
+            pauseUserButton.disabled = true;
+            post("admin/resumeUser", { userId }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
+        }
+        const sendCustomText = (userId, phoneNumber) => {
+            const text = document.getElementById(`customTextMessage-${userId}`).value;
+            post("admin/text", { phoneNumber, text });
+        }
+        const loadTextConversation = (userId, phoneNumber) => {
+            const daysToPull = document.getElementById(`loadTextDayLimit-${userId}`).value;
+            if (daysToPull) {
+                get("admin/messages", { phoneNumber, days: daysToPull }).then(response => response.json()).then(result => {
+                    const rows = result.map(message => {
+                        return `
+                            <li>
+                                <p style="color:${message.sender === 'them' ? 'blue' : 'black'}">${message.date_sent}/${message.sender}: ${message.body}</p>
+                            </li>
+                        `
+                    });
+                    const html = `<ul>${rows.join("")}</ul>`;
+                    document.getElementById(`conversationHistory-${userId}`).innerHTML = html;
+                });
+            };
+        }
+        const sendManualReminder = (doseWindowId) => {
+            const reminderType = document.getElementById(`reminderType-${doseWindow.id}`).value;
+            const manualTime = document.getElementById(`manualEventTime-${doseWindow.id}`).value;
+            post("manual", { reminderType, doseWindowId, manualTime }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
+        }
+        const toggleOnlineStatus = () => {
+            const onlineButton = document.getElementById("onlineToggleButton");
+            onlineButton.innerHTML = "switching modes..."
+            onlineButton.disabled = true;
+            post("admin/online", {}).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
+        }
+        const scheduleManualReminder = (doseWindowId) => {
+            const reminderType = document.getElementById(`reminderType-${doseWindowId}`).value;
+            const manualTime = document.getElementById(`manualReminderTime-${doseWindowId}`).value;
+            post("admin/manual", { reminderType, doseWindowId, manualTime }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
+        }
+        const createEventLog = (doseWindowId) => {
+            const eventType = document.getElementById(`eventType-${doseWindowId}`).value;
+            const manualTime = document.getElementById(`manualEventTime-${doseWindowId}`).value;
+            post("admin/manual/event", { doseWindowId, manualTime, eventType }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
+        }
+        const deleteEvent = (eventId) => {
+            post("admin/manual/event/delete", { eventId }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                }
+            );
+        }
+        refreshData();
+    </script>
+</body>

@@ -1,3 +1,4 @@
+from posix import CLD_EXITED
 from flask import Flask, request, jsonify, send_from_directory, g
 from sqlalchemy.sql.expression import false
 from flask_cors import CORS
@@ -28,7 +29,7 @@ from models import (
 )
 
 from models import db
-from nlp import segment_message
+from nlp import segment_message, get_datetime_obj_from_string
 
 from ai import get_reminder_time_within_range
 
@@ -67,15 +68,21 @@ from constants import (
     BOUNDARY_MSG,
     CLINICAL_BOUNDARY_MSG,
     CONFIRMATION_MSG,
+    COULDNT_PARSE_DATE,
+    COULDNT_PARSE_NUMBER,
     FUTURE_MESSAGE_SUFFIXES,
     INITIAL_MSGS,
     FOLLOWUP_MSGS,
     INITIAL_SUFFIXES,
     MANUAL_TEXT_NEEDED_MSG,
+    ONBOARDING_COMPLETE,
     PAUSE_MESSAGE,
     REMINDER_OUT_OF_RANGE_MSG,
     REMINDER_TOO_CLOSE_MSG,
     REMINDER_TOO_LATE_MSG,
+    REQUEST_DOSE_WINDOW_COUNT,
+    REQUEST_DOSE_WINDOW_END_TIME,
+    REQUEST_DOSE_WINDOW_START_TIME,
     REQUEST_WEBSITE,
     SECRET_CODE_MESSAGE,
     SKIP_MSG,
@@ -170,6 +177,11 @@ client = Client(account_sid, auth_token)
 # initialize scheduler
 scheduler = APScheduler()
 
+def get_random_emoji():
+    return random.choice(["💫", "🌈", "🌱", "🏆", "💎", "💡", "🔆", "(:", "☺️", "👍", "😇", "😊"])
+
+def append_emoji_suffix(input_str):
+    return f"{input_str} {get_random_emoji()}"
 # not calling this with false anywhere
 def get_time_now(tzaware=True):
     return datetime.now(pytzutc) if tzaware else datetime.utcnow()
@@ -254,6 +266,11 @@ def add_header(resp):
 
 @app.route("/", methods=["GET"])
 def patient_page():
+    return app.send_static_file('index.html')
+
+@app.errorhandler(404)
+def not_found(_):
+    print("404")
     return app.send_static_file('index.html')
 
 
@@ -345,9 +362,9 @@ def get_current_user_and_dose_window(truncated_phone_number):
 
 
 def translate_time_of_day(dt, user=None):
-    local_time = dt
+    utc_time = pytzutc.localize(dt)
     if user is not None:
-        local_time = dt.astimezone(timezone(user.timezone))
+        local_time = utc_time.astimezone(timezone(user.timezone))
     if local_time.hour > 2 and local_time.hour < 12:
         return "morning"
     elif local_time.hour >= 12 and local_time.hour < 18:
@@ -370,17 +387,21 @@ def get_time_of_day(dose_window_obj):
 @auth.login_required
 def auth_patient_data():
     user = g.user
+    calendar_month = int(request.args.get("calendarMonth"))
+    print(calendar_month)
+    impersonating = False
     if user.phone_number == ADMIN_PHONE_NUMBER:
         impersonating_phone_number = request.args.get("phoneNumber")
         if impersonating_phone_number is not None:
             impersonated_user = User.query.filter_by(phone_number=impersonating_phone_number).one_or_none()
             if impersonated_user is not None:
                 user = impersonated_user
+                impersonating = True
     dose_window = None
     for user_dose_window in user.active_dose_windows:
         if user_dose_window.within_dosing_period():
             dose_window = user_dose_window
-    if request.remote_addr not in IP_BLACKLIST: # blacklist my IPs to reduce data pollution, but not really working
+    if not impersonating:
         log_event_new("patient_portal_load", user.id, dose_window.id if dose_window else None, description=request.remote_addr)
     # grab data from user object
     take_record_events = [
@@ -402,8 +423,8 @@ def auth_patient_data():
     combined_list = list(set(take_record_events) | set(user_driven_events))
     relevant_events = EventLog.query.filter(EventLog.event_type.in_(combined_list), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
     requested_time_window = (
-        timezone(user.timezone).localize(datetime(2021, 5, 1, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None),
-        timezone(user.timezone).localize(datetime(2021, 6, 1, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None)  # christ
+        timezone(user.timezone).localize(datetime(2021, calendar_month, 1, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None),
+        timezone(user.timezone).localize(datetime(2021, calendar_month + 1, 1, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None)  # christ
     )
     dose_history_events = list(filter(lambda event: (
         event.event_type in take_record_events and
@@ -452,8 +473,39 @@ def auth_patient_data():
         "pausedService": bool(paused_service),
         "behaviorLearningScores": behavior_learning_scores,
         "doseWindows": dose_windows,
-        "impersonateList": User.query.with_entities(User.name, User.phone_number).all() if user.phone_number == ADMIN_PHONE_NUMBER else None
+        "impersonateList": User.query.with_entities(User.name, User.phone_number).all() if user.phone_number == ADMIN_PHONE_NUMBER else None,
+        "month": calendar_month,
+        "impersonating": impersonating,
+        "token": g.user.generate_auth_token().decode('ascii')  # refresh auth token
     })
+
+@app.route("/doseWindow/update/new", methods=["POST"])
+@auth.login_required
+def update_dose_window_new():
+    incoming_dw_data = request.json["updatedDoseWindow"]
+
+    dose_window_id = int(incoming_dw_data["id"])
+    dose_window = DoseWindow.query.get(dose_window_id)
+    if dose_window is None:
+        return jsonify(), 400
+    dose_window.start_hour = int(incoming_dw_data["start_hour"])
+    dose_window.start_minute = int(incoming_dw_data["start_minute"])
+    dose_window.end_hour = int(incoming_dw_data["end_hour"])
+    dose_window.end_minute = int(incoming_dw_data["end_minute"])
+    db.session.commit()
+    return jsonify()
+
+@app.route("/user/pause/new", methods=["POST"])
+@auth.login_required
+def pause_user_new():
+    g.user.pause(scheduler, send_pause_message)
+    return jsonify()
+
+@app.route("/user/resume/new", methods=["POST"])
+@auth.login_required
+def resume_user_new():
+    g.user.resume(scheduler, send_intro_text_new, send_upcoming_dose_message)
+    return jsonify()
 
 @app.route("/patientData", methods=["GET"])
 def patient_data():
@@ -648,7 +700,7 @@ def react_login():
     if not password:
         return jsonify({"status": "register"})
     user.set_password(password)
-    return jsonify({"status": "success", "token": user.generate_auth_token()})
+    return jsonify({"status": "success", "token": user.generate_auth_token().decode('ascii')})
 
 @app.route("/logout", methods=["GET"])
 def logout():
@@ -882,7 +934,7 @@ def bot():
                             # text patient confirmation
                             if "NOALERTS" not in os.environ:
                                 client.messages.create(
-                                    body=SKIP_MSG,
+                                    body=f"{SKIP_MSG}{f' {get_random_emoji()}' if incoming_msg['modifiers']['emotion'] == 'smiley' else ''}",
                                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                     to=incoming_phone_number
                                 )
@@ -927,10 +979,14 @@ def bot():
                             if next_alarm_time > get_time_now():
                                 log_event_new("reminder_delay", user.id, dose_window.id, None, description=f"delayed to {next_alarm_time.astimezone(timezone(user.timezone))}")
                                 if "NOALERTS" not in os.environ:
+                                    confirmation_msg = CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(user.timezone)).strftime('%I:%M'))
+                                    if incoming_msg['modifiers']['emotion'] == 'smiley':
+                                        confirmation_msg = append_emoji_suffix(confirmation_msg)
                                     client.messages.create(
-                                        body=REMINDER_TOO_CLOSE_MSG.substitute(
+                                        body=(REMINDER_TOO_CLOSE_MSG.substitute(
                                             time=dose_end_time.astimezone(timezone(user.timezone)).strftime("%I:%M"),
-                                            reminder_time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")
+                                            reminder_time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M"))
+                                            if too_close else confirmation_msg
                                         ),
                                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                         to=incoming_phone_number
@@ -971,11 +1027,14 @@ def bot():
                         if next_alarm_time > get_time_now():
                             log_event_new("reminder_delay", user.id, dose_window.id, None, description=f"delayed to {next_alarm_time.astimezone(timezone(user.timezone))}")
                             if "NOALERTS" not in os.environ:
+                                confirmation_msg = CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M"))
+                                if incoming_msg['modifiers']['emotion'] == 'smiley':
+                                    confirmation_msg = append_emoji_suffix(confirmation_msg)
                                 client.messages.create(
-                                    body=REMINDER_TOO_CLOSE_MSG.substitute(
+                                    body=(REMINDER_TOO_CLOSE_MSG.substitute(
                                         time=dose_end_time.astimezone(timezone(user.timezone)).strftime("%I:%M"),
-                                        reminder_time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")
-                                    ),
+                                        reminder_time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")) if too_close
+                                        else confirmation_msg),
                                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                     to=incoming_phone_number
                                 )
@@ -1013,10 +1072,14 @@ def bot():
                         if next_alarm_time > get_time_now():
                             log_event_new("reminder_delay", user.id, dose_window.id, None, description=f"delayed to {next_alarm_time.astimezone(timezone(user.timezone))}")
                             if "NOALERTS" not in os.environ:
+                                confirmation_msg = CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M"))
+                                if incoming_msg['modifiers']['emotion'] == 'smiley':
+                                    confirmation_msg = append_emoji_suffix(confirmation_msg)
                                 client.messages.create(
-                                    body=REMINDER_TOO_CLOSE_MSG.substitute(
+                                    body=(REMINDER_TOO_CLOSE_MSG.substitute(
                                         time=dose_end_time.astimezone(timezone(user.timezone)).strftime("%I:%M"),
-                                        reminder_time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")) if too_close else CONFIRMATION_MSG.substitute(time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M")
+                                        reminder_time=next_alarm_time.astimezone(timezone(user.timezone)).strftime("%I:%M"))
+                                        if too_close else confirmation_msg
                                     ),
                                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                     to=incoming_phone_number
@@ -1059,8 +1122,11 @@ def bot():
                         if next_alarm_time > get_time_now():
                             log_event_new("reminder_delay", user.id, dose_window.id, None, description=f"delayed to {next_alarm_time.astimezone(timezone(user.timezone))}")
                             if "NOALERTS" not in os.environ:
+                                canned_response = incoming_msg["payload"]["response"]
+                                if incoming_msg['modifiers']['emotion'] == 'smiley':
+                                    canned_response = append_emoji_suffix(canned_response)
                                 client.messages.create(
-                                    body=incoming_msg["payload"]["response"],
+                                    body=canned_response,
                                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                                     to=incoming_phone_number
                                 )
@@ -1089,11 +1155,12 @@ def bot():
                 if incoming_msg["type"] == "thanks":
                     log_event_new("conversational", user.id, None, None, description=incoming_msg["raw"])
                     if "NOALERTS" not in os.environ:
-                        client.messages.create(
-                            body=get_thanks_message(),
-                            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                            to=incoming_phone_number
-                        )
+                        if random.random() < 0.5:  # only send thanks response 50% of the time to reduce staleness
+                            client.messages.create(
+                                body=get_thanks_message(),
+                                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                                to=incoming_phone_number
+                            )
                 if incoming_msg["type"] == "website_request":
                     log_event_new("website_request", user.id, None, None, description=incoming_msg["raw"])
                     if "NOALERTS" not in os.environ:
@@ -1104,6 +1171,89 @@ def bot():
                         )
     if user and user.paused:
         if "NOALERTS" not in os.environ:
+            raw_message = request.values.get('Body', '')
+            onboarding_events = ["confirm_join_trial", "num_dose_windows", "dw_start_time", "dw_end_time"]
+            relevant_events = EventLog.query.filter(EventLog.event_type.in_(onboarding_events), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
+            confirm_join_event = list(filter(lambda e: e.event_type == "confirm_join_trial", relevant_events))
+            num_dose_windows_event = list(filter(lambda e: e.event_type == "num_dose_windows", relevant_events))
+            dose_window_start_events = list(filter(lambda e: e.event_type == "dw_start_time", relevant_events))
+            dose_window_end_events = list(filter(lambda e: e.event_type == "dw_end_time", relevant_events))
+            print(confirm_join_event)
+            print(num_dose_windows_event)
+            print(dose_window_start_events)
+            print(dose_window_end_events)
+            if raw_message.lower() == "c" and not confirm_join_event:
+                new_event = EventLog("confirm_join_trial", user.id, None, None)
+                db.session.add(new_event)
+                db.session.commit()
+                client.messages.create(
+                    body=REQUEST_DOSE_WINDOW_COUNT,
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                    to=incoming_phone_number
+                )
+            elif confirm_join_event and not num_dose_windows_event:
+                try:
+                    print("in here1")
+                    num_dose_windows = int(raw_message)
+                    new_event = EventLog("num_dose_windows", user.id, None, None, description=num_dose_windows)
+                    db.session.add(new_event)
+                    db.session.commit()
+                    client.messages.create(
+                        body=REQUEST_DOSE_WINDOW_START_TIME.substitute(count=1),
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                        to=incoming_phone_number
+                    )
+                except ValueError:
+                    client.messages.create(
+                        body=COULDNT_PARSE_NUMBER,
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                        to=incoming_phone_number
+                    )
+            elif confirm_join_event and num_dose_windows_event:
+                print("in here2")
+                num_dose_windows = int(num_dose_windows_event[0].description)
+                if len(dose_window_end_events) == num_dose_windows:
+                    print("in here3")
+                    pass  # we're done with onboarding flow
+                else:
+                    extracted_dt, _, __ = get_datetime_obj_from_string(raw_message, format_restrictions=True)
+                    if extracted_dt is None:
+                        client.messages.create(
+                            body=COULDNT_PARSE_DATE,
+                            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                            to=incoming_phone_number
+                        )
+                    else:  # date parseable
+                        if len(dose_window_start_events) == num_dose_windows:
+                            print("in here4")
+                            new_event = EventLog("dw_end_time", user.id, None, None)
+                            db.session.add(new_event)
+                            db.session.commit()
+                            client.messages.create(
+                                body=ONBOARDING_COMPLETE,
+                                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                                to=incoming_phone_number
+                            )
+                        elif len(dose_window_end_events) == len(dose_window_start_events):
+                            print("in here5")
+                            new_event = EventLog("dw_start_time", user.id, None, None)
+                            db.session.add(new_event)
+                            db.session.commit()
+                            client.messages.create(
+                                body=REQUEST_DOSE_WINDOW_END_TIME.substitute(count=len(dose_window_start_events) + 1),
+                                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                                to=incoming_phone_number
+                            )
+                        else:
+                            print("in here6")
+                            new_event = EventLog("dw_end_time", user.id, None, None)
+                            db.session.add(new_event)
+                            db.session.commit()
+                            client.messages.create(
+                                body=REQUEST_DOSE_WINDOW_START_TIME.substitute(count=len(dose_window_start_events) + 1),
+                                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                                to=incoming_phone_number
+                            )
             client.messages.create(
                 body=f"User {user.name} has responded to onboarding message.",
                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",

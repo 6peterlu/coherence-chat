@@ -3,7 +3,8 @@ import Cookies from 'universal-cookie';
 
 const cookies = new Cookies();
 
-const apiServer = 'http://localhost:5000';
+console.log(process.env.NODE_ENV);
+const apiServer = process.env.NODE_ENV.trim() === "production" ? "https://coherence-chat.herokuapp.com" : 'http://localhost:5000';
 
 const post = async (route, payload) => {
   const token = cookies.get('token');
@@ -66,12 +67,27 @@ export const login = async (phoneNumber, secretCode, password) => {
     return response;
 }
 
-export const pullPatientData = async () => {
-  const response = await get("patientData/new");
+export const pullPatientData = async (calendarMonth) => {
+  const response = await get("patientData/new", { calendarMonth });
   return response;
 }
 
-export const pullPatientDataForNumber = async (phoneNumber) => {
-  const response = await get("patientData/new", { phoneNumber });
+export const pullPatientDataForNumber = async (phoneNumber, calendarMonth) => {
+  const response = await get("patientData/new", { phoneNumber, calendarMonth });
+  return response;
+}
+
+export const updateDoseWindow = async (updatedDoseWindow) => {
+  const response = await post("doseWindow/update/new", { updatedDoseWindow });
+  return response;
+}
+
+export const pauseUser = async () => {
+  const response = await post("user/pause/new");
+  return response;
+}
+
+export const resumeUser = async () => {
+  const response = await post("user/resume/new");
   return response;
 }

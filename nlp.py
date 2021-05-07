@@ -19,12 +19,13 @@ cal = parsedatetime.Calendar()
 
 USER_TIMEZONE = "US/Pacific"
 
-MEDICATION_TAKEN_REGEX = r'(?:\W|^)(taken|take|t)(?:\W|$)'
+MEDICATION_TAKEN_REGEX = r'(?:\W|^)(taken|take|t|took)(?:\W|$)'
 TIME_DELAY_EXTRACTION_REGEX = r'(\d+)\s*(minutes|minute|mins|min|hours|hour|hr)'
 ABSOLUTE_TIME_EXTRACTION_REGEX = r'(\d+(?:\:\d+)?)\s*(am|pm)?'
 SKIP_REGEX = r'(?:\W|^)(skipped|skipping|skip|s)(?:\W|$)'
 SPECIAL_COMMANDS_REGEX = r'(?:\W|^)(\d+|x)(?:\W|$)'
 WEBSITE_REGEX = r'((?:\W|^)(?:w)(?:\W|$)|website|site)'
+SMILEY_REGEX = r'((?:\(-?\:)|(?:\:-?[\)|D])|[😀|😃|😄|😁|☺️|😊|😇|🙂|😍|🥰|👍])'
 
 COMPUTING_PREFIX = "Computing ideal reminder time...done."
 
@@ -105,6 +106,7 @@ def segment_message(raw_message_str):
     message_segments = []
     processed_msg = raw_message_str.lower().strip()
     excited = "!" in processed_msg
+    smiley_data = re.findall(SMILEY_REGEX, processed_msg)  # grab the smileys before the punctuation goes away
     # remove all punctuation besides : and @
     punctuation = string.punctuation.replace("@", "").replace(":", "")
     processed_msg = processed_msg.translate(str.maketrans("", "", punctuation))
@@ -116,6 +118,10 @@ def segment_message(raw_message_str):
     website_request = re.findall(WEBSITE_REGEX, processed_msg)
 
     extracted_time, am_pm_defined, needs_tz_convert = get_datetime_obj_from_string(processed_msg, expanded_search=True, format_restrictions=True)
+    for thanks_version in THANKS_VERSIONS:
+        if thanks_version in processed_msg:
+            message_segments.append({"type": "thanks", "modifiers": {"emotion": "excited" if excited else "neutral"}})
+            smiley_data = None  # unset smiley if we're already saying thanks
     if taken_data:
         next_alarm_time, am_pm_defined, needs_tz_convert = get_datetime_obj_from_string(processed_msg, expanded_search=False)
         message_body = {"type": "take", "modifiers": {"emotion": "excited" if excited else "neutral"}}
@@ -126,26 +132,24 @@ def segment_message(raw_message_str):
             message_body["payload"] = {"time": next_alarm_time, "am_pm_defined": am_pm_defined, "needs_tz_convert": needs_tz_convert}  # tz_convert is always true, but its here for consistency
         message_segments.append(message_body)
     elif skip_data:
-        message_segments.append({"type": "skip"})
+        message_segments.append({"type": "skip", "modifiers": {"emotion": "smiley" if smiley_data else "neutral"}})
     elif extracted_time is not None:
-        message_segments.append({"type": "requested_alarm_time", "payload": {"time": extracted_time, "am_pm_defined": am_pm_defined, "needs_tz_convert": needs_tz_convert}})
+        message_segments.append({"type": "requested_alarm_time", "payload": {"time": extracted_time, "am_pm_defined": am_pm_defined, "needs_tz_convert": needs_tz_convert}, "modifiers": {"emotion": "smiley" if smiley_data else "neutral"}})
     else:
         if special_commands:
             command = special_commands[0]
             if command not in ['1', '2', '3', 'x']:  # must be a manual minute entry
-                message_segments.append({"type": "delay_minutes", "payload": int(command)})
+                message_segments.append({"type": "delay_minutes", "modifiers": {"emotion": "smiley" if smiley_data else "neutral"}, "payload": int(command)})
             else:
-                message_segments.append({"type": "special", "payload": command})
+                message_segments.append({"type": "special", "modifiers": {"emotion": "smiley" if smiley_data else "neutral"}, "payload": command})
         # still process activities if there are special commands
         for activity in RECOGNIZED_ACTIVITIES:
             if activity in processed_msg:
-                message_segments.append({"type": "activity", "payload": RECOGNIZED_ACTIVITIES[activity]})
+                message_segments.append({"type": "activity", "modifiers": {"emotion": "smiley" if smiley_data else "neutral"}, "payload": RECOGNIZED_ACTIVITIES[activity]})
                 break
         if website_request:
-            message_segments.append({"type": "website_request"})
-    for thanks_version in THANKS_VERSIONS:
-        if thanks_version in processed_msg:
-            message_segments.append({"type": "thanks", "modifiers": {"emotion": "excited" if excited else "neutral"}})
+            message_segments.append({"type": "website_request", "modifiers": {"emotion": "smiley" if smiley_data else "neutral"}})
+
 
     message_segments = [{**message, "raw": raw_message_str} for message in message_segments]
     return message_segments
