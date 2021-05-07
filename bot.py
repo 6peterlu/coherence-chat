@@ -400,7 +400,7 @@ def auth_patient_data():
     for user_dose_window in user.active_dose_windows:
         if user_dose_window.within_dosing_period():
             dose_window = user_dose_window
-    if request.remote_addr not in IP_BLACKLIST: # blacklist my IPs to reduce data pollution, but not really working
+    if not impersonating:
         log_event_new("patient_portal_load", user.id, dose_window.id if dose_window else None, description=request.remote_addr)
     # grab data from user object
     take_record_events = [
