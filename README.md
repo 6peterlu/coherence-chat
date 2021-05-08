@@ -10,6 +10,8 @@ Unit tests:
 
 Before pushing to prod, test with gunicorn locally: `NOALERTS=1 gunicorn -b 0.0.0.0:5000 bot:app --workers 1`
 
+Build the frontend into prod mode with `yarn build` inside the `web/` directory.
+
 Then you can safely push to prod.
 
 ## alembic usage
