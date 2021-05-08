@@ -240,7 +240,7 @@ const Home = () => {
                 <Heading size="small">Good {currentTimeOfDay}{patientData ? `, ${patientData.patientName}` : ""}.</Heading>
             </Box>
             <Box>
-                {patientData && patientData.doseToTakeNow ?
+                {patientData && patientData.takeNow ?
                     <Box
                         align="center"
                         background={{"color":"status-warning", "dark": true}}
