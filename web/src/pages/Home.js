@@ -203,6 +203,16 @@ const Home = () => {
         return <Redirect to="/login"/>;
     }
 
+    const orderDays = (t1, t2) => {
+        if (t1 === t2) {
+            return 0;
+        }
+        if (t1 === "morning" || (t1 === "afternoon" && t2 === "evening")) {
+            return -1;
+        }
+        return 1;
+    }
+
 
     return (
         // <>
@@ -269,7 +279,7 @@ const Home = () => {
                                 <Paragraph size="small">20, 20 min</Paragraph>
                                 <Paragraph size="small">Delay the reminder by 20 minutes</Paragraph>
                                 <Paragraph size="small">W, website, site</Paragraph>
-                                <Paragraph size="small">Delay the reminder by 20 minutes</Paragraph>
+                                <Paragraph size="small">Get the website linke sent to you</Paragraph>
                                 <Paragraph size="small">Eating, going for a walk</Paragraph>
                                 <Paragraph size="small">Tell Coherence you're busy with an activity</Paragraph>
                                 <Paragraph size="small">X</Paragraph>
@@ -313,7 +323,7 @@ const Home = () => {
                         </Box>
                         {
                             patientData.eventData[selectedDay - 1].day_status ?
-                            Object.keys(patientData.eventData[selectedDay - 1].time_of_day).map((key) => {
+                            Object.keys(patientData.eventData[selectedDay - 1].time_of_day).sort(orderDays).map((key) => {
                                 const event = patientData.eventData[selectedDay - 1].time_of_day[key][0];
                                 return (
                                     <>
