@@ -203,6 +203,16 @@ const Home = () => {
         return <Redirect to="/login"/>;
     }
 
+    const orderDays = (t1, t2) => {
+        if (t1 === t2) {
+            return 0;
+        }
+        if (t1 === "morning" || (t1 === "afternoon" && t2 === "evening")) {
+            return -1;
+        }
+        return 1;
+    }
+
 
     return (
         // <>
@@ -313,7 +323,7 @@ const Home = () => {
                         </Box>
                         {
                             patientData.eventData[selectedDay - 1].day_status ?
-                            Object.keys(patientData.eventData[selectedDay - 1].time_of_day).map((key) => {
+                            Object.keys(patientData.eventData[selectedDay - 1].time_of_day).sort(orderDays).map((key) => {
                                 const event = patientData.eventData[selectedDay - 1].time_of_day[key][0];
                                 return (
                                     <>
