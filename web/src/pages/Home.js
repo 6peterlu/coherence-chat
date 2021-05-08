@@ -1,7 +1,7 @@
 import React from "react";
 import { useCookies } from 'react-cookie';
 import { Redirect } from 'react-router-dom';
-import { pauseUser, pullPatientData, pullPatientDataForNumber, resumeUser, updateDoseWindow } from '../api';
+import { deleteDoseWindow, pauseUser, pullPatientData, pullPatientDataForNumber, resumeUser, updateDoseWindow } from '../api';
 import { Box, Button, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select } from "grommet";
 import { Checkmark, CircleInformation, Clear, Close, FormNextLink} from "grommet-icons";
 import { DateTime } from 'luxon';
@@ -16,6 +16,7 @@ const Home = () => {
     const [impersonating, setImpersonating] = React.useState(null);
     const [selectedDay, setSelectedDay] = React.useState(null);
     const [editingDoseWindow, setEditingDoseWindow] = React.useState(null);
+    const [deletingDoseWindow, setDeletingDoseWindow] = React.useState(null);
     const [animating, setAnimating] = React.useState(false);  // this is setting animating for ALL buttons for now
 
     const dateRange = [DateTime.local(2021, 4, 1), DateTime.local(2021, 5, 31)]
@@ -185,10 +186,10 @@ const Home = () => {
                     }}
                 />
                 {<AnimatingButton
-                    onClick={() => {
+                    onClick={async () => {
                         setAnimating(true);
-                        updateDoseWindow(editingDoseWindow);
-                        loadData();
+                        await updateDoseWindow(editingDoseWindow);
+                        await loadData();
                         setEditingDoseWindow(null);
                     }}
                     label={validDoseWindows ? "Update" : "Invalid dose window"}
@@ -349,20 +350,21 @@ const Home = () => {
                     {
                         patientData ? patientData.doseWindows.map((dw) => {
                             const startTime = DateTime.utc(2021, 5, 1, dw.start_hour, dw.start_minute);
-                            // startTime.set
                             const endTime = DateTime.utc(2021, 5, 1, dw.end_hour, dw.end_minute);
                             return (
-                                <Grid key={`doseWindowContainer-${dw.id}`} columns={["small", "xsmall"]} align="center" pad={{horizontal: "large"}} alignContent="center" justifyContent="center" justify="center">
+                                <Grid key={`doseWindowContainer-${dw.id}`} columns={["small", "xsmall", "flex"]} align="center" pad={{horizontal: "large"}} alignContent="center" justifyContent="center" justify="center">
                                     <Box direction="row" align="center">
                                         <Paragraph>{startTime.setZone('local').toLocaleString(DateTime.TIME_SIMPLE)}</Paragraph>
                                         <FormNextLink/>
                                         <Paragraph>{endTime.setZone('local').toLocaleString(DateTime.TIME_SIMPLE)}</Paragraph>
                                     </Box>
                                     <Button label="edit" onClick={() => setEditingDoseWindow(dw)}/>
+                                    <Button onClick={() => setDeletingDoseWindow(dw)}><Close size="small"/></Button>
                                 </Grid>
                             )
                         }) : null
                     }
+                    <Button label="Add dose window" onClick={() => setEditingDoseWindow({start_hour: 0, start_minute:0, end_hour: 0, end_minute: 0})}/>
             </Box>
             {editingDoseWindow && (
                 <Layer
@@ -377,6 +379,34 @@ const Home = () => {
                         </Box>
                         <Box>
                             {renderDoseWindowEditFields(editingDoseWindow)}
+                        </Box>
+                    </Box>
+                </Layer>
+            )}
+            {deletingDoseWindow && (
+                <Layer
+                    onEsc={() => setDeletingDoseWindow(null)}
+                    onClickOutside={() => setDeletingDoseWindow(null)}
+                    responsive={false}
+                >
+                    <Box width="90vw" pad="large">
+                        <Box direction="row" justify="between">
+                            <Paragraph size="large">Confirm delete dose window</Paragraph>
+                            <Button icon={<Close />} onClick={() => setDeletingDoseWindow(null)} />
+                        </Box>
+                        <Box align="center">
+                            <Paragraph margin={{bottom: "none"}}>You're about to delete the dose window</Paragraph>
+                            <Box direction="row" align="center" margin={{bottom: "medium"}}>
+                                <Paragraph>{DateTime.utc(2021, 5, 1, deletingDoseWindow.start_hour, deletingDoseWindow.start_minute).setZone('local').toLocaleString(DateTime.TIME_SIMPLE)}</Paragraph>
+                                <FormNextLink/>
+                                <Paragraph>{DateTime.utc(2021, 5, 1, deletingDoseWindow.end_hour, deletingDoseWindow.end_minute).setZone('local').toLocaleString(DateTime.TIME_SIMPLE)}</Paragraph>
+                            </Box>
+                            <AnimatingButton onClick={async () => {
+                                setAnimating(true);
+                                await deleteDoseWindow(deletingDoseWindow.id)
+                                await loadData();
+                                setDeletingDoseWindow(null);
+                            }} label="Confirm" animating={animating}/>
                         </Box>
                     </Box>
                 </Layer>

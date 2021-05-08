@@ -82,6 +82,11 @@ export const updateDoseWindow = async (updatedDoseWindow) => {
   return response;
 }
 
+export const deleteDoseWindow = async (dwId) => {
+  const response = await post("doseWindow/deactivate/new", { doseWindowId: dwId });
+  return response;
+}
+
 export const pauseUser = async () => {
   const response = await post("user/pause/new");
   return response;
