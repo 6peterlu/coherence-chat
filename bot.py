@@ -1,6 +1,4 @@
-from posix import CLD_EXITED
 from flask import Flask, request, jsonify, send_from_directory, g
-from sqlalchemy.sql.expression import false
 from flask_cors import CORS
 # import Flask-APScheduler
 from flask_apscheduler import APScheduler
@@ -133,8 +131,6 @@ SECRET_CODES = {
 
 ACTIVITY_BUCKET_SIZE_MINUTES = 10
 
-IP_BLACKLIST = ["73.93.153.54", "73.15.102.35", "73.93.154.210"]
-
 logging.basicConfig()
 logging.getLogger('apscheduler').setLevel(logging.DEBUG)
 
@@ -152,7 +148,7 @@ class Config(object):
     SEND_FILE_MAX_AGE_DEFAULT = 0
 
 # create app
-app = Flask(__name__, static_folder='./web/build', static_url_path='/') if "REACT" in os.environ else Flask(__name__)
+app = Flask(__name__, static_folder='./web/build', static_url_path='/')
 app.config.from_object(Config())
 app.wsgi_app = ProxyFix(app.wsgi_app)
 CORS(app)
@@ -507,93 +503,6 @@ def resume_user_new():
     g.user.resume(scheduler, send_intro_text_new, send_upcoming_dose_message)
     return jsonify()
 
-@app.route("/patientData", methods=["GET"])
-def patient_data():
-    recovered_cookie = request.cookies.get("phoneNumber")
-    if recovered_cookie is None:
-        return jsonify()  # empty response if no cookie
-    phone_number = f"+11{recovered_cookie}"
-    if phone_number not in SECRET_CODES:
-        response = jsonify({"error": "The secret code was incorrect. Please double-check that you've entered it correctly."})
-        response.set_cookie("phoneNumber", "", expires=0)
-        return response
-    user, dose_window = get_current_user_and_dose_window(recovered_cookie)
-    if user is not None:
-        if request.remote_addr not in IP_BLACKLIST: # blacklist my IPs to reduce data pollution, but not really working
-            log_event_new("patient_portal_load", user.id, dose_window.id if dose_window else None, description=request.remote_addr)
-        # grab data from user object
-        take_record_events = [
-            "take",
-            "skip",
-            "boundary"
-        ]
-        user_driven_events = [
-            "take",
-            "skip",
-            "paused",
-            "resumed",
-            "user_reported_error",
-            "out_of_range",
-            "not_interpretable",
-            "requested_time_delay",
-            "activity"
-        ]
-        combined_list = list(set(take_record_events) | set(user_driven_events))
-        relevant_events = EventLog.query.filter(EventLog.event_type.in_(combined_list), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
-        requested_time_window = (
-            timezone(user.timezone).localize(datetime(2021, 5, 1, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None),
-            timezone(user.timezone).localize(datetime(2021, 6, 1, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None)  # christ
-        )
-        dose_history_events = list(filter(lambda event: (
-            event.event_type in take_record_events and
-            event.dose_window in user.dose_windows and
-            event.event_time < requested_time_window[1] and
-            event.event_time > requested_time_window[0]
-            ), relevant_events))
-        user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
-        event_data = []
-        current_day = requested_time_window[0]
-        while current_day < requested_time_window[1]:
-            events_of_day = list(filter(
-                lambda event: event.event_time < current_day + timedelta(days=1) and event.event_time > current_day,
-                dose_history_events
-            ))
-            day_status = None
-            daily_event_summary = {"time_of_day":{}}
-            for event in events_of_day:
-                time_of_day = translate_time_of_day(event.event_time, user=user)
-                if time_of_day not in daily_event_summary:
-                    daily_event_summary["time_of_day"][time_of_day] = []
-                if event.event_type == "boundary":
-                    day_status = "missed"
-                    daily_event_summary["time_of_day"][time_of_day].append({"type": "missed"})
-                elif event.event_type == "skip":
-                    if day_status != "missed":
-                        day_status = "skip"
-                    daily_event_summary["time_of_day"][time_of_day].append({"type": "skipped"})
-                else:
-                    daily_event_summary["time_of_day"][time_of_day].append({"type": "taken", "time": event.event_time})
-                    if day_status is None:
-                        day_status = "taken"
-            daily_event_summary["day_status"] = day_status
-            event_data.append(daily_event_summary)
-            current_day += timedelta(days=1)
-
-        paused_service = user.paused
-        behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
-        dose_to_take_now = False if dose_window is None else not dose_window.is_recorded()
-        dose_windows = [DoseWindowSchema().dump(dw) for dw in user.active_dose_windows]
-        return jsonify({
-            "phoneNumber": recovered_cookie,
-            "eventData": event_data,
-            "patientName": user.name,
-            "takeNow": dose_to_take_now,
-            "pausedService": bool(paused_service),
-            "behaviorLearningScores": behavior_learning_scores,
-            "doseWindows": dose_windows
-        })
-    return jsonify(), 401
-
 
 def send_pause_message(user):
     if "NOALERTS" not in os.environ:
@@ -610,57 +519,6 @@ def send_upcoming_dose_message(user, dose_window):
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
             to=f"+1{user.phone_number}"
         )
-
-
-@app.route("/user/pause", methods=["POST"])
-def pause_user():
-    recovered_cookie = request.cookies.get("phoneNumber")
-    user, _ = get_current_user_and_dose_window(recovered_cookie)
-    user.pause(scheduler, send_pause_message)
-
-
-@app.route("/user/resume", methods=["POST"])
-def resume_user():
-    recovered_cookie = request.cookies.get("phoneNumber")
-    user, _ = get_current_user_and_dose_window(recovered_cookie)
-    user.resume(scheduler, send_intro_text_new, send_upcoming_dose_message)
-
-
-@app.route("/login", methods=["POST"])
-def save_phone_number():
-    secret_code = request.json["code"]
-    phone_number = request.json["phoneNumber"]
-    numeric_filter = filter(str.isdigit, phone_number)
-    phone_number = "".join(numeric_filter)
-    if len(phone_number) == 11 and phone_number[0] == "1":
-        phone_number = phone_number[1:]
-    phone_number_formatted = f"+11{phone_number}"
-    if secret_code == str(SECRET_CODES[phone_number_formatted]):
-        out = jsonify()
-        out.set_cookie("phoneNumber", phone_number)
-        if request.remote_addr not in IP_BLACKLIST:
-            user, _ = get_current_user_and_dose_window(phone_number)
-            log_event_new("successful_login", user.id, None, None, description=request.remote_addr)
-        return out
-    return jsonify(), 401
-
-@app.route("/login/requestCode", methods=["POST"])
-def request_secret_code():
-    phone_number = request.json["phoneNumber"]
-    numeric_filter = filter(str.isdigit, phone_number)
-    phone_number = "".join(numeric_filter)
-    if len(phone_number) == 11 and phone_number[0] == "1":
-        phone_number = phone_number[1:]
-    phone_number_formatted = f"+11{phone_number}"
-    if phone_number_formatted in SECRET_CODES:
-        if "NOALERTS" not in os.environ:
-            client.messages.create(
-                body=SECRET_CODE_MESSAGE.substitute(code=SECRET_CODES[phone_number_formatted]),
-                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                to=phone_number_formatted
-            )
-        return jsonify()
-    return jsonify(), 401
 
 
 @app.route("/login/new", methods=["POST"])
@@ -701,13 +559,6 @@ def react_login():
         return jsonify({"status": "register"})
     user.set_password(password)
     return jsonify({"status": "success", "token": user.generate_auth_token().decode('ascii')})
-
-@app.route("/logout", methods=["GET"])
-def logout():
-    out = jsonify()
-    out.set_cookie("phoneNumber", "", expires=0)
-    return out
-
 
 @app.route("/admin", methods=["GET"])
 def new_admin_page():
