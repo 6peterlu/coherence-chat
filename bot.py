@@ -479,9 +479,13 @@ def auth_patient_data():
 @auth.login_required
 def update_dose_window_new():
     incoming_dw_data = request.json["updatedDoseWindow"]
-
-    dose_window_id = int(incoming_dw_data["id"])
-    dose_window = DoseWindow.query.get(dose_window_id)
+    dose_window = None
+    if "id" in incoming_dw_data:
+        dose_window_id = int(incoming_dw_data["id"])
+        dose_window = DoseWindow.query.get(dose_window_id)
+    else:
+        dose_window = DoseWindow(0, 0, 0, 0, g.user.id)  # if no id given, make a new one
+        db.session.add(dose_window)
     if dose_window is None:
         return jsonify(), 400
     dose_window.start_hour = int(incoming_dw_data["start_hour"])
@@ -490,6 +494,18 @@ def update_dose_window_new():
     dose_window.end_minute = int(incoming_dw_data["end_minute"])
     db.session.commit()
     return jsonify()
+
+
+@app.route("/doseWindow/deactivate/new", methods=["POST"])
+@auth.login_required
+def deactivate_dose_window_new():
+    incoming_dw_id = int(request.json["doseWindowId"])
+    dose_window = DoseWindow.query.get(incoming_dw_id)
+    if dose_window is None:
+        return jsonify(), 400
+    dose_window.deactivate(scheduler)
+    return jsonify()
+
 
 @app.route("/user/pause/new", methods=["POST"])
 @auth.login_required
