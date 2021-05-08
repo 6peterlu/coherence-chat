@@ -279,7 +279,7 @@ const Home = () => {
                                 <Paragraph size="small">20, 20 min</Paragraph>
                                 <Paragraph size="small">Delay the reminder by 20 minutes</Paragraph>
                                 <Paragraph size="small">W, website, site</Paragraph>
-                                <Paragraph size="small">Get the website linke sent to you</Paragraph>
+                                <Paragraph size="small">Get the website link sent to you</Paragraph>
                                 <Paragraph size="small">Eating, going for a walk</Paragraph>
                                 <Paragraph size="small">Tell Coherence you're busy with an activity</Paragraph>
                                 <Paragraph size="small">X</Paragraph>
