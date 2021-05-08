@@ -172,12 +172,14 @@ const Home = () => {
         const endTime = DateTime.utc(2021, 5, 1, editingDoseWindow.end_hour, editingDoseWindow.end_minute);
         return (
             <>
+                <Paragraph size="small" margin={{bottom: "none"}}>Start time (earliest time you'll be reminded)</Paragraph>
                 <TimeInput value={startTime.setZone('local')} color="dark-3" onChangeTime={
                     (newTime) => {
                         const newDwTime = DateTime.local(2021, 5, 1, newTime.hour, newTime.minute).setZone("UTC");
                         setEditingDoseWindow({...editingDoseWindow, start_hour: newDwTime.hour, start_minute: newDwTime.minute});
                     }}
                 />
+                <Paragraph size="small" margin={{bottom: "none"}}>End time (latest time you'll be reminded)</Paragraph>
                 <TimeInput value={endTime.setZone('local')} color="dark-3" onChangeTime={
                     (newTime) => {
                         console.log(`changed time to ${JSON.stringify(newTime)}`)
