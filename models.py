@@ -297,7 +297,7 @@ class DoseWindow(db.Model):
             time_now = get_time_now()
             time_to_compare.replace(time_now.year, time_now.month, time_now.day)
         # boundary condition
-        return self.next_end_date - timedelta(days=1) > time_to_compare and self.next_start_date - timedelta(days=1) < time_to_compare
+        return self.next_end_date - timedelta(days=1) > time_to_compare and self.next_start_date - timedelta(days=1) <= time_to_compare
 
 
 
