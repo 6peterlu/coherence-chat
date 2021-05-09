@@ -10,6 +10,7 @@ import tzlocal
 
 from models import (
     EventLog,
+    Online,
     User,
     # schemas
     UserSchema,
@@ -996,3 +997,9 @@ def test_admin_deactivate_dose_window(client, db_session, user_record, medicatio
     })
     assert len(user_record.active_dose_windows) == 0
     assert len(user_record.dose_windows) == 1
+
+def test_admin_manual_takeover(client, db_session, user_record):
+    client.post("/admin/manualTakeover", json={"userId": user_record.id})
+    online_record = Online.query.get(1)
+    assert online_record.online is True
+    assert user_record.manual_takeover is True

@@ -661,6 +661,11 @@ def toggle_manual_takeover_for_user():
     user = User.query.get(user_id)
     if user is not None:
         user.manual_takeover = not user.manual_takeover
+        if user.manual_takeover:  # we took over a user, we have to go online.
+            online_status = get_online_status()
+            if not online_status:
+                online_record = Online.query.get(1)
+                online_record.online = True
     db.session.commit()
     return jsonify()
 
