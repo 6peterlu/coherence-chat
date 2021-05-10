@@ -15,7 +15,7 @@ AFTERNOON_PREFIXES = [
 EVENING_PREFIXES = [
     "Good evening!",
     "Hope you got to catch the sunset today!",
-    "Last medication for the day!"
+    "Hope you're having a good evening."
 ]
 
 TIME_OF_DAY_PREFIX_MAP = {

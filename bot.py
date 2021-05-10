@@ -38,6 +38,8 @@ from apscheduler.events import (
 
 from flask_httpauth import HTTPBasicAuth
 
+from flask_apscheduler.auth import HTTPBasicAuth as SchedulerAuth
+
 
 ALL_EVENTS = [
     "paused",
@@ -134,9 +136,12 @@ ACTIVITY_BUCKET_SIZE_MINUTES = 10
 logging.basicConfig()
 logging.getLogger('apscheduler').setLevel(logging.DEBUG)
 
+auth = HTTPBasicAuth()
+
 # set configuration values
 class Config(object):
     SCHEDULER_API_ENABLED = True
+    SCHEDULER_AUTH = SchedulerAuth()
     SCHEDULER_JOBSTORES = {
         'default': SQLAlchemyJobStore(
             url=os.environ['SQLALCHEMY_DATABASE_URI'],
@@ -153,7 +158,7 @@ app.config.from_object(Config())
 app.wsgi_app = ProxyFix(app.wsgi_app)
 CORS(app)
 
-auth = HTTPBasicAuth()
+
 
 # sqlalchemy db
 db.app = app
@@ -440,7 +445,7 @@ def auth_patient_data():
         daily_event_summary = {"time_of_day":{}}
         for event in events_of_day:
             time_of_day = translate_time_of_day(event.event_time, user=user)
-            if time_of_day not in daily_event_summary:
+            if time_of_day not in daily_event_summary["time_of_day"]:
                 daily_event_summary["time_of_day"][time_of_day] = []
             if event.event_type == "boundary":
                 day_status = "missed"
@@ -582,7 +587,10 @@ def new_admin_page():
 
 
 @app.route("/admin/messages", methods=["GET"])
+@auth.login_required
 def admin_get_messages_for_number():
+    if g.user.phone_number != ADMIN_PHONE_NUMBER:
+        return jsonify(), 401
     query_phone_number = request.args.get("phoneNumber")
     query_days = int(request.args.get("days"))
     date_limit = get_time_now() - timedelta(days=query_days)
@@ -610,7 +618,10 @@ def admin_get_messages_for_number():
 
 
 @app.route("/admin/online", methods=["POST"])
+@auth.login_required
 def admin_online_toggle():
+    if g.user.phone_number != ADMIN_PHONE_NUMBER:
+        return jsonify(), 401
     online_status = get_online_status()
     if online_status:  # is online, we need to clear manual takeover on going offline
         all_users = User.query.filter(User.manual_takeover.is_(True)).all()
@@ -633,7 +644,10 @@ def convert_to_user_local_time(user_obj, dt):
 
 
 @app.route("/admin/everything", methods=["GET"])
+@auth.login_required
 def get_all_admin_data():
+    if g.user.phone_number != ADMIN_PHONE_NUMBER:
+        return jsonify(), 401
     all_users_in_system = User.query.order_by(User.name).all()
     return_dict = {"users": []}
     for user in all_users_in_system:
@@ -656,16 +670,27 @@ def get_all_admin_data():
 
 
 @app.route("/admin/manualTakeover", methods=["POST"])
+@auth.login_required
 def toggle_manual_takeover_for_user():
+    if g.user.phone_number != ADMIN_PHONE_NUMBER:
+        return jsonify(), 401
     user_id = int(request.json["userId"])
     user = User.query.get(user_id)
     if user is not None:
         user.manual_takeover = not user.manual_takeover
+        if user.manual_takeover:  # we took over a user, we have to go online.
+            online_status = get_online_status()
+            if not online_status:
+                online_record = Online.query.get(1)
+                online_record.online = True
     db.session.commit()
     return jsonify()
 
 @app.route("/admin/pauseUser", methods=["POST"])
+@auth.login_required
 def admin_pause_user():
+    if g.user.phone_number != ADMIN_PHONE_NUMBER:
+        return jsonify(), 401
     user_id = int(request.json["userId"])
     user = User.query.get(user_id)
     if user is not None:
@@ -674,7 +699,10 @@ def admin_pause_user():
 
 
 @app.route("/admin/resumeUser", methods=["POST"])
+@auth.login_required
 def admin_resume_user():
+    if g.user.phone_number != ADMIN_PHONE_NUMBER:
+        return jsonify(), 401
     user_id = int(request.json["userId"])
     user = User.query.get(user_id)
     if user is not None:
@@ -1148,7 +1176,10 @@ def text_fallback(phone_number):
 
 # TODO: unit test
 @app.route("/admin/manual", methods=["POST"])
+@auth.login_required
 def manual_send_reminder():
+    if g.user.phone_number != ADMIN_PHONE_NUMBER:
+        return jsonify(), 401
     incoming_data = request.json
     dose_window_id = int(incoming_data["doseWindowId"])
     reminder_type = incoming_data["reminderType"]
@@ -1188,7 +1219,10 @@ def manual_send_reminder():
     return jsonify()
 
 @app.route("/admin/manual/event", methods=["POST"])
+@auth.login_required
 def admin_manually_create_event():
+    if g.user.phone_number != ADMIN_PHONE_NUMBER:
+        return jsonify(), 401
     incoming_data = request.json
     dose_window_id = int(incoming_data["doseWindowId"])
     event_type = incoming_data["eventType"]
@@ -1205,7 +1239,10 @@ def admin_manually_create_event():
     return jsonify()
 
 @app.route("/admin/manual/event/delete", methods=["POST"])
+@auth.login_required
 def admin_manually_delete_event():
+    if g.user.phone_number != ADMIN_PHONE_NUMBER:
+        return jsonify(), 401
     event_id = int(request.json["eventId"])
     event_to_delete = EventLog.query.get(event_id)
     if event_to_delete:
@@ -1214,7 +1251,10 @@ def admin_manually_delete_event():
     return jsonify()
 
 @app.route("/admin/text", methods=["POST"])
+@auth.login_required
 def admin_send_text():
+    if g.user.phone_number != ADMIN_PHONE_NUMBER:
+        return jsonify(), 401
     incoming_data = request.json
     target_phone_number = incoming_data["phoneNumber"]
     text = incoming_data["text"]
@@ -1229,7 +1269,10 @@ def admin_send_text():
     return jsonify()
 
 @app.route("/admin/editDoseWindow", methods=["POST"])
+@auth.login_required
 def admin_edit_dose_window():
+    if g.user.phone_number != ADMIN_PHONE_NUMBER:
+        return jsonify(), 401
     incoming_data = request.json
     start_hour = int(incoming_data["startHour"])
     start_minute = int(incoming_data["startMinute"])
@@ -1245,7 +1288,10 @@ def admin_edit_dose_window():
     return jsonify()
 
 @app.route("/admin/createUser", methods=["POST"])
+@auth.login_required
 def admin_create_user():
+    if g.user.phone_number != ADMIN_PHONE_NUMBER:
+        return jsonify(), 401
     incoming_data = request.json
     phone_number = incoming_data["phoneNumber"]
     name = incoming_data["name"]
@@ -1259,7 +1305,10 @@ def admin_create_user():
     return jsonify()
 
 @app.route("/admin/createDoseWindow", methods=["POST"])
+@auth.login_required
 def admin_create_dose_window_and_medication_for_user():
+    if g.user.phone_number != ADMIN_PHONE_NUMBER:
+        return jsonify(), 401
     incoming_data = request.json
     user_id = int(incoming_data["userId"])
     if User.query.get(user_id) is not None:
@@ -1272,7 +1321,10 @@ def admin_create_dose_window_and_medication_for_user():
 
 
 @app.route("/admin/deactivateDoseWindow", methods=["POST"])
+@auth.login_required
 def admin_deactivate_dose_window():
+    if g.user.phone_number != ADMIN_PHONE_NUMBER:
+        return jsonify(), 401
     incoming_data = request.json
     dw_id = int(incoming_data["doseWindowId"])
     dw = DoseWindow.query.get(dw_id)
@@ -1282,6 +1334,7 @@ def admin_deactivate_dose_window():
 
 
 @app.route("/user/updateDoseWindow", methods=["POST"])
+@auth.login_required
 def user_edit_dose_window():
     incoming_data = request.json
     start_hour = incoming_data["startHour"]
@@ -1290,6 +1343,8 @@ def user_edit_dose_window():
     end_minute = incoming_data["endMinute"]
     dose_window_id = incoming_data["doseWindowId"]
     relevant_dose_window = DoseWindow.query.get(dose_window_id)
+    if relevant_dose_window.user.id != g.user.id:
+        return jsonify(), 401
     user_tz = timezone(relevant_dose_window.user.timezone)
     target_start_date = user_tz.localize(datetime(2012, 5, 12, start_hour, start_minute, 0, 0, tzinfo=None)).astimezone(pytzutc)
     target_end_date = user_tz.localize(datetime(2012, 5, 12, end_hour, end_minute, 0, 0, tzinfo=None)).astimezone(pytzutc)
@@ -1440,114 +1495,122 @@ def toggle_manual_takeover_user():
     db.session.commit()
     return jsonify()
 
+# legacy getters and setters
+
 # dose window methods
-@app.route("/doseWindow/create", methods=["POST"])
-@auth_required_post_delete
-def create_dose_window():
-    incoming_data = request.json
-    create_for_all_days = "createForAllDays" in request.json
-    if create_for_all_days:
-        for i in range(7):
-            new_dose_window = DoseWindow(
-                i,
-                int(incoming_data["startHour"]),
-                int(incoming_data["startMinute"]),
-                int(incoming_data["endHour"]),
-                int(incoming_data["endMinute"]),
-                int(incoming_data["userId"])
-            )
-            db.session.add(new_dose_window)
-    else:
-        new_dose_window = DoseWindow(
-            int(incoming_data["dayOfWeek"]),
-            int(incoming_data["startHour"]),
-            int(incoming_data["startMinute"]),
-            int(incoming_data["endHour"]),
-            int(incoming_data["endMinute"]),
-            int(incoming_data["userId"])
-        )
-        db.session.add(new_dose_window)
-    db.session.commit()
-    return jsonify()
+# @app.route("/doseWindow/create", methods=["POST"])
+# @auth_required_post_delete
+# def create_dose_window():
+#     incoming_data = request.json
+#     create_for_all_days = "createForAllDays" in request.json
+#     if create_for_all_days:
+#         for i in range(7):
+#             new_dose_window = DoseWindow(
+#                 i,
+#                 int(incoming_data["startHour"]),
+#                 int(incoming_data["startMinute"]),
+#                 int(incoming_data["endHour"]),
+#                 int(incoming_data["endMinute"]),
+#                 int(incoming_data["userId"])
+#             )
+#             db.session.add(new_dose_window)
+#     else:
+#         new_dose_window = DoseWindow(
+#             int(incoming_data["dayOfWeek"]),
+#             int(incoming_data["startHour"]),
+#             int(incoming_data["startMinute"]),
+#             int(incoming_data["endHour"]),
+#             int(incoming_data["endMinute"]),
+#             int(incoming_data["userId"])
+#         )
+#         db.session.add(new_dose_window)
+#     db.session.commit()
+#     return jsonify()
 
-@app.route("/doseWindow/update", methods=["POST"])
-@auth_required_post_delete
-def update_dose_window():
-    incoming_data = request.json
-    dose_window_id = int(incoming_data["doseWindowId"])
-    dose_window = DoseWindow.query.get(dose_window_id)
-    if dose_window is None:
-        return jsonify(), 400
-    dose_window.start_hour = int(incoming_data["startHour"])
-    dose_window.start_minute = int(incoming_data["startMinute"])
-    dose_window.end_hour = int(incoming_data["endHour"])
-    dose_window.end_minute = int(incoming_data["endMinute"])
-    db.session.commit()
+# @app.route("/doseWindow/update", methods=["POST"])
+# @auth_required_post_delete
+# def update_dose_window():
+#     incoming_data = request.json
+#     dose_window_id = int(incoming_data["doseWindowId"])
+#     dose_window = DoseWindow.query.get(dose_window_id)
+#     if dose_window is None:
+#         return jsonify(), 400
+#     dose_window.start_hour = int(incoming_data["startHour"])
+#     dose_window.start_minute = int(incoming_data["startMinute"])
+#     dose_window.end_hour = int(incoming_data["endHour"])
+#     dose_window.end_minute = int(incoming_data["endMinute"])
+#     db.session.commit()
 
-@app.route("/doseWindow/addMedication", methods=["POST"])
-@auth_required_post_delete
-def associate_medication_with_dose_window_route():
-    incoming_data = request.json
-    dose_window_id = int(incoming_data["doseWindowId"])
-    medication_id = int(incoming_data["medicationId"])
-    dose_window = DoseWindow.query.get(dose_window_id)
-    medication = Medication.query.get(medication_id)
-    if dose_window is None or medication is None:
-        return jsonify(), 400
-    dose_window.medications.append(medication)
-    db.session.commit()
-    return jsonify()
+# @app.route("/doseWindow/addMedication", methods=["POST"])
+# @auth_required_post_delete
+# def associate_medication_with_dose_window_route():
+#     incoming_data = request.json
+#     dose_window_id = int(incoming_data["doseWindowId"])
+#     medication_id = int(incoming_data["medicationId"])
+#     dose_window = DoseWindow.query.get(dose_window_id)
+#     medication = Medication.query.get(medication_id)
+#     if dose_window is None or medication is None:
+#         return jsonify(), 400
+#     dose_window.medications.append(medication)
+#     db.session.commit()
+#     return jsonify()
 
-@app.route("/doseWindow/removeMedication", methods=["POST"])
-@auth_required_post_delete
-def disassociate_medication_with_dose_window_route():
-    incoming_data = request.json
-    dose_window_id = int(incoming_data["doseWindowId"])
-    medication_id = int(incoming_data["medicationId"])
-    dose_window = DoseWindow.query.get(dose_window_id)
-    medication = Medication.query.get(medication_id)
-    if dose_window is None or medication is None:
-        return jsonify(), 400
-    dose_window.medications.append(medication)
-    db.session.commit()
-    return jsonify()
+# @app.route("/doseWindow/removeMedication", methods=["POST"])
+# @auth_required_post_delete
+# def disassociate_medication_with_dose_window_route():
+#     incoming_data = request.json
+#     dose_window_id = int(incoming_data["doseWindowId"])
+#     medication_id = int(incoming_data["medicationId"])
+#     dose_window = DoseWindow.query.get(dose_window_id)
+#     medication = Medication.query.get(medication_id)
+#     if dose_window is None or medication is None:
+#         return jsonify(), 400
+#     dose_window.medications.append(medication)
+#     db.session.commit()
+#     return jsonify()
 
-# medication methods
-@app.route("/medication/create", methods=["POST"])
-@auth_required_post_delete
-def create_medication():
-    incoming_data = request.json
-    dose_window_id = int(incoming_data["doseWindowId"])
-    dose_window = DoseWindow.query.get(dose_window_id)
-    if dose_window is None:
-        return jsonify(), 400
-    new_medication = Medication(
-        int(incoming_data["userId"]),
-        incoming_data["medicationName"],
-        incoming_data.get("instructions"),
-        dose_windows=[dose_window]  # initialize with a dose window
-    )
-    db.session.add(new_medication)
-    db.session.commit()
-    return jsonify()
+# # medication methods
+# @app.route("/medication/create", methods=["POST"])
+# @auth_required_post_delete
+# def create_medication():
+#     incoming_data = request.json
+#     dose_window_id = int(incoming_data["doseWindowId"])
+#     dose_window = DoseWindow.query.get(dose_window_id)
+#     if dose_window is None:
+#         return jsonify(), 400
+#     new_medication = Medication(
+#         int(incoming_data["userId"]),
+#         incoming_data["medicationName"],
+#         incoming_data.get("instructions"),
+#         dose_windows=[dose_window]  # initialize with a dose window
+#     )
+#     db.session.add(new_medication)
+#     db.session.commit()
+#     return jsonify()
 
-@app.route("/medication/update", methods=["POST"])
-@auth_required_post_delete
-def update_medication():
-    incoming_data = request.json
-    medication_id = int(incoming_data["medicationId"])
-    medication = Medication.query.get(medication_id)
-    if medication is None:
-        return jsonify(), 400
-    medication.name = incoming_data["medicationName"]
-    medication.instructions = incoming_data["medicationInstructions"]
-    db.session.commit()
-    return jsonify()
+# @app.route("/medication/update", methods=["POST"])
+# @auth_required_post_delete
+# def update_medication():
+#     incoming_data = request.json
+#     medication_id = int(incoming_data["medicationId"])
+#     medication = Medication.query.get(medication_id)
+#     if medication is None:
+#         return jsonify(), 400
+#     medication.name = incoming_data["medicationName"]
+#     medication.instructions = incoming_data["medicationInstructions"]
+#     db.session.commit()
+#     return jsonify()
 
 
 scheduler.add_listener(scheduler_error_alert, EVENT_JOB_MISSED | EVENT_JOB_ERROR)
 scheduler.init_app(app)
 scheduler.start()
+
+
+@scheduler.authenticate
+def authenticate(auth):
+    """Check auth."""
+    return verify_password(auth["username"], None)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')

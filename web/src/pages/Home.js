@@ -172,12 +172,14 @@ const Home = () => {
         const endTime = DateTime.utc(2021, 5, 1, editingDoseWindow.end_hour, editingDoseWindow.end_minute);
         return (
             <>
+                <Paragraph size="small" margin={{bottom: "none"}}>Start time (earliest time you'll be reminded)</Paragraph>
                 <TimeInput value={startTime.setZone('local')} color="dark-3" onChangeTime={
                     (newTime) => {
                         const newDwTime = DateTime.local(2021, 5, 1, newTime.hour, newTime.minute).setZone("UTC");
                         setEditingDoseWindow({...editingDoseWindow, start_hour: newDwTime.hour, start_minute: newDwTime.minute});
                     }}
                 />
+                <Paragraph size="small" margin={{bottom: "none"}}>End time (latest time you'll be reminded)</Paragraph>
                 <TimeInput value={endTime.setZone('local')} color="dark-3" onChangeTime={
                     (newTime) => {
                         console.log(`changed time to ${JSON.stringify(newTime)}`)
@@ -325,19 +327,23 @@ const Home = () => {
                         {
                             patientData.eventData[selectedDay - 1].day_status ?
                             Object.keys(patientData.eventData[selectedDay - 1].time_of_day).sort(orderDays).map((key) => {
-                                const event = patientData.eventData[selectedDay - 1].time_of_day[key][0];
+                                let numberSuffix = patientData.eventData[selectedDay - 1].time_of_day[key].length > 1;  // handle multiple dose windows in the same time of day
                                 return (
-                                    <>
-                                        <Paragraph key={`tod-${key}`} margin={{bottom: "none"}}>{key} dose</Paragraph>
-                                        <Box key={`todStatusContainer-${key}`} pad={{left: "medium"}} direction="row" align="center" justify="between">
-                                            <Paragraph key={`todStatus-${key}`} size="small">
-                                                {event.type}{event.time ? ` at ${DateTime.fromJSDate(new Date(event.time)).toLocaleString(DateTime.TIME_SIMPLE)}` : ''}
-                                            </Paragraph>
-                                            {event.type === "taken" ? <Checkmark color="status-ok" size="small"/> : null}
-                                            {event.type === "skipped" ? <Clear color="status-warning" size="small"/> : null}
-                                            {event.type === "missed" ? <Close color="status-error" size="small"/> : null}
-                                        </Box>
-                                    </>
+                                    patientData.eventData[selectedDay - 1].time_of_day[key].map((event, index) => {
+                                        return (
+                                            <>
+                                                <Paragraph key={`tod-${key}`} margin={{bottom: "none"}}>{key} dose{numberSuffix ? ` ${index + 1}` : ''}</Paragraph>
+                                                <Box key={`todStatusContainer-${key}`} pad={{left: "medium"}} direction="row" align="center" justify="between">
+                                                    <Paragraph key={`todStatus-${key}`} size="small">
+                                                        {event.type}{event.time ? ` at ${DateTime.fromJSDate(new Date(event.time)).toLocaleString(DateTime.TIME_SIMPLE)}` : ''}
+                                                    </Paragraph>
+                                                    {event.type === "taken" ? <Checkmark color="status-ok" size="small"/> : null}
+                                                    {event.type === "skipped" ? <Clear color="status-warning" size="small"/> : null}
+                                                    {event.type === "missed" ? <Close color="status-error" size="small"/> : null}
+                                                </Box>
+                                            </>
+                                        )
+                                    })
                                 )
                             }) :
                             <Paragraph>No data for this day.</Paragraph>
