@@ -445,7 +445,7 @@ def auth_patient_data():
         daily_event_summary = {"time_of_day":{}}
         for event in events_of_day:
             time_of_day = translate_time_of_day(event.event_time, user=user)
-            if time_of_day not in daily_event_summary:
+            if time_of_day not in daily_event_summary["time_of_day"]:
                 daily_event_summary["time_of_day"][time_of_day] = []
             if event.event_type == "boundary":
                 day_status = "missed"
