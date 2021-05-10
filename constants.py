@@ -162,6 +162,6 @@ ONBOARDING_COMPLETE = "Great, you'll get your first Coherence reminders starting
 
 BLOOD_GLUCOSE_MESSAGE = Template("🕒 $time\nBlood glucose recorded: $blood_glucose mg/dl.\n🍽🍽🍽🍽")
 
-WEIGHT_MESSAGE = Template("🕒 $time\nWe've recorded a weight reading of $weight lbs.\n⚖⚖⚖⚖")
+WEIGHT_MESSAGE = Template("🕒 $time\nWe've recorded a weight reading of $weight lbs.\n🪶🪶🪶🪶")
 
 BLOOD_PRESSURE_MESSAGE = Template("🕒 $time\nWe've recorded a blood pressure reading of $blood_pressure mm/hg.\n🩸🩸🩸🩸")
