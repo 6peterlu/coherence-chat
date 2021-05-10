@@ -326,20 +326,24 @@ const Home = () => {
                         </Box>
                         {
                             patientData.eventData[selectedDay - 1].day_status ?
-                            Object.keys(patientData.eventData[selectedDay - 1].time_of_day).sort(orderDays).map((key) => {
-                                const event = patientData.eventData[selectedDay - 1].time_of_day[key][0];
+                            Object.keys(patientData.eventData[selectedDay - 1].time_of_day).sort(orderDays).map((key, index) => {
+                                let numberSuffix = patientData.eventData[selectedDay - 1].time_of_day[key].length > 1;  // handle multiple dose windows in the same time of day
                                 return (
-                                    <>
-                                        <Paragraph key={`tod-${key}`} margin={{bottom: "none"}}>{key} dose</Paragraph>
-                                        <Box key={`todStatusContainer-${key}`} pad={{left: "medium"}} direction="row" align="center" justify="between">
-                                            <Paragraph key={`todStatus-${key}`} size="small">
-                                                {event.type}{event.time ? ` at ${DateTime.fromJSDate(new Date(event.time)).toLocaleString(DateTime.TIME_SIMPLE)}` : ''}
-                                            </Paragraph>
-                                            {event.type === "taken" ? <Checkmark color="status-ok" size="small"/> : null}
-                                            {event.type === "skipped" ? <Clear color="status-warning" size="small"/> : null}
-                                            {event.type === "missed" ? <Close color="status-error" size="small"/> : null}
-                                        </Box>
-                                    </>
+                                    patientData.eventData[selectedDay - 1].time_of_day[key].map((event) => {
+                                        return (
+                                            <>
+                                                <Paragraph key={`tod-${key}`} margin={{bottom: "none"}}>{key} dose</Paragraph>
+                                                <Box key={`todStatusContainer-${key}`} pad={{left: "medium"}} direction="row" align="center" justify="between">
+                                                    <Paragraph key={`todStatus-${key}`} size="small">
+                                                        {event.type}{event.time ? ` at ${DateTime.fromJSDate(new Date(event.time)).toLocaleString(DateTime.TIME_SIMPLE)}` : ''}{numberSuffix ? index + 1 : ''}
+                                                    </Paragraph>
+                                                    {event.type === "taken" ? <Checkmark color="status-ok" size="small"/> : null}
+                                                    {event.type === "skipped" ? <Clear color="status-warning" size="small"/> : null}
+                                                    {event.type === "missed" ? <Close color="status-error" size="small"/> : null}
+                                                </Box>
+                                            </>
+                                        )
+                                    })
                                 )
                             }) :
                             <Paragraph>No data for this day.</Paragraph>

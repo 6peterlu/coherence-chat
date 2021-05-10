@@ -577,8 +577,11 @@ def react_login():
     return jsonify({"status": "success", "token": user.generate_auth_token().decode('ascii')})
 
 @app.route("/admin", methods=["GET"])
+@auth.login_required
 def new_admin_page():
-    return app.send_static_file('new_admin.html')
+    if g.user.phone_number == ADMIN_PHONE_NUMBER:
+        return app.send_static_file('new_admin.html')
+    return jsonify(), 401
 
 
 @app.route("/admin/messages", methods=["GET"])
