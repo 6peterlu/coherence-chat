@@ -46,6 +46,19 @@ def boundary_event_record(db_session, dose_window_record):
     db_session.commit()
     return event_obj
 
+@pytest.fixture
+def intro_event_record(db_session, dose_window_record):
+    event_obj = EventLog(
+        event_type="initial",
+        user_id=dose_window_record.user.id,
+        event_time=datetime(2012, 1, 1, 10+7, 23, 15),
+        medication_id=None,
+        dose_window_id=dose_window_record.id
+    )
+    db_session.add(event_obj)
+    db_session.commit()
+    return event_obj
+
 # testing schemas
 def test_user_schema(user_record, dose_window_record, medication_record, medication_record_2):
     user_schema = UserSchema()
@@ -245,6 +258,14 @@ def test_toggle_user_pause_out_of_range(dose_window_record_for_paused_user, user
     assert scheduler.get_job(f"{dose_window_record_for_paused_user.id}-initial-new") is None
 
 
+@freeze_time("2012-01-01 17:00:00")
+def test_already_sent_intro(user_record, intro_event_record):
+    assert user_record.already_sent_intro_today is True
+
+@freeze_time("2012-01-01 17:00:00")
+def test_not_already_sent_intro(user_record):
+    assert user_record.already_sent_intro_today is False
+
 
 def test_medication_schema(dose_window_record, medication_record, user_record):
     medication_schema = MedicationSchema()
@@ -334,3 +355,15 @@ def test_delete_past_boundary_record(dose_window_record, boundary_event_record, 
     assert len(db_session.query(EventLog).all()) == 1
     dose_window_record.remove_boundary_event(days_delta=-1)
     assert len(db_session.query(EventLog).all()) == 0
+
+def test_start_tracking_health_metric(user_record, health_metric_record, db_session):
+    assert len(user_record.health_metrics) == 0
+    health_metric_record.users.append(user_record)
+    db_session.commit()
+    assert len(user_record.health_metrics) == 1
+    health_metric_record.users.remove(user_record)
+    db_session.commit()
+    assert len(user_record.health_metrics) == 0
+    user_record.health_metrics.append(health_metric_record)
+    db_session.commit()
+    assert len(health_metric_record.users) == 1

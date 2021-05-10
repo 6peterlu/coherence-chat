@@ -672,6 +672,7 @@ def get_all_admin_data():
 @app.route("/admin/manualTakeover", methods=["POST"])
 @auth.login_required
 def toggle_manual_takeover_for_user():
+    print(g.user)
     if g.user.phone_number != ADMIN_PHONE_NUMBER:
         return jsonify(), 401
     user_id = int(request.json["userId"])
@@ -679,6 +680,7 @@ def toggle_manual_takeover_for_user():
     if user is not None:
         user.manual_takeover = not user.manual_takeover
         if user.manual_takeover:  # we took over a user, we have to go online.
+            print("going online")
             online_status = get_online_status()
             if not online_status:
                 online_record = Online.query.get(1)
@@ -1441,7 +1443,7 @@ def send_intro_text_new(dose_window_obj_id, manual=False, welcome_back=False):
     if not dose_window_obj.is_recorded():  # only send if the dose window object hasn't been recorded yet.
         if "NOALERTS" not in os.environ:
             client.messages.create(
-                body=f"{get_initial_message(dose_window_obj, get_time_now().astimezone(timezone(dose_window_obj.user.timezone)).strftime('%I:%M'), welcome_back, dose_window_obj.user.phone_number)}{ACTION_MENU}",
+                body=f"{get_initial_message(dose_window_obj, get_time_now().astimezone(timezone(dose_window_obj.user.timezone)).strftime('%I:%M'), welcome_back, dose_window_obj.user.phone_number)}{'' if dose_window_obj.user.already_sent_intro_today else ACTION_MENU}",
                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                 to=f"+11{dose_window_obj.user.phone_number}"
             )

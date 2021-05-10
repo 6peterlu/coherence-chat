@@ -7,6 +7,8 @@ from pytest_postgresql.janitor import DatabaseJanitor
 from models import (
     db,
     # tables
+    HealthMetric,
+    Online,
     User,
     DoseWindow,
     Medication
@@ -216,3 +218,18 @@ def medication_record_for_paused_user_2(db_session, dose_window_record_for_pause
     db_session.add(medication_obj)
     db_session.commit()
     return medication_obj
+
+
+@pytest.fixture
+def health_metric_record(db_session):
+    health_metric_obj= HealthMetric(name="bp", type="int")
+    db_session.add(health_metric_obj)
+    db_session.commit()
+    return health_metric_obj
+
+@pytest.fixture
+def online_record(db_session):
+    online_obj = Online(online=False)
+    db_session.add(online_obj)
+    db_session.commit()
+    return online_obj
