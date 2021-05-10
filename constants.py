@@ -160,8 +160,8 @@ REQUEST_DOSE_WINDOW_END_TIME = Template("When would you like dose window $count 
 
 ONBOARDING_COMPLETE = "Great, you'll get your first Coherence reminders starting tomorrow. Thanks again for trying us out! If you have any questions or concerns, text us at (650) 667-1146‬, our customer service line."
 
-BLOOD_GLUCOSE_MESSAGE = Template("We've recorded a blood glucose reading of $blood_glucose mg/dl.")
+BLOOD_GLUCOSE_MESSAGE = Template("🕒 $time\nBlood glucose recorded: $blood_glucose mg/dl.\n🍽🍽🍽🍽")
 
-WEIGHT_MESSAGE = Template("We've recorded a weight reading of $weight lbs.")
+WEIGHT_MESSAGE = Template("🕒 $time\nWe've recorded a weight reading of $weight lbs.\n⚖⚖⚖⚖")
 
-BLOOD_PRESSURE_MESSAGE = Template("We've recorded a blood pressure reading of $blood_pressure mm/hg.")
+BLOOD_PRESSURE_MESSAGE = Template("🕒 $time\nWe've recorded a blood pressure reading of $blood_pressure mm/hg.\n🩸🩸🩸🩸")

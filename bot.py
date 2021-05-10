@@ -215,13 +215,14 @@ def get_absent_message():
 def get_thanks_message():
     return random.choice(THANKS_MESSAGES)
 
-def get_health_metric_response_message(health_metric_type, description):
+def get_health_metric_response_message(health_metric_type, description, user):
+    timezone_translated_time = get_time_now().astimezone(timezone(user.timezone)).strftime('%b %d, %I:%M %p')
     if health_metric_type == "blood glucose":
-        return BLOOD_GLUCOSE_MESSAGE.substitute(blood_glucose=description)
+        return BLOOD_GLUCOSE_MESSAGE.substitute(blood_glucose=description, time=timezone_translated_time)
     if health_metric_type == "weight":
-        return WEIGHT_MESSAGE.substitute(weight=description)
+        return WEIGHT_MESSAGE.substitute(weight=description, time=timezone_translated_time)
     if health_metric_type == "blood pressure":
-        return BLOOD_PRESSURE_MESSAGE.substitute(blood_pressure=description)
+        return BLOOD_PRESSURE_MESSAGE.substitute(blood_pressure=description, time=timezone_translated_time)
     return None
 
 
@@ -1081,7 +1082,7 @@ def bot():
                     log_event_new(f"hm-{incoming_msg['payload']['type']}", user.id, None, None, description=incoming_msg["payload"]["value"])
                     if "NOALERTS" not in os.environ:
                         client.messages.create(
-                            body=get_health_metric_response_message(incoming_msg['payload']['type'], incoming_msg["payload"]["value"]),
+                            body=get_health_metric_response_message(incoming_msg['payload']['type'], incoming_msg["payload"]["value"], user),
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                             to=incoming_phone_number
                         )
