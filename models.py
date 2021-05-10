@@ -5,6 +5,7 @@ from marshmallow import Schema, fields
 from werkzeug.security import check_password_hash, generate_password_hash
 from itsdangerous import (TimedJSONWebSignatureSerializer
                           as Serializer, BadSignature, SignatureExpired)
+import re
 import os
 
 db = SQLAlchemy()
@@ -405,6 +406,38 @@ class HealthMetric(db.Model):
     upper_healthy_limit = db.Column(db.Integer)
     lower_healthy_limit = db.Column(db.Integer)
     users = db.relationship("User", secondary=health_metric_user_linker, back_populates="health_metrics")
+
+    def deserialize(self, serialized_data):
+        if self.name == "blood pressure":
+            split_bp = serialized_data.split(":")
+            return {"systolic": int(split_bp[0]), "diastolic": int(split_bp[1])}
+        elif self.type == "int":
+            return int(serialized_data)
+
+    def serialize_from_text(self, input_str):
+        if self.name == "blood pressure":
+            bp_regex = r'(\d{2,3})(?:(?:\s*\/\s*)|\s+|(?:\s*over\s*))(\d{2,3})'
+            bp_measures = re.findall(bp_regex, input_str)
+            if bp_measures:
+                return f"{bp_measures[0][0]}/{bp_measures[0][1]}"
+        elif self.name == "weight":
+            weight_regex_1 = r'(?:(?:weight\s*:?\s*)(\d{2,3}))'
+            weight_regex_2 = r'(?:(\d{2,3})(?:\s*(?:lb|pound)))'
+            weight_measure = re.findall(weight_regex_1, input_str)
+            if weight_measure is None:
+                weight_measure = re.findall(weight_regex_2, input_str)
+            if weight_measure:
+                return weight_measure[0]
+        elif self.name == "glucose":
+            glucose_regex_1 = r'(\d{2,3})\s*(?:mg(?:\s*\/?\s*)dl)'
+            glucose_regex_2 = r'glucose(?:\s*:?\s*)(\d{2,3})'
+            glucose_measure = re.findall(glucose_regex_1, input_str)
+            if glucose_measure is None:
+                glucose_measure = re.findall(glucose_regex_2, input_str)
+            if glucose_measure:
+                return glucose_measure[0]
+        return None
+
 
 class Online(db.Model):
     id = db.Column(db.Integer, primary_key=True)

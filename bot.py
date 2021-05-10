@@ -65,6 +65,8 @@ from constants import (
     ABSENT_MSGS,
     ACTION_OUT_OF_RANGE_MSG,
     ALREADY_RECORDED,
+    BLOOD_GLUCOSE_MESSAGE,
+    BLOOD_PRESSURE_MESSAGE,
     BOUNDARY_MSG,
     CLINICAL_BOUNDARY_MSG,
     CONFIRMATION_MSG,
@@ -95,6 +97,7 @@ from constants import (
     ACTION_MENU,
     USER_ERROR_REPORT,
     USER_ERROR_RESPONSE,
+    WEIGHT_MESSAGE,
     WELCOME_BACK_MESSAGES
 )
 
@@ -211,6 +214,16 @@ def get_absent_message():
 
 def get_thanks_message():
     return random.choice(THANKS_MESSAGES)
+
+def get_health_metric_response_message(health_metric_type, description):
+    if health_metric_type == "blood glucose":
+        return BLOOD_GLUCOSE_MESSAGE.substitute(blood_glucose=description)
+    if health_metric_type == "weight":
+        return WEIGHT_MESSAGE.substitute(weight=description)
+    if health_metric_type == "blood pressure":
+        return BLOOD_PRESSURE_MESSAGE.substitute(blood_pressure=description)
+    return None
+
 
 
 def log_event_new(event_type, user_id, dose_window_id, medication_id=None, event_time=None, description=None):
@@ -672,7 +685,6 @@ def get_all_admin_data():
 @app.route("/admin/manualTakeover", methods=["POST"])
 @auth.login_required
 def toggle_manual_takeover_for_user():
-    print(g.user)
     if g.user.phone_number != ADMIN_PHONE_NUMBER:
         return jsonify(), 401
     user_id = int(request.json["userId"])
@@ -680,7 +692,6 @@ def toggle_manual_takeover_for_user():
     if user is not None:
         user.manual_takeover = not user.manual_takeover
         if user.manual_takeover:  # we took over a user, we have to go online.
-            print("going online")
             online_status = get_online_status()
             if not online_status:
                 online_record = Online.query.get(1)
@@ -1063,6 +1074,14 @@ def bot():
                     if "NOALERTS" not in os.environ:
                         client.messages.create(
                             body=REQUEST_WEBSITE,
+                            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                            to=incoming_phone_number
+                        )
+                if incoming_msg["type"] == "health_metric":
+                    log_event_new(f"hm-{incoming_msg['payload']['type']}", user.id, None, None, description=incoming_msg["payload"]["value"])
+                    if "NOALERTS" not in os.environ:
+                        client.messages.create(
+                            body=get_health_metric_response_message(incoming_msg['payload']['type'], incoming_msg["payload"]["value"]),
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                             to=incoming_phone_number
                         )
