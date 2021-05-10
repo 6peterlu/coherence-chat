@@ -449,11 +449,11 @@ def auth_patient_data():
                 daily_event_summary["time_of_day"][time_of_day] = []
             if event.event_type == "boundary":
                 day_status = "missed"
-                daily_event_summary["time_of_day"][time_of_day].append({"type": "missed"})
+                daily_event_summary["time_of_day"][time_of_day].append({"type": "missed", "time": event.event_time})
             elif event.event_type == "skip":
                 if day_status != "missed":
                     day_status = "skip"
-                daily_event_summary["time_of_day"][time_of_day].append({"type": "skipped"})
+                daily_event_summary["time_of_day"][time_of_day].append({"type": "skipped", "time": event.event_time})
             else:
                 daily_event_summary["time_of_day"][time_of_day].append({"type": "taken", "time": event.event_time})
                 if day_status is None:
