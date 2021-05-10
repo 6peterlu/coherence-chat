@@ -21,19 +21,25 @@
     </div>
     <div id="userDetailedData"></div>
     <script defer>
+        const getCookieValue = (name) => (
+            document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)')?.pop() || ''
+        )
+        console.log(getCookieValue('token'));
         const initDetails = {
             method: 'get',
             headers: {
                 "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow_Methods": "GET",
                 "Access-Control_Allow_Headers": "*",
-                "Cache-Control": "no-cache"
+                "Cache-Control": "no-cache",
+                "Authorization": 'Basic ' + btoa(getCookieValue('token') + ":unused")
             },
             mode: "cors"
         };
-        const apiURL = "https://coherence-chat.herokuapp.com";
+        const apiURL = "http://localhost:5000"; // "https://coherence-chat.herokuapp.com";
         // HTTP helpers
         const get = async (route, queryArgs) => {
+
             const queryArgsList = [];
             for (const arg in queryArgs) {
                 queryArgsList.push(`${arg}=${queryArgs[arg]}`);
@@ -49,7 +55,8 @@
                     "Access-Control-Allow_Methods": "POST",
                     "Access-Control_Allow_Headers": "*",
                     "Content-Type": "application/json; charset=utf-8",
-                    "Cache-Control": "no-cache"
+                    "Cache-Control": "no-cache",
+                    "Authorization": 'Basic ' + btoa(getCookieValue('token') + ":unused")
                 },
                 mode: "cors",
                 body: JSON.stringify(body)
@@ -65,7 +72,8 @@
                     "Access-Control-Allow_Methods": "DELETE",
                     "Access-Control_Allow_Headers": "*",
                     "Content-Type": "application/json; charset=utf-8",
-                    "Cache-Control": "no-cache"
+                    "Cache-Control": "no-cache",
+                    "Authorization": 'Basic ' + btoa(getCookieValue('token') + ":unused")
                 },
                 mode: "cors",
                 body: JSON.stringify(body)
