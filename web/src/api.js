@@ -96,3 +96,13 @@ export const resumeUser = async () => {
   const response = await post("user/resume/new");
   return response;
 }
+
+export const startTrackingHealthMetric = async (metric) => {
+  const response = await post("user/healthMetrics/startTracking", { metric });
+  return response;
+}
+
+export const stopTrackingHealthMetric = async (metric) => {
+  const response = await post("user/healthMetrics/stopTracking", { metric });
+  return response;
+}

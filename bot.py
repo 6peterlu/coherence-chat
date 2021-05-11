@@ -28,6 +28,7 @@ from models import (
 
 from models import db
 from nlp import segment_message, get_datetime_obj_from_string
+from health_metrics import METRIC_LIST, process_health_metric_event_stream
 
 from ai import get_reminder_time_within_range
 
@@ -398,6 +399,7 @@ def get_time_of_day(dose_window_obj):
         return "afternoon"
     return "evening"
 
+
 @app.route("/patientData/new", methods=["GET"])
 @auth.login_required
 def auth_patient_data():
@@ -435,7 +437,9 @@ def auth_patient_data():
         "requested_time_delay",
         "activity"
     ]
-    combined_list = list(set(take_record_events) | set(user_driven_events))
+    health_metric_event_types = [f"hm_{name}" for name in METRIC_LIST]
+    combined_list = list(set(take_record_events) | set(user_driven_events) | set(health_metric_event_types))
+    print(EventLog.query.filter(EventLog.event_type == "hm_weight", EventLog.user == user).order_by(EventLog.event_time.asc()).all())
     relevant_events = EventLog.query.filter(EventLog.event_type.in_(combined_list), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
     requested_time_window = (
         timezone(user.timezone).localize(datetime(2021, calendar_month, 1, 4, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None),
@@ -448,6 +452,8 @@ def auth_patient_data():
         event.event_time > requested_time_window[0]
         ), relevant_events))
     user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
+    health_metric_events = list(filter(lambda event: event.event_type in health_metric_event_types, relevant_events))
+    print(health_metric_events)
     event_data = []
     current_day = requested_time_window[0]
     while current_day < requested_time_window[1]:
@@ -491,6 +497,7 @@ def auth_patient_data():
         "impersonateList": User.query.with_entities(User.name, User.phone_number).all() if user.phone_number == ADMIN_PHONE_NUMBER else None,
         "month": calendar_month,
         "impersonating": impersonating,
+        "healthMetricData": process_health_metric_event_stream(health_metric_events, user.tracked_health_metrics),
         "token": g.user.generate_auth_token().decode('ascii')  # refresh auth token
     })
 
@@ -536,6 +543,22 @@ def pause_user_new():
 @auth.login_required
 def resume_user_new():
     g.user.resume(scheduler, send_intro_text_new, send_upcoming_dose_message)
+    return jsonify()
+
+@app.route("/user/healthMetrics/startTracking", methods=["POST"])
+@auth.login_required
+def start_tracking_health_metric():
+    metric_to_track = request.json["metric"]
+    g.user.tracked_health_metrics.append(metric_to_track)
+    db.session.commit()
+    return jsonify()
+
+@app.route("/user/healthMetrics/stopTracking", methods=["POST"])
+@auth.login_required
+def stop_tracking_health_metric():
+    metric_to_track = request.json["metric"]
+    g.user.tracked_health_metrics.remove(metric_to_track)
+    db.session.commit()
     return jsonify()
 
 
@@ -1079,7 +1102,7 @@ def bot():
                             to=incoming_phone_number
                         )
                 if incoming_msg["type"] == "health_metric":
-                    log_event_new(f"hm-{incoming_msg['payload']['type']}", user.id, None, None, description=incoming_msg["payload"]["value"])
+                    log_event_new(f"hm_{incoming_msg['payload']['type']}", user.id, None, None, description=incoming_msg["payload"]["value"])
                     if "NOALERTS" not in os.environ:
                         client.messages.create(
                             body=get_health_metric_response_message(incoming_msg['payload']['type'], incoming_msg["payload"]["value"], user),

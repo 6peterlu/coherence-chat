@@ -2,9 +2,12 @@ import React from "react";
 import { useCookies } from 'react-cookie';
 import { Redirect } from 'react-router-dom';
 import { deleteDoseWindow, pauseUser, pullPatientData, pullPatientDataForNumber, resumeUser, updateDoseWindow } from '../api';
-import { Box, Button, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select } from "grommet";
+import { Scatter } from 'react-chartjs-2';
+import { Box, Button, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select, calcs } from "grommet";
 import { Checkmark, CircleInformation, Clear, Close, FormNextLink} from "grommet-icons";
 import { DateTime } from 'luxon';
+import 'chartjs-adapter-luxon';
+import 'chartjs-plugin-datalabels';
 import TimeInput from "../components/TimeInput";
 import AnimatingButton from "../components/AnimatingButton";
 
@@ -32,6 +35,7 @@ const Home = () => {
             removeCookie("token");
             return;
         }
+        console.log(loadedData);
         setPatientData(loadedData);
         setCookie('token', loadedData.token, {secure: true});  // refresh login token
         if (loadedData.impersonateList) {
@@ -98,6 +102,72 @@ const Home = () => {
             </Box>
         );
     }, [calendarMonth, patientData]);
+
+    const formattedHealthMetricData = React.useMemo(() => {
+        const data = {}
+        if (patientData !== null) {
+            for (const metric in patientData.healthMetricData) {
+                const metric_list = patientData.healthMetricData[metric];
+                console.log(metric_list);
+                if (metric !== "blood pressure") {
+                    data[metric] = {
+                        datasets: [{
+                            data: metric_list.map((metric) => {
+                                const jsTime = DateTime.fromHTTP(metric.time);
+                                return {x: jsTime, y: metric.value};
+                            }),
+                            label: metric,
+                            fill: false,
+                            backgroundColor: 'rgb(255, 99, 132)',
+                            borderColor: 'rgba(255, 99, 132, 0.2)'
+                        }]
+                    };
+                } else { // blood pressure has two timeseries
+                    data[metric] = {
+                        datasets: [
+                        {
+                            data: metric_list.map((metric) => {
+                                const jsTime = DateTime.fromHTTP(metric.time);
+                                return {x: jsTime, y: metric.value.systolic};
+                            }),
+                            label: "systolic",
+                            fill: false,
+                            backgroundColor: 'rgb(255, 99, 132)',
+                            borderColor: 'rgba(255, 99, 132, 0.2)'
+                        },
+                        {
+                            data: metric_list.map((metric) => {
+                                const jsTime = DateTime.fromHTTP(metric.time);
+                                return {x: jsTime, y: metric.value.diastolic};
+                            }),
+                            label: "diastolic",
+                            fill: false,
+                            backgroundColor: 'rgb(99, 255, 132)',
+                            borderColor: 'rgba(99, 255, 132, 0.2)'
+                        }
+                    ]
+                    };
+                }
+                // data[metric]["chart"] = calcs(data[metric].data, {coarseness: 10, steps: [10, 1]})
+                // // recompute x bounds
+                // const currentEndOfDay = DateTime.local().plus({days: 2}).set({hour: 0, minute: 0, second: 0, millisecond: 0});
+                // const twoWeeksAgo = currentEndOfDay.minus({days: 14});
+                // console.log("original bounds")
+                // console.log(data[metric].chart.bounds)
+                // console.log([twoWeeksAgo.toSeconds(), currentEndOfDay.toSeconds()])
+                // data[metric].chart.bounds[0] = [twoWeeksAgo.toSeconds(), currentEndOfDay.toSeconds()]
+                // console.log("after bounds")
+                // console.log(data[metric].chart.bounds);
+                // data[metric].chart.axis[0] = range(twoWeeksAgo.toSeconds(), currentEndOfDay.toSeconds(), 3600 * 24 * 2);
+                // console.log(data[metric].chart.axis[0])
+                // console.log(data[metric].data)
+            }
+        }
+        console.log("returned HM data:")
+        console.log(data);
+
+        return data;
+    }, [patientData]);
 
     const renderImpersonateListItem = React.useCallback((listItem) => {
         console.log(listItem);
@@ -214,6 +284,17 @@ const Home = () => {
             return -1;
         }
         return 1;
+    }
+
+    const options = {
+        scales: {
+            x: {type: "time", time: {unit: "day"}},
+            y: {type: "linear"}
+        },
+        plugins: {
+            datalabels: {color: 'black'}
+        },
+        showLine: true
     }
 
 
@@ -351,6 +432,26 @@ const Home = () => {
                     </Box>
                 </Layer>
             )}
+            <Box>
+                {formattedHealthMetricData && formattedHealthMetricData["blood pressure"] ?
+                    <Box pad={{horizontal: "large"}}>
+                        <Paragraph>Blood pressure</Paragraph>
+                        <Scatter data={formattedHealthMetricData["blood pressure"]} options={options}/>
+                    </Box>
+                    : <Paragraph>No blood pressure data recorded.</Paragraph>}
+                {formattedHealthMetricData && formattedHealthMetricData.weight ?
+                    <Box pad={{horizontal: "large"}}>
+                        <Paragraph>Weight</Paragraph>
+                        <Scatter data={formattedHealthMetricData.weight} options={options}/>
+                    </Box>
+                    : <Paragraph>No weight data recorded.</Paragraph>}
+                {formattedHealthMetricData && formattedHealthMetricData.glucose ?
+                    <Box pad={{horizontal: "large"}}>
+                        <Paragraph>Glucose</Paragraph>
+                        <Scatter data={formattedHealthMetricData.glucose} options={options}/>
+                    </Box>
+                    : <Paragraph>No glucose data recorded.</Paragraph>}
+            </Box>
             <Box align="center" pad={{vertical: "medium"}} margin={{horizontal: "xlarge"}} border="bottom">
                 <Paragraph textAlign="center" margin={{vertical: "none"}}>Dose windows</Paragraph>
                     {
@@ -427,7 +528,6 @@ const Home = () => {
                         animating={animating}
                         style={{padding: "10px"}}
                         primary={patientData.pausedService}
-                        // primary={patientData.pausedService}
                         onClick={async () => {
                             setAnimating(true);
                             if (patientData.pausedService) {

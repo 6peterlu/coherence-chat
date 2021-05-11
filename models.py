@@ -1,4 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.dialects import postgresql
 from datetime import datetime, timedelta, timezone as dt_timezone
 from pytz import utc as pytzutc, timezone
 from marshmallow import Schema, fields
@@ -21,10 +22,10 @@ dose_medication_linker = db.Table('dose_medication_linker',
     db.Column('medication_id', db.Integer, db.ForeignKey('medication.id', ondelete='CASCADE', name="dose_medication_linker_medication_fkey_custom"))
 )
 
-health_metric_user_linker = db.Table('health_metric_user_linker',
-    db.Column('health_metric_id', db.Integer, db.ForeignKey('health_metric.id', name="health_metric_user_linker_health_metric_fkey_custom")),
-    db.Column('user_id', db.Integer, db.ForeignKey('user.id', name="health_metric_user_linker_user_fkey_custom"))
-)
+# health_metric_user_linker = db.Table('health_metric_user_linker',
+#     db.Column('health_metric_id', db.Integer, db.ForeignKey('health_metric.id', name="health_metric_user_linker_health_metric_fkey_custom")),
+#     db.Column('user_id', db.Integer, db.ForeignKey('user.id', name="health_metric_user_linker_user_fkey_custom"))
+# )
 
 class User(db.Model):
     __tablename__ = 'user'
@@ -38,7 +39,7 @@ class User(db.Model):
     paused = db.Column(db.Boolean, nullable=False)
     timezone = db.Column(db.String, nullable=False)
     password_hash = db.Column(db.String, nullable=True)
-    health_metrics = db.relationship("HealthMetric", secondary=health_metric_user_linker, back_populates="users")
+    tracked_health_metrics = db.Column(postgresql.ARRAY(db.String))
 
     def __init__(
         self,
@@ -136,9 +137,10 @@ class User(db.Model):
     def already_sent_intro_today(self):
         start_of_day, end_of_day = self.current_day_bounds
         num_intro_events_today = EventLog.query.filter(
-            EventLog.event_time > start_of_day,
+            EventLog.event_time >= start_of_day,
             EventLog.event_time < end_of_day,
-            EventLog.event_type == "initial"
+            EventLog.event_type == "initial",
+            EventLog.user == self
         ).count()  # count is no more efficient than actually querying; this can be optimized: https://stackoverflow.com/questions/14754994/why-is-sqlalchemy-count-much-slower-than-the-raw-query
         return num_intro_events_today > 0
 
@@ -396,47 +398,6 @@ class EventLog(db.Model):
     @property
     def aware_event_time(self):
         return self.event_time.replace(tzinfo=datetime.now().astimezone().tzinfo)
-
-
-class HealthMetric(db.Model):
-    __tablename__ = 'health_metric'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False)
-    type = db.Column(db.String, nullable=False)  # number, string, etc
-    upper_healthy_limit = db.Column(db.Integer)
-    lower_healthy_limit = db.Column(db.Integer)
-    users = db.relationship("User", secondary=health_metric_user_linker, back_populates="health_metrics")
-
-    def deserialize(self, serialized_data):
-        if self.name == "blood pressure":
-            split_bp = serialized_data.split(":")
-            return {"systolic": int(split_bp[0]), "diastolic": int(split_bp[1])}
-        elif self.type == "int":
-            return int(serialized_data)
-
-    def serialize_from_text(self, input_str):
-        if self.name == "blood pressure":
-            bp_regex = r'(\d{2,3})(?:(?:\s*\/\s*)|\s+|(?:\s*over\s*))(\d{2,3})'
-            bp_measures = re.findall(bp_regex, input_str)
-            if bp_measures:
-                return f"{bp_measures[0][0]}/{bp_measures[0][1]}"
-        elif self.name == "weight":
-            weight_regex_1 = r'(?:(?:weight\s*:?\s*)(\d{2,3}))'
-            weight_regex_2 = r'(?:(\d{2,3})(?:\s*(?:lb|pound)))'
-            weight_measure = re.findall(weight_regex_1, input_str)
-            if weight_measure is None:
-                weight_measure = re.findall(weight_regex_2, input_str)
-            if weight_measure:
-                return weight_measure[0]
-        elif self.name == "glucose":
-            glucose_regex_1 = r'(\d{2,3})\s*(?:mg(?:\s*\/?\s*)dl)'
-            glucose_regex_2 = r'glucose(?:\s*:?\s*)(\d{2,3})'
-            glucose_measure = re.findall(glucose_regex_1, input_str)
-            if glucose_measure is None:
-                glucose_measure = re.findall(glucose_regex_2, input_str)
-            if glucose_measure:
-                return glucose_measure[0]
-        return None
 
 
 class Online(db.Model):
