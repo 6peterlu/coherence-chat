@@ -162,19 +162,10 @@ const Home = () => {
                                 color: "white",
                                 plugins: {
                                     legend: {display: false},
-                                    zoom: {
-                                        // pan: {
-                                        //     enabled: true,
-                                        //     mode: 'x'
-                                        // },
-                                        // limits: {
-                                        // // axis limits
-                                        // },
-                                        zoom: {
-                                            enabled:true,
-                                            mode:'xy'
-                                        }
-                                    }
+                                },
+                                zoom: {
+                                    enabled:true,
+                                    mode:'xy'
                                 },
                                 showLine: true
                         }
@@ -502,7 +493,7 @@ const Home = () => {
                     <Box pad={{horizontal: "large"}} fill="horizontal">
                         <Paragraph size="small" margin={{bottom: "none"}}>Blood pressure</Paragraph>
                         {formattedHealthMetricData["blood pressure"].datasets[0].data.length > 0 ?
-                            <Scatter data={formattedHealthMetricData["blood pressure"]} options={formattedHealthMetricData["blood pressure"].options}/> :
+                            <Scatter data={{datasets: formattedHealthMetricData["blood pressure"].datasets}} options={formattedHealthMetricData["blood pressure"].options}/> :
                             <Paragraph alignSelf="center" size="small">No blood pressure data recorded yet. Example texts you can send: "120/80", "120 80".</Paragraph>
                         }
                     </Box>) : null}
@@ -510,7 +501,7 @@ const Home = () => {
                     <Box pad={{horizontal: "large"}} fill="horizontal">
                         <Paragraph size="small" margin={{bottom: "none"}}>Weight</Paragraph>
                         {formattedHealthMetricData.weight.datasets[0].data.length > 0 ?
-                        <Scatter data={formattedHealthMetricData.weight} options={formattedHealthMetricData.weight.options}/> :
+                        <Scatter data={{datasets: formattedHealthMetricData.weight.datasets}} options={formattedHealthMetricData.weight.options}/> :
                         <Paragraph alignSelf="center" size="small">No weight data recorded yet. Example texts you can send: "weight:150", "150 lb", "150 pounds".</Paragraph>}
                     </Box>
                     : null}
@@ -518,7 +509,7 @@ const Home = () => {
                     <Box pad={{horizontal: "large"}} fill="horizontal">
                         <Paragraph size="small" margin={{bottom: "none"}}>Glucose</Paragraph>
                         {formattedHealthMetricData.glucose.datasets[0].data.length > 0 ?
-                        <Scatter data={formattedHealthMetricData.glucose} options={formattedHealthMetricData.glucose.options}/> :
+                        <Scatter data={{datasets: formattedHealthMetricData.glucose.datasets}} options={formattedHealthMetricData.glucose.options}/> :
                         <Paragraph alignSelf="center" size="small">No glucose data recorded yet. Example texts you can send: "glucose:140", "140 mg/dL"</Paragraph>}
                     </Box>
                     : null}
