@@ -485,7 +485,7 @@ const Home = () => {
                 {formattedHealthMetricData && "blood pressure" in formattedHealthMetricData ? (
                     <Box pad={{horizontal: "large"}} fill="horizontal">
                         <Paragraph size="small" margin={{bottom: "none"}}>Blood pressure</Paragraph>
-                        {formattedHealthMetricData["blood pressure"].datasets.data.length > 0 ?
+                        {formattedHealthMetricData["blood pressure"][0].datasets.data.length > 0 ?
                             <Scatter data={formattedHealthMetricData["blood pressure"]} options={formattedHealthMetricData["blood pressure"].options}/> :
                             <Paragraph>No blood pressure data recorded yet. Example texts you can send: "120/80", "120 80".</Paragraph>
                         }
