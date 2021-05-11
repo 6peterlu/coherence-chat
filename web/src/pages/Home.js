@@ -548,7 +548,7 @@ const Home = () => {
                             const startTime = DateTime.utc(2021, 5, 1, dw.start_hour, dw.start_minute);
                             const endTime = DateTime.utc(2021, 5, 1, dw.end_hour, dw.end_minute);
                             return (
-                                <Grid key={`doseWindowContainer-${dw.id}`} columns={["small", "xsmall", "flex"]} align="center" pad={{horizontal: "large"}} alignContent="center" justifyContent="center" justify="center">
+                                <Grid key={`doseWindowContainer-${dw.id}`} columns={["small", "flex", "flex"]} align="center" pad={{horizontal: "large"}} alignContent="center" justifyContent="center" justify="center">
                                     <Box direction="row" align="center">
                                         <Paragraph>{startTime.setZone('local').toLocaleString(DateTime.TIME_SIMPLE)}</Paragraph>
                                         <FormNextLink/>
@@ -565,7 +565,7 @@ const Home = () => {
                                         if (impersonating === null) {
                                             trackStartDeletingDoseWindow(patientData.id);
                                         }
-                                    }} label="delete" size="small" padding={{horizontal: "none"}}/>
+                                    }} icon={<Close/>} size="small" padding={{horizontal: "none"}}/>
                                 </Grid>
                             )
                         }) : null
