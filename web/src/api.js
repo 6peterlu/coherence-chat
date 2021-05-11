@@ -97,12 +97,7 @@ export const resumeUser = async () => {
   return response;
 }
 
-export const startTrackingHealthMetric = async (metric) => {
-  const response = await post("user/healthMetrics/startTracking", { metric });
-  return response;
-}
-
-export const stopTrackingHealthMetric = async (metric) => {
-  const response = await post("user/healthMetrics/stopTracking", { metric });
+export const setHealthMetricsTracking = async (metricList) => {
+  const response = await post("user/healthMetrics/set", { metricList });
   return response;
 }

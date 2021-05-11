@@ -545,19 +545,11 @@ def resume_user_new():
     g.user.resume(scheduler, send_intro_text_new, send_upcoming_dose_message)
     return jsonify()
 
-@app.route("/user/healthMetrics/startTracking", methods=["POST"])
+@app.route("/user/healthMetrics/set", methods=["POST"])
 @auth.login_required
-def start_tracking_health_metric():
-    metric_to_track = request.json["metric"]
-    g.user.tracked_health_metrics.append(metric_to_track)
-    db.session.commit()
-    return jsonify()
-
-@app.route("/user/healthMetrics/stopTracking", methods=["POST"])
-@auth.login_required
-def stop_tracking_health_metric():
-    metric_to_track = request.json["metric"]
-    g.user.tracked_health_metrics.remove(metric_to_track)
+def set_tracking_health_metric():
+    metrics_to_track = request.json["metricList"]
+    g.user.tracked_health_metrics = metrics_to_track
     db.session.commit()
     return jsonify()
 

@@ -1,10 +1,18 @@
 import React from "react";
 import { useCookies } from 'react-cookie';
 import { Redirect } from 'react-router-dom';
-import { deleteDoseWindow, pauseUser, pullPatientData, pullPatientDataForNumber, resumeUser, updateDoseWindow } from '../api';
+import {
+    deleteDoseWindow,
+    pauseUser,
+    pullPatientData,
+    pullPatientDataForNumber,
+    resumeUser,
+    setHealthMetricsTracking,
+    updateDoseWindow,
+} from '../api';
 import { Scatter } from 'react-chartjs-2';
-import { Box, Button, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select, calcs } from "grommet";
-import { Checkmark, CircleInformation, Clear, Close, FormNextLink} from "grommet-icons";
+import { Box, Button, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select, CheckBoxGroup } from "grommet";
+import { Add, Checkmark, CircleInformation, Clear, Close, FormNextLink} from "grommet-icons";
 import { DateTime } from 'luxon';
 import 'chartjs-adapter-luxon';
 import 'chartjs-plugin-datalabels';
@@ -20,6 +28,7 @@ const Home = () => {
     const [selectedDay, setSelectedDay] = React.useState(null);
     const [editingDoseWindow, setEditingDoseWindow] = React.useState(null);
     const [deletingDoseWindow, setDeletingDoseWindow] = React.useState(null);
+    const [editingHealthTracking, setEditingHealthTracking] = React.useState(null);
     const [animating, setAnimating] = React.useState(false);  // this is setting animating for ALL buttons for now
 
     const dateRange = [DateTime.local(2021, 4, 1), DateTime.local(2021, 5, 31)]
@@ -432,26 +441,60 @@ const Home = () => {
                     </Box>
                 </Layer>
             )}
-            <Box>
-                {formattedHealthMetricData && formattedHealthMetricData["blood pressure"] ?
+            <Box align="center" background="brand" pad={{bottom: "large"}}>
+                <Paragraph margin={{bottom: "none"}}>Health tracking</Paragraph>
+                {Object.keys(formattedHealthMetricData).length === 0 ? <Paragraph size="small">You're not tracking any health metrics yet.</Paragraph> : null}
+                {formattedHealthMetricData && "blood pressure" in formattedHealthMetricData ? (
                     <Box pad={{horizontal: "large"}}>
                         <Paragraph>Blood pressure</Paragraph>
-                        <Scatter data={formattedHealthMetricData["blood pressure"]} options={options}/>
-                    </Box>
-                    : <Paragraph>No blood pressure data recorded.</Paragraph>}
-                {formattedHealthMetricData && formattedHealthMetricData.weight ?
+                        {formattedHealthMetricData["blood pressure"].datasets.length > 0 ?
+                            <Scatter data={formattedHealthMetricData["blood pressure"]} options={options}/> :
+                            <Paragraph>No blood pressure data recorded yet.</Paragraph>
+                        }
+                    </Box>) : null}
+                {formattedHealthMetricData && "weight" in formattedHealthMetricData ?
                     <Box pad={{horizontal: "large"}}>
                         <Paragraph>Weight</Paragraph>
-                        <Scatter data={formattedHealthMetricData.weight} options={options}/>
+                        {formattedHealthMetricData.weight.datasets.length > 0 ?
+                        <Scatter data={formattedHealthMetricData.weight} options={options}/> :
+                        <Paragraph>No weight data recorded yet.</Paragraph>}
                     </Box>
-                    : <Paragraph>No weight data recorded.</Paragraph>}
-                {formattedHealthMetricData && formattedHealthMetricData.glucose ?
+                    : null}
+                {formattedHealthMetricData && "glucose" in formattedHealthMetricData ?
                     <Box pad={{horizontal: "large"}}>
                         <Paragraph>Glucose</Paragraph>
-                        <Scatter data={formattedHealthMetricData.glucose} options={options}/>
+                        {formattedHealthMetricData.glucose.datasets.length > 0 ?
+                        <Scatter data={formattedHealthMetricData.glucose} options={options}/> :
+                        <Paragraph>No glucose data recorded yet.</Paragraph>}
                     </Box>
-                    : <Paragraph>No glucose data recorded.</Paragraph>}
+                    : null}
+                <Button label={Object.keys(formattedHealthMetricData).length === 0 ? "Start tracking": "Edit tracking"} onClick={() => { setEditingHealthTracking(Object.keys(formattedHealthMetricData))}} margin={{top: "medium"}}/>
             </Box>
+            {editingHealthTracking !== null ?
+                <Layer
+                    onEsc={() => setEditingHealthTracking(null)}
+                    onClickOutside={() => setEditingHealthTracking(null)}
+                    responsive={false}
+                >
+                    <Box width="70vw" pad="large">
+                        <Box direction="row" justify="between">
+                            <Paragraph size="large">Choose what you want to track</Paragraph>
+                            <Button icon={<Close />} onClick={() => setEditingHealthTracking(null)} />
+                        </Box>
+                        <CheckBoxGroup
+                            options={["blood pressure", "weight", "glucose"]}
+                            value={editingHealthTracking}
+                            onChange={(e) => {setEditingHealthTracking(e.value)}}
+                        />
+                        <AnimatingButton animating={animating} label="Save changes" margin={{top:"medium"}} onClick={async () => {
+                            setAnimating(true);
+                            await setHealthMetricsTracking(editingHealthTracking);
+                            await loadData();
+                            setEditingHealthTracking(null);
+                        }}/>
+                    </Box>
+                </Layer> : null
+            }
             <Box align="center" pad={{vertical: "medium"}} margin={{horizontal: "xlarge"}} border="bottom">
                 <Paragraph textAlign="center" margin={{vertical: "none"}}>Dose windows</Paragraph>
                     {
@@ -465,13 +508,13 @@ const Home = () => {
                                         <FormNextLink/>
                                         <Paragraph>{endTime.setZone('local').toLocaleString(DateTime.TIME_SIMPLE)}</Paragraph>
                                     </Box>
-                                    <Button label="edit" onClick={() => setEditingDoseWindow(dw)}/>
-                                    <Button onClick={() => setDeletingDoseWindow(dw)}><Close size="small"/></Button>
+                                    <Button label="edit" onClick={() => setEditingDoseWindow(dw)} size="small" margin={{horizontal: "none"}}/>
+                                    <Button onClick={() => setDeletingDoseWindow(dw)} label="delete" size="small" padding={{horizontal: "none"}}/>
                                 </Grid>
                             )
                         }) : null
                     }
-                    <Button label="Add dose window" onClick={() => setEditingDoseWindow({start_hour: 0, start_minute:0, end_hour: 0, end_minute: 0})}/>
+                    <Button label="Add dose window" onClick={() => setEditingDoseWindow({start_hour: 0, start_minute:0, end_hour: 0, end_minute: 0})} icon={<Add/>}/>
             </Box>
             {editingDoseWindow && (
                 <Layer
@@ -499,7 +542,7 @@ const Home = () => {
                     <Box width="90vw" pad="large">
                         <Box direction="row" justify="between">
                             <Paragraph size="large">Confirm delete dose window</Paragraph>
-                            <Button icon={<Close />} onClick={() => setDeletingDoseWindow(null)} />
+                            <Button icon={<Close />} onClick={() => setDeletingDoseWindow(null)}/>
                         </Box>
                         <Box align="center">
                             <Paragraph margin={{bottom: "none"}}>You're about to delete the dose window</Paragraph>
@@ -536,7 +579,7 @@ const Home = () => {
                                 await pauseUser();
                             }
                             loadData();
-                        }}>{patientData.pausedService ? "Resume" : "Pause"} Coherence</AnimatingButton>
+                        }} label={`${patientData.pausedService ? "Resume" : "Pause"} Coherence`} />
                     {patientData.pausedService ? <Paragraph size="small" color="status-warning" textAlign="center">While Coherence is paused, we can't respond to any texts you send us, or remind you about your medications.</Paragraph> : null}
                 </> : null}
             </Box>
@@ -545,7 +588,7 @@ const Home = () => {
                 <Paragraph size="small" color="dark-3">Our customer service is just a text away at (650) 667-1146. Reach out any time and we'll get back to you in a few hours!</Paragraph>
             </Box>
             <Box align="center" pad={{vertical: "medium"}} margin={{horizontal: "xlarge"}} border="top">
-                <Button onClick={logout}>Log out</Button>
+                <Button onClick={logout} label="Log out" />
             </Box>
         </Box>
     )
