@@ -127,13 +127,12 @@ const Home = () => {
         );
     }, [calendarMonth, patientData]);
 
-    const units = {
-        weight: "pounds",
-        glucose: "mg/dL",
-        "blood pressure": "mm/hg"
-    }
-
     const formattedHealthMetricData = React.useMemo(() => {
+        const units = {
+            weight: "pounds",
+            glucose: "mg/dL",
+            "blood pressure": "mm/hg"
+        }
         const data = {}
         if (patientData !== null) {
             for (const metric in patientData.healthMetricData) {
@@ -485,7 +484,7 @@ const Home = () => {
                 {formattedHealthMetricData && "blood pressure" in formattedHealthMetricData ? (
                     <Box pad={{horizontal: "large"}} fill="horizontal">
                         <Paragraph size="small" margin={{bottom: "none"}}>Blood pressure</Paragraph>
-                        {formattedHealthMetricData["blood pressure"][0].datasets.data.length > 0 ?
+                        {formattedHealthMetricData["blood pressure"].datasets[0].data.length > 0 ?
                             <Scatter data={formattedHealthMetricData["blood pressure"]} options={formattedHealthMetricData["blood pressure"].options}/> :
                             <Paragraph>No blood pressure data recorded yet. Example texts you can send: "120/80", "120 80".</Paragraph>
                         }
@@ -493,7 +492,7 @@ const Home = () => {
                 {formattedHealthMetricData && "weight" in formattedHealthMetricData ?
                     <Box pad={{horizontal: "large"}} fill="horizontal">
                         <Paragraph size="small" margin={{bottom: "none"}}>Weight</Paragraph>
-                        {formattedHealthMetricData.weight.datasets.data.length > 0 ?
+                        {formattedHealthMetricData.weight.datasets[0].data.length > 0 ?
                         <Scatter data={formattedHealthMetricData.weight} options={formattedHealthMetricData.weight.options}/> :
                         <Paragraph>No weight data recorded yet. Example texts you can send: "weight:150", "150 lb", "150 pounds".</Paragraph>}
                     </Box>
@@ -501,7 +500,7 @@ const Home = () => {
                 {formattedHealthMetricData && "glucose" in formattedHealthMetricData ?
                     <Box pad={{horizontal: "large"}} fill="horizontal">
                         <Paragraph size="small" margin={{bottom: "none"}}>Glucose</Paragraph>
-                        {formattedHealthMetricData.glucose.datasets.data.length > 0 ?
+                        {formattedHealthMetricData.glucose.datasets[0].data.length > 0 ?
                         <Scatter data={formattedHealthMetricData.glucose} options={formattedHealthMetricData.glucose.options}/> :
                         <Paragraph>No glucose data recorded yet. Example texts you can send: "glucose:140", "140 mg/dL"</Paragraph>}
                     </Box>
