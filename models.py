@@ -36,6 +36,7 @@ class User(db.Model):
     timezone = db.Column(db.String, nullable=False)
     password_hash = db.Column(db.String, nullable=True)
     tracked_health_metrics = db.Column(postgresql.ARRAY(db.String), default=[])
+    pending_announcement = db.Column(db.String)
 
     def __init__(
         self,
@@ -425,6 +426,7 @@ class UserSchema(Schema):
     doses = fields.List(fields.Nested(
         lambda: MedicationSchema(exclude=("user", "dose_windows"))
     ))
+    pending_announcement = fields.String()
 
 class DoseWindowSchema(Schema):
     id = fields.Integer()

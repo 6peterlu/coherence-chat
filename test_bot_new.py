@@ -1005,3 +1005,13 @@ def test_admin_manual_takeover(client, db_session, user_record, online_record):
     online_record = Online.query.get(1)
     assert online_record.online is True
     assert user_record.manual_takeover is True
+
+
+def test_announcement(client, db_session, user_record):
+    client.post("/admin/setPendingAnnouncement", json={"announcement": "announce!"}, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), None)})
+    announcement_events = db_session.query(EventLog).filter(EventLog.event_type == "feature_announcement", EventLog.user_id == user_record.id).all()
+    assert len(announcement_events) == 0
+    assert user_record.pending_announcement == "announce!"
+    client.post("/bot", query_string={"From": "+13604508655"})
+    announcement_events = db_session.query(EventLog).filter(EventLog.event_type == "feature_announcement", EventLog.user_id == user_record.id).all()
+    assert len(announcement_events) == 1

@@ -4,6 +4,8 @@
     <h1 id="header"></h1>
     <button onclick="refreshData()">Pull data</button>
     <button onclick="toggleOnlineStatus()" id="onlineToggleButton">Go online</button>
+    <textarea id="announcement" placeholder="announcement"></textarea>
+    <button onclick="createAnnouncement()">Create announcement</button>
     <div id="overviewDiv" style="display:flex; flex-direction: row; justify-content: space-between;">
         <div>
             <p>Job list:</p>
@@ -36,7 +38,7 @@
             },
             mode: "cors"
         };
-        const apiURL = "https://coherence-chat.herokuapp.com";
+        const apiURL = "http://localhost:5000"; // "https://coherence-chat.herokuapp.com";
         // HTTP helpers
         const get = async (route, queryArgs) => {
 
@@ -91,6 +93,15 @@
             return new Date((typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: tzString}));
         }
 
+        function createAnnouncement() {
+            const announcement = document.getElementById("announcement").value;
+            if (announcement && announcement.length > 0) {
+                post("admin/setPendingAnnouncement", { announcement }).then(() => {
+                    refreshData();
+                });
+            }
+        }
+
         function renderJobs(jobData) {
             const jobComparator = (job1, job2) => {
                 if (job1.name > job2.name) {
@@ -136,7 +147,7 @@
             htmlOut += "<p style='font-weight:bold;'>Name</p>";
             htmlOut += `
                 <div style='display: flex; flex-direction: row; ${userData.user.manual_takeover ? 'background-color: #bd5c59' : ''}'>
-                    <p style="padding-left: 20px;">${userData.user.id} | ${userData.user.name}: ${userData.user.phone_number}</p>
+                    <p style="padding-left: 20px;">${userData.user.id} | ${userData.user.name}: ${userData.user.phone_number} | pending announcement: ${userData.user.pending_announcement}</p>
                     <button style="margin: 10px;" id="manualTakeover-${userData.user.id}" onclick=toggleManualTakeover(\'${userData.user.id}\')>${userData.user.manual_takeover ? 'Stop taking over user' : 'Manually takeover user' }</button>
                     <button style="margin: 10px;" id="pause-${userData.user.id}"
                         onclick=${userData.user.paused  ? `resumeUser(\'${userData.user.id}\')` : `pauseUser(\'${userData.user.id}\')`}>

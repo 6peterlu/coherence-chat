@@ -741,6 +741,20 @@ def admin_resume_user():
     return jsonify()
 
 
+@app.route("/admin/setPendingAnnouncement", methods=["POST"])
+@auth.login_required
+def admin_set_pending_announcement():
+    if g.user.phone_number != ADMIN_PHONE_NUMBER:
+        return jsonify(), 401
+    announcement = request.json["announcement"]
+    users = User.query.all()
+    for user in users:
+        if not user.paused:
+            user.pending_announcement = announcement;
+    db.session.commit()
+    return jsonify()
+
+
 def get_nearest_dose_window(input_time, user):
     for dose_window in user.active_dose_windows:
         if dose_window.within_dosing_period(input_time, day_agnostic=True):
@@ -1103,6 +1117,16 @@ def bot():
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                             to=incoming_phone_number
                         )
+        if user.pending_announcement:
+            log_event_new(f"feature_announcement", user.id, None, None, description=user.pending_announcement)
+            if "NOALERTS" not in os.environ:
+                client.messages.create(
+                    body=user.pending_announcement,
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                    to=incoming_phone_number
+                )
+            user.pending_announcement = None
+            db.session.commit()
     if user and user.paused:
         if "NOALERTS" not in os.environ:
             raw_message = request.values.get('Body', '')
