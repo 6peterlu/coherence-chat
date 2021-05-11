@@ -7,11 +7,11 @@ import {
     pullPatientData,
     pullPatientDataForNumber,
     resumeUser,
-    setHealthMetricsTracking,
+    // setHealthMetricsTracking,
     updateDoseWindow,
 } from '../api';
-import { Scatter } from 'react-chartjs-2';
-import { Box, Button, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select, CheckBoxGroup } from "grommet";
+// import { Scatter } from 'react-chartjs-2';
+import { Box, Button, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select } from "grommet";
 import { Add, Checkmark, CircleInformation, Clear, Close, FormNextLink} from "grommet-icons";
 import { DateTime } from 'luxon';
 import 'chartjs-adapter-luxon';
@@ -28,7 +28,7 @@ const Home = () => {
     const [selectedDay, setSelectedDay] = React.useState(null);
     const [editingDoseWindow, setEditingDoseWindow] = React.useState(null);
     const [deletingDoseWindow, setDeletingDoseWindow] = React.useState(null);
-    const [editingHealthTracking, setEditingHealthTracking] = React.useState(null);
+    // const [editingHealthTracking, setEditingHealthTracking] = React.useState(null);
     const [animating, setAnimating] = React.useState(false);  // this is setting animating for ALL buttons for now
 
     const dateRange = [DateTime.local(2021, 4, 1), DateTime.local(2021, 5, 31)]
@@ -112,71 +112,71 @@ const Home = () => {
         );
     }, [calendarMonth, patientData]);
 
-    const formattedHealthMetricData = React.useMemo(() => {
-        const data = {}
-        if (patientData !== null) {
-            for (const metric in patientData.healthMetricData) {
-                const metric_list = patientData.healthMetricData[metric];
-                console.log(metric_list);
-                if (metric !== "blood pressure") {
-                    data[metric] = {
-                        datasets: [{
-                            data: metric_list.map((metric) => {
-                                const jsTime = DateTime.fromHTTP(metric.time);
-                                return {x: jsTime, y: metric.value};
-                            }),
-                            label: metric,
-                            fill: false,
-                            backgroundColor: 'rgb(255, 99, 132)',
-                            borderColor: 'rgba(255, 99, 132, 0.2)'
-                        }]
-                    };
-                } else { // blood pressure has two timeseries
-                    data[metric] = {
-                        datasets: [
-                        {
-                            data: metric_list.map((metric) => {
-                                const jsTime = DateTime.fromHTTP(metric.time);
-                                return {x: jsTime, y: metric.value.systolic};
-                            }),
-                            label: "systolic",
-                            fill: false,
-                            backgroundColor: 'rgb(255, 99, 132)',
-                            borderColor: 'rgba(255, 99, 132, 0.2)'
-                        },
-                        {
-                            data: metric_list.map((metric) => {
-                                const jsTime = DateTime.fromHTTP(metric.time);
-                                return {x: jsTime, y: metric.value.diastolic};
-                            }),
-                            label: "diastolic",
-                            fill: false,
-                            backgroundColor: 'rgb(99, 255, 132)',
-                            borderColor: 'rgba(99, 255, 132, 0.2)'
-                        }
-                    ]
-                    };
-                }
-                // data[metric]["chart"] = calcs(data[metric].data, {coarseness: 10, steps: [10, 1]})
-                // // recompute x bounds
-                // const currentEndOfDay = DateTime.local().plus({days: 2}).set({hour: 0, minute: 0, second: 0, millisecond: 0});
-                // const twoWeeksAgo = currentEndOfDay.minus({days: 14});
-                // console.log("original bounds")
-                // console.log(data[metric].chart.bounds)
-                // console.log([twoWeeksAgo.toSeconds(), currentEndOfDay.toSeconds()])
-                // data[metric].chart.bounds[0] = [twoWeeksAgo.toSeconds(), currentEndOfDay.toSeconds()]
-                // console.log("after bounds")
-                // console.log(data[metric].chart.bounds);
-                // data[metric].chart.axis[0] = range(twoWeeksAgo.toSeconds(), currentEndOfDay.toSeconds(), 3600 * 24 * 2);
-                // console.log(data[metric].chart.axis[0])
-                // console.log(data[metric].data)
-            }
-        }
-        console.log("returned HM data:")
-        console.log(data);
+    // const formattedHealthMetricData = React.useMemo(() => {
+    //     const data = {}
+    //     if (patientData !== null) {
+    //         for (const metric in patientData.healthMetricData) {
+    //             const metric_list = patientData.healthMetricData[metric];
+    //             console.log(metric_list);
+    //             if (metric !== "blood pressure") {
+    //                 data[metric] = {
+    //                     datasets: [{
+    //                         data: metric_list.map((metric) => {
+    //                             const jsTime = DateTime.fromHTTP(metric.time);
+    //                             return {x: jsTime, y: metric.value};
+    //                         }),
+    //                         label: metric,
+    //                         fill: false,
+    //                         backgroundColor: 'rgb(255, 99, 132)',
+    //                         borderColor: 'rgba(255, 99, 132, 0.2)'
+    //                     }]
+    //                 };
+    //             } else { // blood pressure has two timeseries
+    //                 data[metric] = {
+    //                     datasets: [
+    //                     {
+    //                         data: metric_list.map((metric) => {
+    //                             const jsTime = DateTime.fromHTTP(metric.time);
+    //                             return {x: jsTime, y: metric.value.systolic};
+    //                         }),
+    //                         label: "systolic",
+    //                         fill: false,
+    //                         backgroundColor: 'rgb(255, 99, 132)',
+    //                         borderColor: 'rgba(255, 99, 132, 0.2)'
+    //                     },
+    //                     {
+    //                         data: metric_list.map((metric) => {
+    //                             const jsTime = DateTime.fromHTTP(metric.time);
+    //                             return {x: jsTime, y: metric.value.diastolic};
+    //                         }),
+    //                         label: "diastolic",
+    //                         fill: false,
+    //                         backgroundColor: 'rgb(99, 255, 132)',
+    //                         borderColor: 'rgba(99, 255, 132, 0.2)'
+    //                     }
+    //                 ]
+    //                 };
+    //             }
+    //         }
+    //     }
+    //     console.log("returned HM data:")
+    //     console.log(data);
 
-        return data;
-    }, [patientData]);
+    //     return data;
+    // }, [patientData]);
+
+    // scatter chart options
+
+    // const options = {
+    //     scales: {
+    //         x: {type: "time", time: {unit: "day"}},
+    //         y: {type: "linear"}
+    //     },
+    //     plugins: {
+    //         datalabels: {color: 'black'}
+    //     },
+    //     showLine: true
+    // }
 
     const renderImpersonateListItem = React.useCallback((listItem) => {
         console.log(listItem);
@@ -293,17 +293,6 @@ const Home = () => {
             return -1;
         }
         return 1;
-    }
-
-    const options = {
-        scales: {
-            x: {type: "time", time: {unit: "day"}},
-            y: {type: "linear"}
-        },
-        plugins: {
-            datalabels: {color: 'black'}
-        },
-        showLine: true
     }
 
 
@@ -441,7 +430,7 @@ const Home = () => {
                     </Box>
                 </Layer>
             )}
-            <Box align="center" background="brand" pad={{bottom: "large"}}>
+            {/* <Box align="center" background="brand" pad={{bottom: "large"}}>
                 <Paragraph margin={{bottom: "none"}}>Health tracking</Paragraph>
                 {Object.keys(formattedHealthMetricData).length === 0 ? <Paragraph size="small">You're not tracking any health metrics yet.</Paragraph> : null}
                 {formattedHealthMetricData && "blood pressure" in formattedHealthMetricData ? (
@@ -494,7 +483,7 @@ const Home = () => {
                         }}/>
                     </Box>
                 </Layer> : null
-            }
+            } */}
             <Box align="center" pad={{vertical: "medium"}} margin={{horizontal: "xlarge"}} border="bottom">
                 <Paragraph textAlign="center" margin={{vertical: "none"}}>Dose windows</Paragraph>
                     {
