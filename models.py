@@ -39,7 +39,7 @@ class User(db.Model):
     paused = db.Column(db.Boolean, nullable=False)
     timezone = db.Column(db.String, nullable=False)
     password_hash = db.Column(db.String, nullable=True)
-    tracked_health_metrics = db.Column(postgresql.ARRAY(db.String))
+    tracked_health_metrics = db.Column(postgresql.ARRAY(db.String), default=[])
 
     def __init__(
         self,
