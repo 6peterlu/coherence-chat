@@ -24,6 +24,7 @@ import {
     trackPausedService
 } from '../analytics';
 import { Scatter } from 'react-chartjs-2';
+import 'chartjs-plugin-zoom';
 import { Box, Button, CheckBoxGroup, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select } from "grommet";
 import { Add, Checkmark, CircleInformation, Clear, Close, FormNextLink} from "grommet-icons";
 import { DateTime } from 'luxon';
@@ -31,7 +32,11 @@ import 'chartjs-adapter-luxon';
 import TimeInput from "../components/TimeInput";
 import AnimatingButton from "../components/AnimatingButton";
 
+import 'chartjs-plugin-zoom'; // hmm
+
 const Home = () => {
+
+    console.log(DateTime.local().zoneName)
     const [cookies, setCookie, removeCookie] = useCookies(['token']);
     const [patientData, setPatientData] = React.useState(null);
     const [calendarMonth, setCalendarMonth] = React.useState(5);
@@ -150,16 +155,28 @@ const Home = () => {
                             backgroundColor: 'rgb(255, 99, 132)',
                             borderColor: 'rgba(255, 99, 132, 0.2)'
                         }], options:{
-                            scales: {
-                                x: {type: "time", time: {unit: "day"}, grid: {"color": ["#777"]}, ticks:{color: "#FFF"}},
-                                y: {grid: {"color": ["#AAA"]}, ticks:{color: "#FFF"}, title: {text:units[metric], display: true, color: "#FFF"}}
-                            },
-
-                            color: "white",
-                            plugins: {
-                                legend: {display: false}
-                            },
-                            showLine: true
+                                scales: {
+                                    x: {type: "time", time: {unit: "day"}, grid: {"color": ["#777"]}, ticks:{color: "#FFF"}},
+                                    y: {grid: {"color": ["#AAA"]}, ticks:{color: "#FFF"}, title: {text:units[metric], display: true, color: "#FFF"}}
+                                },
+                                color: "white",
+                                plugins: {
+                                    legend: {display: false},
+                                    zoom: {
+                                        // pan: {
+                                        //     enabled: true,
+                                        //     mode: 'x'
+                                        // },
+                                        // limits: {
+                                        // // axis limits
+                                        // },
+                                        zoom: {
+                                            enabled:true,
+                                            mode:'xy'
+                                        }
+                                    }
+                                },
+                                showLine: true
                         }
                     };
                 } else { // blood pressure has two timeseries
