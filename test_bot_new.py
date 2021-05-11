@@ -6,6 +6,7 @@ from freezegun import freeze_time
 from datetime import datetime
 from pytz import utc, timezone
 import tzlocal
+from requests.auth import _basic_auth_str
 
 
 from models import (
@@ -960,7 +961,7 @@ def test_maybe_schedule_absent_new(mock_get_reminder_time, dose_window_record, d
 def test_admin_pause(mock_send_pause_message, user_record, dose_window_record, medication_record, scheduler, client):
     client.post("/admin/pauseUser", json={
         "userId": user_record.id
-    })
+    }, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), None)})
     assert not mock_send_pause_message.called
 
 @mock.patch("bot.send_upcoming_dose_message")
@@ -971,35 +972,36 @@ def test_admin_resume(
 ):
     client.post("/admin/resumeUser", json={
         "userId": user_record.id
-    })
+    }, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), None)})
     assert not mock_send_intro_text.called
     assert not mock_send_upcoming_dose_message.called
 
 
-def test_admin_create_user(client, db_session):
+def test_admin_create_user(client, db_session, user_record):
     client.post("/admin/createUser", json={
-        "phoneNumber": "3604508655",
+        "phoneNumber": "3604508656",
         "name": "Peter"
-    })
+    }, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), None)})
     users = db_session.query(User).all()
-    assert len(users) == 1
+    assert len(users) == 2
 
 def test_admin_create_dose_window(client, db_session, user_record):
     client.post("/admin/createDoseWindow", json={
         "userId": user_record.id
-    })
+    }, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), None)})
     assert len(user_record.dose_windows) == 1
     assert len(user_record.doses) == 1
 
 def test_admin_deactivate_dose_window(client, db_session, user_record, medication_record, dose_window_record):
     client.post("/admin/deactivateDoseWindow", json={
         "doseWindowId": dose_window_record.id
-    })
+    }, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), None)})
     assert len(user_record.active_dose_windows) == 0
     assert len(user_record.dose_windows) == 1
 
-def test_admin_manual_takeover(client, db_session, user_record):
-    client.post("/admin/manualTakeover", json={"userId": user_record.id})
+
+def test_admin_manual_takeover(client, db_session, user_record, online_record):
+    client.post("/admin/manualTakeover", json={"userId": user_record.id}, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), None)})
     online_record = Online.query.get(1)
     assert online_record.online is True
     assert user_record.manual_takeover is True

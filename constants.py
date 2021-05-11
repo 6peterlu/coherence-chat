@@ -77,7 +77,7 @@ ABSENT_MSGS = [
     """I haven't gotten a record of your dose yet, so please let us know if you've taken it.\n""",
 ]
 
-BOUNDARY_MSG = """It's the end of the designated dose period. I've marked the dose as missed."""
+BOUNDARY_MSG = """It's the end of the designated dose period. I've marked the dose as missed for now, but you can come back and mark it later by saying something like 'T @ 5pm'."""
 
 CLINICAL_BOUNDARY_MSG = Template("""It's $time, so here's a reminder not to take your medication after this point.""")
 
@@ -159,3 +159,9 @@ REQUEST_DOSE_WINDOW_START_TIME = Template("When would you like dose window $coun
 REQUEST_DOSE_WINDOW_END_TIME = Template("When would you like dose window $count to end?")
 
 ONBOARDING_COMPLETE = "Great, you'll get your first Coherence reminders starting tomorrow. Thanks again for trying us out! If you have any questions or concerns, text us at (650) 667-1146‬, our customer service line."
+
+BLOOD_GLUCOSE_MESSAGE = Template("🕒 $time\nBlood glucose recorded: $blood_glucose mg/dl.\n📝📝📝📝")
+
+WEIGHT_MESSAGE = Template("🕒 $time\nWe've recorded a weight reading of $weight lbs.\n📝📝📝📝")
+
+BLOOD_PRESSURE_MESSAGE = Template("🕒 $time\nWe've recorded a blood pressure reading of $blood_pressure mm/hg.\n📝📝📝📝")

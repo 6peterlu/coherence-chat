@@ -1,23 +1,32 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.dialects import postgresql
 from datetime import datetime, timedelta, timezone as dt_timezone
 from pytz import utc as pytzutc, timezone
 from marshmallow import Schema, fields
 from werkzeug.security import check_password_hash, generate_password_hash
 from itsdangerous import (TimedJSONWebSignatureSerializer
                           as Serializer, BadSignature, SignatureExpired)
+import re
 import os
 
 db = SQLAlchemy()
 
 def get_time_now(tzaware=True):
     return datetime.now(pytzutc) if tzaware else datetime.utcnow()
+
+
 # sqlalchemy models & deserializers
 
-# new tables
 dose_medication_linker = db.Table('dose_medication_linker',
     db.Column('dose_window_id', db.Integer, db.ForeignKey('dose_window.id', ondelete='CASCADE', name="dose_medication_linker_dose_window_fkey_custom")),
     db.Column('medication_id', db.Integer, db.ForeignKey('medication.id', ondelete='CASCADE', name="dose_medication_linker_medication_fkey_custom"))
 )
+
+# health_metric_user_linker = db.Table('health_metric_user_linker',
+#     db.Column('health_metric_id', db.Integer, db.ForeignKey('health_metric.id', name="health_metric_user_linker_health_metric_fkey_custom")),
+#     db.Column('user_id', db.Integer, db.ForeignKey('user.id', name="health_metric_user_linker_user_fkey_custom"))
+# )
+
 class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
@@ -30,6 +39,7 @@ class User(db.Model):
     paused = db.Column(db.Boolean, nullable=False)
     timezone = db.Column(db.String, nullable=False)
     password_hash = db.Column(db.String, nullable=True)
+    tracked_health_metrics = db.Column(postgresql.ARRAY(db.String), default=[])
 
     def __init__(
         self,
@@ -122,6 +132,17 @@ class User(db.Model):
             return None # invalid token
         user = User.query.get(data['id'])
         return user
+
+    @property
+    def already_sent_intro_today(self):
+        start_of_day, end_of_day = self.current_day_bounds
+        num_intro_events_today = EventLog.query.filter(
+            EventLog.event_time >= start_of_day,
+            EventLog.event_time < end_of_day,
+            EventLog.event_type == "initial",
+            EventLog.user == self
+        ).count()  # count is no more efficient than actually querying; this can be optimized: https://stackoverflow.com/questions/14754994/why-is-sqlalchemy-count-much-slower-than-the-raw-query
+        return num_intro_events_today > 0
 
 class DoseWindow(db.Model):
     __tablename__ = 'dose_window'
@@ -377,6 +398,7 @@ class EventLog(db.Model):
     @property
     def aware_event_time(self):
         return self.event_time.replace(tzinfo=datetime.now().astimezone().tzinfo)
+
 
 class Online(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -28,6 +28,7 @@ from models import (
 
 from models import db
 from nlp import segment_message, get_datetime_obj_from_string
+from health_metrics import METRIC_LIST, process_health_metric_event_stream
 
 from ai import get_reminder_time_within_range
 
@@ -65,6 +66,8 @@ from constants import (
     ABSENT_MSGS,
     ACTION_OUT_OF_RANGE_MSG,
     ALREADY_RECORDED,
+    BLOOD_GLUCOSE_MESSAGE,
+    BLOOD_PRESSURE_MESSAGE,
     BOUNDARY_MSG,
     CLINICAL_BOUNDARY_MSG,
     CONFIRMATION_MSG,
@@ -95,6 +98,7 @@ from constants import (
     ACTION_MENU,
     USER_ERROR_REPORT,
     USER_ERROR_RESPONSE,
+    WEIGHT_MESSAGE,
     WELCOME_BACK_MESSAGES
 )
 
@@ -211,6 +215,17 @@ def get_absent_message():
 
 def get_thanks_message():
     return random.choice(THANKS_MESSAGES)
+
+def get_health_metric_response_message(health_metric_type, description, user):
+    timezone_translated_time = get_time_now().astimezone(timezone(user.timezone)).strftime('%b %d, %I:%M %p')
+    if health_metric_type == "blood glucose":
+        return BLOOD_GLUCOSE_MESSAGE.substitute(blood_glucose=description, time=timezone_translated_time)
+    if health_metric_type == "weight":
+        return WEIGHT_MESSAGE.substitute(weight=description, time=timezone_translated_time)
+    if health_metric_type == "blood pressure":
+        return BLOOD_PRESSURE_MESSAGE.substitute(blood_pressure=description, time=timezone_translated_time)
+    return None
+
 
 
 def log_event_new(event_type, user_id, dose_window_id, medication_id=None, event_time=None, description=None):
@@ -384,6 +399,7 @@ def get_time_of_day(dose_window_obj):
         return "afternoon"
     return "evening"
 
+
 @app.route("/patientData/new", methods=["GET"])
 @auth.login_required
 def auth_patient_data():
@@ -421,7 +437,9 @@ def auth_patient_data():
         "requested_time_delay",
         "activity"
     ]
-    combined_list = list(set(take_record_events) | set(user_driven_events))
+    health_metric_event_types = [f"hm_{name}" for name in METRIC_LIST]
+    combined_list = list(set(take_record_events) | set(user_driven_events) | set(health_metric_event_types))
+    print(EventLog.query.filter(EventLog.event_type == "hm_weight", EventLog.user == user).order_by(EventLog.event_time.asc()).all())
     relevant_events = EventLog.query.filter(EventLog.event_type.in_(combined_list), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
     requested_time_window = (
         timezone(user.timezone).localize(datetime(2021, calendar_month, 1, 4, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None),
@@ -434,6 +452,8 @@ def auth_patient_data():
         event.event_time > requested_time_window[0]
         ), relevant_events))
     user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
+    health_metric_events = list(filter(lambda event: event.event_type in health_metric_event_types, relevant_events))
+    print(health_metric_events)
     event_data = []
     current_day = requested_time_window[0]
     while current_day < requested_time_window[1]:
@@ -449,11 +469,11 @@ def auth_patient_data():
                 daily_event_summary["time_of_day"][time_of_day] = []
             if event.event_type == "boundary":
                 day_status = "missed"
-                daily_event_summary["time_of_day"][time_of_day].append({"type": "missed"})
+                daily_event_summary["time_of_day"][time_of_day].append({"type": "missed", "time": event.event_time})
             elif event.event_type == "skip":
                 if day_status != "missed":
                     day_status = "skip"
-                daily_event_summary["time_of_day"][time_of_day].append({"type": "skipped"})
+                daily_event_summary["time_of_day"][time_of_day].append({"type": "skipped", "time": event.event_time})
             else:
                 daily_event_summary["time_of_day"][time_of_day].append({"type": "taken", "time": event.event_time})
                 if day_status is None:
@@ -477,6 +497,7 @@ def auth_patient_data():
         "impersonateList": User.query.with_entities(User.name, User.phone_number).all() if user.phone_number == ADMIN_PHONE_NUMBER else None,
         "month": calendar_month,
         "impersonating": impersonating,
+        "healthMetricData": process_health_metric_event_stream(health_metric_events, user.tracked_health_metrics),
         "token": g.user.generate_auth_token().decode('ascii')  # refresh auth token
     })
 
@@ -522,6 +543,14 @@ def pause_user_new():
 @auth.login_required
 def resume_user_new():
     g.user.resume(scheduler, send_intro_text_new, send_upcoming_dose_message)
+    return jsonify()
+
+@app.route("/user/healthMetrics/set", methods=["POST"])
+@auth.login_required
+def set_tracking_health_metric():
+    metrics_to_track = request.json["metricList"]
+    g.user.tracked_health_metrics = metrics_to_track
+    db.session.commit()
     return jsonify()
 
 
@@ -1064,6 +1093,14 @@ def bot():
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                             to=incoming_phone_number
                         )
+                if incoming_msg["type"] == "health_metric":
+                    log_event_new(f"hm_{incoming_msg['payload']['type']}", user.id, None, None, description=incoming_msg["payload"]["value"])
+                    if "NOALERTS" not in os.environ:
+                        client.messages.create(
+                            body=get_health_metric_response_message(incoming_msg['payload']['type'], incoming_msg["payload"]["value"], user),
+                            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                            to=incoming_phone_number
+                        )
     if user and user.paused:
         if "NOALERTS" not in os.environ:
             raw_message = request.values.get('Body', '')
@@ -1441,7 +1478,7 @@ def send_intro_text_new(dose_window_obj_id, manual=False, welcome_back=False):
     if not dose_window_obj.is_recorded():  # only send if the dose window object hasn't been recorded yet.
         if "NOALERTS" not in os.environ:
             client.messages.create(
-                body=f"{get_initial_message(dose_window_obj, get_time_now().astimezone(timezone(dose_window_obj.user.timezone)).strftime('%I:%M'), welcome_back, dose_window_obj.user.phone_number)}{ACTION_MENU}",
+                body=f"{get_initial_message(dose_window_obj, get_time_now().astimezone(timezone(dose_window_obj.user.timezone)).strftime('%I:%M'), welcome_back, dose_window_obj.user.phone_number)}{'' if dose_window_obj.user.already_sent_intro_today else ACTION_MENU}",
                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                 to=f"+11{dose_window_obj.user.phone_number}"
             )

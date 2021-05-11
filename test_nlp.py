@@ -45,3 +45,22 @@ def test_segment_message_take():
     assert segment_message("T. Thanks!")[0] == {'modifiers': {'emotion': 'excited'}, 'type': 'thanks', "raw": "T. Thanks!"}
     assert segment_message("T. Thanks!")[1] == {'modifiers': {'emotion': 'excited'}, 'type': 'take', "raw": "T. Thanks!"}
     assert segment_message("I actually took it at 9pm, then went to sleep without phone near.")[0] == {'type': 'take', 'modifiers': {'emotion': 'neutral'}, 'payload': {'time': datetime(2000, 1, 1, 21, 0, tzinfo=utc), 'am_pm_defined': True, 'needs_tz_convert': True}, 'raw': 'I actually took it at 9pm, then went to sleep without phone near.'}
+
+
+def test_health_metrics():
+    assert segment_message("120/80")[0] == {'type': 'health_metric', 'payload': {'type': 'blood pressure', 'value': '120/80'}, 'raw': '120/80'}
+    assert segment_message("bp: 120/80")[0] == {'type': 'health_metric', 'payload': {'type': 'blood pressure', 'value': '120/80'}, 'raw': 'bp: 120/80'}
+    assert segment_message("bp: 120 80")[0] == {'type': 'health_metric', 'payload': {'type': 'blood pressure', 'value': '120/80'}, 'raw': 'bp: 120 80'}
+    assert segment_message("120 80")[0] == {'type': 'health_metric', 'payload': {'type': 'blood pressure', 'value': '120/80'}, 'raw': '120 80'}
+    assert segment_message("120/ 80")[0] == {'type': 'health_metric', 'payload': {'type': 'blood pressure', 'value': '120/80'}, 'raw': '120/ 80'}
+    assert segment_message("120 /80")[0] == {'type': 'health_metric', 'payload': {'type': 'blood pressure', 'value': '120/80'}, 'raw': '120 /80'}
+    assert segment_message("120lbs")[0] == {'type': 'health_metric', 'payload': {'type': 'weight', 'value': '120'}, 'raw': '120lbs'}
+    assert segment_message("120 pounds")[0] == {'type': 'health_metric', 'payload': {'type': 'weight', 'value': '120'}, 'raw': '120 pounds'}
+    assert segment_message("120 lb")[0] == {'type': 'health_metric', 'payload': {'type': 'weight', 'value': '120'}, 'raw': '120 lb'}
+    assert segment_message("weight:120 pounds")[0] == {'type': 'health_metric', 'payload': {'type': 'weight', 'value': '120'}, 'raw': 'weight:120 pounds'}
+    assert segment_message("weight:90 pounds")[0] == {'type': 'health_metric', 'payload': {'type': 'weight', 'value': '90'}, 'raw': 'weight:90 pounds'}
+    assert segment_message("weight 90")[0] == {'type': 'health_metric', 'payload': {'type': 'weight', 'value': '90'}, 'raw': 'weight 90'}
+    assert segment_message("glucose100")[0] == {'type': 'health_metric', 'payload': {'type': 'glucose', 'value': '100'}, 'raw': 'glucose100'}
+    assert segment_message("100mg/dl")[0] == {'type': 'health_metric', 'payload': {'type': 'glucose', 'value': '100'}, 'raw': '100mg/dl'}
+    assert segment_message("100 mg/dl")[0] == {'type': 'health_metric', 'payload': {'type': 'glucose', 'value': '100'}, 'raw': '100 mg/dl'}
+    assert segment_message("glucose 100")[0] == {'type': 'health_metric', 'payload': {'type': 'glucose', 'value': '100'}, 'raw': 'glucose 100'}
