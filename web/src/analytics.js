@@ -1,6 +1,7 @@
 import ReactGA from 'react-ga';
 
-ReactGA.initialize('G-NHQLEL1ETH');
+ReactGA.initialize('UA-196778289-2', {cookieFlags: 'max-age=7200;SameSite=None;Secure'});
+// console.log("initialized")
 
 export const trackPatientPortalLoad = (userId) => {
     ReactGA.event({
