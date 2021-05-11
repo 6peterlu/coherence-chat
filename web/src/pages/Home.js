@@ -7,15 +7,27 @@ import {
     pullPatientData,
     pullPatientDataForNumber,
     resumeUser,
-    // setHealthMetricsTracking,
+    setHealthMetricsTracking,
     updateDoseWindow,
 } from '../api';
-// import { Scatter } from 'react-chartjs-2';
-import { Box, Button, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select } from "grommet";
+import {
+    trackStartAddingDoseWindow,
+    trackPatientPortalLoad,
+    trackViewedDayDetails,
+    trackStartDeletingDoseWindow,
+    trackStartEditingDoseWindow,
+    trackStartEditingHealthMetrics,
+    trackSubmitDeletingDoseWindow,
+    trackSubmitEditedDoseWindow,
+    trackSubmitEditingHealthMetrics,
+    trackResumedService,
+    trackPausedService
+} from '../analytics';
+import { Scatter } from 'react-chartjs-2';
+import { Box, Button, CheckBoxGroup, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select } from "grommet";
 import { Add, Checkmark, CircleInformation, Clear, Close, FormNextLink} from "grommet-icons";
 import { DateTime } from 'luxon';
 import 'chartjs-adapter-luxon';
-import 'chartjs-plugin-datalabels';
 import TimeInput from "../components/TimeInput";
 import AnimatingButton from "../components/AnimatingButton";
 
@@ -28,7 +40,7 @@ const Home = () => {
     const [selectedDay, setSelectedDay] = React.useState(null);
     const [editingDoseWindow, setEditingDoseWindow] = React.useState(null);
     const [deletingDoseWindow, setDeletingDoseWindow] = React.useState(null);
-    // const [editingHealthTracking, setEditingHealthTracking] = React.useState(null);
+    const [editingHealthTracking, setEditingHealthTracking] = React.useState(null);
     const [animating, setAnimating] = React.useState(false);  // this is setting animating for ALL buttons for now
 
     const dateRange = [DateTime.local(2021, 4, 1), DateTime.local(2021, 5, 31)]
@@ -46,6 +58,9 @@ const Home = () => {
         }
         console.log(loadedData);
         setPatientData(loadedData);
+        if (!impersonating) { // only track non impersonating data
+            trackPatientPortalLoad(loadedData.id);
+        }
         setCookie('token', loadedData.token, {secure: true});  // refresh login token
         if (loadedData.impersonateList) {
             setImpersonateOptions(
@@ -112,71 +127,90 @@ const Home = () => {
         );
     }, [calendarMonth, patientData]);
 
-    // const formattedHealthMetricData = React.useMemo(() => {
-    //     const data = {}
-    //     if (patientData !== null) {
-    //         for (const metric in patientData.healthMetricData) {
-    //             const metric_list = patientData.healthMetricData[metric];
-    //             console.log(metric_list);
-    //             if (metric !== "blood pressure") {
-    //                 data[metric] = {
-    //                     datasets: [{
-    //                         data: metric_list.map((metric) => {
-    //                             const jsTime = DateTime.fromHTTP(metric.time);
-    //                             return {x: jsTime, y: metric.value};
-    //                         }),
-    //                         label: metric,
-    //                         fill: false,
-    //                         backgroundColor: 'rgb(255, 99, 132)',
-    //                         borderColor: 'rgba(255, 99, 132, 0.2)'
-    //                     }]
-    //                 };
-    //             } else { // blood pressure has two timeseries
-    //                 data[metric] = {
-    //                     datasets: [
-    //                     {
-    //                         data: metric_list.map((metric) => {
-    //                             const jsTime = DateTime.fromHTTP(metric.time);
-    //                             return {x: jsTime, y: metric.value.systolic};
-    //                         }),
-    //                         label: "systolic",
-    //                         fill: false,
-    //                         backgroundColor: 'rgb(255, 99, 132)',
-    //                         borderColor: 'rgba(255, 99, 132, 0.2)'
-    //                     },
-    //                     {
-    //                         data: metric_list.map((metric) => {
-    //                             const jsTime = DateTime.fromHTTP(metric.time);
-    //                             return {x: jsTime, y: metric.value.diastolic};
-    //                         }),
-    //                         label: "diastolic",
-    //                         fill: false,
-    //                         backgroundColor: 'rgb(99, 255, 132)',
-    //                         borderColor: 'rgba(99, 255, 132, 0.2)'
-    //                     }
-    //                 ]
-    //                 };
-    //             }
-    //         }
-    //     }
-    //     console.log("returned HM data:")
-    //     console.log(data);
+    const units = {
+        weight: "pounds",
+        glucose: "mg/dL",
+        "blood pressure": "mm/hg"
+    }
 
-    //     return data;
-    // }, [patientData]);
+    const formattedHealthMetricData = React.useMemo(() => {
+        const data = {}
+        if (patientData !== null) {
+            for (const metric in patientData.healthMetricData) {
+                const metric_list = patientData.healthMetricData[metric];
+                console.log(metric_list);
+                if (metric !== "blood pressure") {
+                    data[metric] = {
+                        datasets: [{
+                            data: metric_list.map((metric) => {
+                                const jsTime = DateTime.fromHTTP(metric.time);
+                                return {x: jsTime, y: metric.value};
+                            }),
+                            label: metric,
+                            fill: false,
+                            backgroundColor: 'rgb(255, 99, 132)',
+                            borderColor: 'rgba(255, 99, 132, 0.2)'
+                        }], options:{
+                            scales: {
+                                x: {type: "time", time: {unit: "day"}, grid: {"color": ["#777"]}, ticks:{color: "#FFF"}},
+                                y: {grid: {"color": ["#AAA"]}, ticks:{color: "#FFF"}, title: {text:units[metric], display: true, color: "#FFF"}}
+                            },
+
+                            color: "white",
+                            plugins: {
+                                legend: {display: false}
+                            },
+                            showLine: true
+                        }
+                    };
+                } else { // blood pressure has two timeseries
+                    data[metric] = {
+                        datasets: [
+                        {
+                            data: metric_list.map((metric) => {
+                                const jsTime = DateTime.fromHTTP(metric.time);
+                                return {x: jsTime, y: metric.value.systolic};
+                            }),
+                            label: "systolic",
+                            fill: false,
+                            backgroundColor: 'rgb(255, 99, 132)',
+                            borderColor: 'rgba(255, 99, 132, 0.2)'
+                        },
+                        {
+                            data: metric_list.map((metric) => {
+                                const jsTime = DateTime.fromHTTP(metric.time);
+                                return {x: jsTime, y: metric.value.diastolic};
+                            }),
+                            label: "diastolic",
+                            fill: false,
+                            backgroundColor: 'rgb(99, 255, 132)',
+                            borderColor: 'rgba(99, 255, 132, 0.2)'
+                        }
+                    ], options:{
+                        scales: {
+                            x: {type: "time", time: {unit: "day"}, grid: {"color": ["#777"]}, ticks:{color: "#FFF"}},
+                            y: {grid: {"color": ["#AAA"]}, ticks:{color: "#FFF"}, title: {text:units[metric], display: true, color: "#FFF"}}
+                        },
+
+                        color: "white",
+                        plugins: {
+                            datalabels: {color: 'black'}
+                        },
+                        showLine: true
+                    }
+                    };
+                }
+            }
+        }
+        console.log("returned HM data:")
+        console.log(data);
+
+        return data;
+    }, [patientData]);
 
     // scatter chart options
 
-    // const options = {
-    //     scales: {
-    //         x: {type: "time", time: {unit: "day"}},
-    //         y: {type: "linear"}
-    //     },
-    //     plugins: {
-    //         datalabels: {color: 'black'}
-    //     },
-    //     showLine: true
-    // }
+    // const options =
 
     const renderImpersonateListItem = React.useCallback((listItem) => {
         console.log(listItem);
@@ -247,6 +281,9 @@ const Home = () => {
     }, [])
 
     const renderDoseWindowEditFields = React.useCallback(() => {
+        if (patientData === null) {
+            return null;
+        }
         const startTime = DateTime.utc(2021, 5, 1, editingDoseWindow.start_hour, editingDoseWindow.start_minute);
         const endTime = DateTime.utc(2021, 5, 1, editingDoseWindow.end_hour, editingDoseWindow.end_minute);
         return (
@@ -272,6 +309,9 @@ const Home = () => {
                         await updateDoseWindow(editingDoseWindow);
                         await loadData();
                         setEditingDoseWindow(null);
+                        if (impersonating === null) {
+                            trackSubmitEditedDoseWindow(patientData.id);
+                        }
                     }}
                     label={validDoseWindows ? "Update" : "Invalid dose window"}
                     disabled={!validDoseWindows}
@@ -279,7 +319,7 @@ const Home = () => {
                 />}
             </>
         )
-    }, [animating, editingDoseWindow, loadData, validDoseWindows]);
+    }, [animating, editingDoseWindow, impersonating, loadData, patientData, validDoseWindows]);
 
     if (!cookies.token) {
         return <Redirect to="/login"/>;
@@ -345,7 +385,7 @@ const Home = () => {
                     dropContent={
                         <Box pad={{horizontal: "small"}}>
                             <Paragraph textAlign="center">Texting commands</Paragraph>
-                            <Grid columns={["xsmall", "small"]}>
+                            <Grid columns={["xsmall", "small"]} align="center" justifyContent="center" gap={{column: "small"}}>
                                 <Paragraph size="small">T, taken</Paragraph>
                                 <Paragraph size="small">Mark your medication as taken at the current time</Paragraph>
                                 <Paragraph size="small">T @ 5:00pm</Paragraph>
@@ -360,6 +400,12 @@ const Home = () => {
                                 <Paragraph size="small">Delay the reminder by an hour</Paragraph>
                                 <Paragraph size="small">20, 20 min</Paragraph>
                                 <Paragraph size="small">Delay the reminder by 20 minutes</Paragraph>
+                                <Paragraph size="small">glucose:140, 140 mg/dL</Paragraph>
+                                <Paragraph size="small">Record glucose reading</Paragraph>
+                                <Paragraph size="small">weight:150, 150 pounds, 150 lb</Paragraph>
+                                <Paragraph size="small">Record weight reading</Paragraph>
+                                <Paragraph size="small">120/80, 120 80</Paragraph>
+                                <Paragraph size="small">Record blood pressure reading</Paragraph>
                                 <Paragraph size="small">W, website, site</Paragraph>
                                 <Paragraph size="small">Get the website link sent to you</Paragraph>
                                 <Paragraph size="small">Eating, going for a walk</Paragraph>
@@ -380,6 +426,9 @@ const Home = () => {
                     onSelect={(date) => {
                         const dt = DateTime.fromISO(date);
                         setSelectedDay(dt.day);
+                        if (impersonating === null) {
+                            trackViewedDayDetails(patientData.id);
+                        }
                     }}
                     showAdjacentDays={false}
                     bounds={dateRange.map((date) => {return date.toString()})}
@@ -430,34 +479,39 @@ const Home = () => {
                     </Box>
                 </Layer>
             )}
-            {/* <Box align="center" background="brand" pad={{bottom: "large"}}>
+            <Box align="center" background="brand" pad={{bottom: "large"}}>
                 <Paragraph margin={{bottom: "none"}}>Health tracking</Paragraph>
                 {Object.keys(formattedHealthMetricData).length === 0 ? <Paragraph size="small">You're not tracking any health metrics yet.</Paragraph> : null}
                 {formattedHealthMetricData && "blood pressure" in formattedHealthMetricData ? (
-                    <Box pad={{horizontal: "large"}}>
-                        <Paragraph>Blood pressure</Paragraph>
+                    <Box pad={{horizontal: "large"}} fill="horizontal">
+                        <Paragraph size="small" margin={{bottom: "none"}}>Blood pressure</Paragraph>
                         {formattedHealthMetricData["blood pressure"].datasets.length > 0 ?
-                            <Scatter data={formattedHealthMetricData["blood pressure"]} options={options}/> :
-                            <Paragraph>No blood pressure data recorded yet.</Paragraph>
+                            <Scatter data={formattedHealthMetricData["blood pressure"]} options={formattedHealthMetricData["blood pressure"].options}/> :
+                            <Paragraph>No blood pressure data recorded yet. Example texts you can send: "120/80", "120 80".</Paragraph>
                         }
                     </Box>) : null}
                 {formattedHealthMetricData && "weight" in formattedHealthMetricData ?
-                    <Box pad={{horizontal: "large"}}>
-                        <Paragraph>Weight</Paragraph>
+                    <Box pad={{horizontal: "large"}} fill="horizontal">
+                        <Paragraph size="small" margin={{bottom: "none"}}>Weight</Paragraph>
                         {formattedHealthMetricData.weight.datasets.length > 0 ?
-                        <Scatter data={formattedHealthMetricData.weight} options={options}/> :
-                        <Paragraph>No weight data recorded yet.</Paragraph>}
+                        <Scatter data={formattedHealthMetricData.weight} options={formattedHealthMetricData.weight.options}/> :
+                        <Paragraph>No weight data recorded yet. Example texts you can send: "weight:150", "150 lb", "150 pounds".</Paragraph>}
                     </Box>
                     : null}
                 {formattedHealthMetricData && "glucose" in formattedHealthMetricData ?
-                    <Box pad={{horizontal: "large"}}>
-                        <Paragraph>Glucose</Paragraph>
+                    <Box pad={{horizontal: "large"}} fill="horizontal">
+                        <Paragraph size="small" margin={{bottom: "none"}}>Glucose</Paragraph>
                         {formattedHealthMetricData.glucose.datasets.length > 0 ?
-                        <Scatter data={formattedHealthMetricData.glucose} options={options}/> :
-                        <Paragraph>No glucose data recorded yet.</Paragraph>}
+                        <Scatter data={formattedHealthMetricData.glucose} options={formattedHealthMetricData.glucose.options}/> :
+                        <Paragraph>No glucose data recorded yet. Example texts you can send: "glucose:140", "140 mg/dL"</Paragraph>}
                     </Box>
                     : null}
-                <Button label={Object.keys(formattedHealthMetricData).length === 0 ? "Start tracking": "Edit tracking"} onClick={() => { setEditingHealthTracking(Object.keys(formattedHealthMetricData))}} margin={{top: "medium"}}/>
+                <Button label={Object.keys(formattedHealthMetricData).length === 0 ? "Start tracking": "Edit tracking"} onClick={() => {
+                    setEditingHealthTracking(Object.keys(formattedHealthMetricData));
+                    if (impersonating === null) {
+                        trackStartEditingHealthMetrics(patientData.id);
+                    }
+                }} margin={{top: "medium"}}/>
             </Box>
             {editingHealthTracking !== null ?
                 <Layer
@@ -477,13 +531,17 @@ const Home = () => {
                         />
                         <AnimatingButton animating={animating} label="Save changes" margin={{top:"medium"}} onClick={async () => {
                             setAnimating(true);
+                            console.log(editingHealthTracking);
                             await setHealthMetricsTracking(editingHealthTracking);
                             await loadData();
                             setEditingHealthTracking(null);
+                            if (impersonating === null) {
+                                trackSubmitEditingHealthMetrics(patientData.id);
+                            }
                         }}/>
                     </Box>
                 </Layer> : null
-            } */}
+            }
             <Box align="center" pad={{vertical: "medium"}} margin={{horizontal: "xlarge"}} border="bottom">
                 <Paragraph textAlign="center" margin={{vertical: "none"}}>Dose windows</Paragraph>
                     {
@@ -497,13 +555,28 @@ const Home = () => {
                                         <FormNextLink/>
                                         <Paragraph>{endTime.setZone('local').toLocaleString(DateTime.TIME_SIMPLE)}</Paragraph>
                                     </Box>
-                                    <Button label="edit" onClick={() => setEditingDoseWindow(dw)} size="small" margin={{horizontal: "none"}}/>
-                                    <Button onClick={() => setDeletingDoseWindow(dw)} label="delete" size="small" padding={{horizontal: "none"}}/>
+                                    <Button label="edit" onClick={() => {
+                                        setEditingDoseWindow(dw);
+                                        if (impersonating === null) {
+                                            trackStartEditingDoseWindow(patientData.id);
+                                        }
+                                    }} size="small" margin={{horizontal: "none"}}/>
+                                    <Button onClick={() => {
+                                        setDeletingDoseWindow(dw);
+                                        if (impersonating === null) {
+                                            trackStartDeletingDoseWindow(patientData.id);
+                                        }
+                                    }} label="delete" size="small" padding={{horizontal: "none"}}/>
                                 </Grid>
                             )
                         }) : null
                     }
-                    <Button label="Add dose window" onClick={() => setEditingDoseWindow({start_hour: 0, start_minute:0, end_hour: 0, end_minute: 0})} icon={<Add/>}/>
+                    <Button label="Add dose window" onClick={() => {
+                        setEditingDoseWindow({start_hour: 0, start_minute:0, end_hour: 0, end_minute: 0});
+                        if (impersonating === null) {
+                            trackStartAddingDoseWindow(patientData.id);
+                        }
+                    }} icon={<Add/>}/>
             </Box>
             {editingDoseWindow && (
                 <Layer
@@ -545,6 +618,9 @@ const Home = () => {
                                 await deleteDoseWindow(deletingDoseWindow.id)
                                 await loadData();
                                 setDeletingDoseWindow(null);
+                                if (impersonating === null) {
+                                    trackSubmitDeletingDoseWindow(patientData.id);
+                                }
                             }} label="Confirm" animating={animating}/>
                         </Box>
                     </Box>
@@ -564,8 +640,14 @@ const Home = () => {
                             setAnimating(true);
                             if (patientData.pausedService) {
                                 await resumeUser();
+                                if (impersonating === null) {
+                                    trackResumedService(patientData.id);
+                                }
                             } else {
                                 await pauseUser();
+                                if (impersonating === null) {
+                                    trackPausedService(patientData.id);
+                                }
                             }
                             loadData();
                         }} label={`${patientData.pausedService ? "Resume" : "Pause"} Coherence`} />

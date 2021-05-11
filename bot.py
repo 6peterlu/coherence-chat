@@ -490,6 +490,7 @@ def auth_patient_data():
         "phoneNumber": user.phone_number,
         "eventData": event_data,
         "patientName": user.name,
+        "patientId": user.id,
         "takeNow": dose_to_take_now,
         "pausedService": bool(paused_service),
         "behaviorLearningScores": behavior_learning_scores,
@@ -549,6 +550,7 @@ def resume_user_new():
 @auth.login_required
 def set_tracking_health_metric():
     metrics_to_track = request.json["metricList"]
+    print(metrics_to_track)
     g.user.tracked_health_metrics = metrics_to_track
     db.session.commit()
     return jsonify()
