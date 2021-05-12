@@ -63,9 +63,9 @@ const Home = () => {
         }
         console.log(loadedData);
         setPatientData(loadedData);
-        // if (impersonateOptions === null) { // only track non impersonating data
-        trackPatientPortalLoad(loadedData.id);
-        // }
+        if (loadedData.impersonateList === null) { // only track non impersonating data
+            trackPatientPortalLoad(loadedData.patientId);
+        }
         setCookie('token', loadedData.token, {secure: true});  // refresh login token
         if (loadedData.impersonateList) {
             setImpersonateOptions(
@@ -313,7 +313,7 @@ const Home = () => {
                         await loadData();
                         setEditingDoseWindow(null);
                         if (impersonateOptions === null) {
-                            trackSubmitEditedDoseWindow(patientData.id);
+                            trackSubmitEditedDoseWindow(patientData.patientId);
                         }
                     }}
                     label={validDoseWindows ? "Update" : "Invalid dose window"}
@@ -423,7 +423,7 @@ const Home = () => {
                         const dt = DateTime.fromISO(date);
                         setSelectedDay(dt.day);
                         if (impersonateOptions === null) {
-                            trackViewedDayDetails(patientData.id);
+                            trackViewedDayDetails(patientData.patientId);
                         }
                     }}
                     showAdjacentDays={false}
@@ -510,7 +510,7 @@ const Home = () => {
                 <Button label={Object.keys(formattedHealthMetricData).length === 0 ? "Start tracking": "Edit tracking"} onClick={() => {
                     setEditingHealthTracking(Object.keys(formattedHealthMetricData));
                     if (impersonateOptions === null) {
-                        trackStartEditingHealthMetrics(patientData.id);
+                        trackStartEditingHealthMetrics(patientData.patientId);
                     }
                 }} margin={{top: "medium"}}/>
             </Box>
@@ -537,7 +537,7 @@ const Home = () => {
                             await loadData();
                             setEditingHealthTracking(null);
                             if (impersonateOptions === null) {
-                                trackSubmitEditingHealthMetrics(patientData.id);
+                                trackSubmitEditingHealthMetrics(patientData.patientId);
                             }
                         }}/>
                     </Box>
@@ -559,13 +559,13 @@ const Home = () => {
                                     <Button label="edit" onClick={() => {
                                         setEditingDoseWindow(dw);
                                         if (impersonateOptions === null) {
-                                            trackStartEditingDoseWindow(patientData.id);
+                                            trackStartEditingDoseWindow(patientData.patientId);
                                         }
                                     }} size="small" margin={{horizontal: "none"}}/>
                                     <Button onClick={() => {
                                         setDeletingDoseWindow(dw);
                                         if (impersonateOptions === null) {
-                                            trackStartDeletingDoseWindow(patientData.id);
+                                            trackStartDeletingDoseWindow(patientData.patientId);
                                         }
                                     }} icon={<Close/>} size="small" padding={{horizontal: "none"}}/>
                                 </Grid>
@@ -575,7 +575,7 @@ const Home = () => {
                     <Button label="Add dose window" onClick={() => {
                         setEditingDoseWindow({start_hour: 0, start_minute:0, end_hour: 0, end_minute: 0});
                         if (impersonateOptions === null) {
-                            trackStartAddingDoseWindow(patientData.id);
+                            trackStartAddingDoseWindow(patientData.patientId);
                         }
                     }} icon={<Add/>}/>
             </Box>
@@ -620,7 +620,7 @@ const Home = () => {
                                 await loadData();
                                 setDeletingDoseWindow(null);
                                 if (impersonateOptions === null) {
-                                    trackSubmitDeletingDoseWindow(patientData.id);
+                                    trackSubmitDeletingDoseWindow(patientData.patientId);
                                 }
                             }} label="Confirm" animating={animating}/>
                         </Box>
@@ -642,12 +642,12 @@ const Home = () => {
                             if (patientData.pausedService) {
                                 await resumeUser();
                                 if (impersonateOptions === null) {
-                                    trackResumedService(patientData.id);
+                                    trackResumedService(patientData.patientId);
                                 }
                             } else {
                                 await pauseUser();
                                 if (impersonateOptions === null) {
-                                    trackPausedService(patientData.id);
+                                    trackPausedService(patientData.patientId);
                                 }
                             }
                             loadData();
