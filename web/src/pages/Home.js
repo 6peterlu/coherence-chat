@@ -215,10 +215,6 @@ const Home = () => {
         return data;
     }, [patientData]);
 
-    // scatter chart options
-
-    // const options =
-
     const renderImpersonateListItem = React.useCallback((listItem) => {
         console.log(listItem);
         return listItem.label;
@@ -344,13 +340,6 @@ const Home = () => {
 
 
     return (
-        // <>
-        //     {cookies.token ? (<p>Logged in!</p>) : <Redirect to="/login"/>}
-        //     <p>{JSON.stringify(patientData)}</p>
-        //     <button onClick={logout}>Logout</button>
-        //     {patientData.impersonateList ? <Select options={impersonateOptions} onChange={(selectedValue) => { loadDataForUser(selectedValue)}}/> : null}
-        //     {impersonating ? <p>Impersonating {impersonating}</p> : null}
-        // </>
         <Box>
             {impersonateOptions !== null ?
                 <Box direction="row" align="center" gap="small" pad={{"horizontal": "medium"}}>
