@@ -488,7 +488,12 @@ const Home = () => {
             )}
             <Box align="center" background="brand" pad={{bottom: "large"}}>
                 <Paragraph margin={{bottom: "none"}}>Health tracking</Paragraph>
-                {Object.keys(formattedHealthMetricData).length === 0 ? <Paragraph size="small">You're not tracking any health metrics yet.</Paragraph> : null}
+                {Object.keys(formattedHealthMetricData).length === 0 ?
+                    <>
+                        <Paragraph size="small">You're not tracking any health metrics yet.</Paragraph>
+                        <Paragraph size="small" textAlign="center">Tracking is a brand new feature that allows you to text us health data such as blood pressure, weight, or glucose. You can then view your historical data here at any time.</Paragraph>
+                    </>
+                : null}
                 {formattedHealthMetricData && "blood pressure" in formattedHealthMetricData ? (
                     <Box pad={{horizontal: "large"}} fill="horizontal">
                         <Paragraph size="small" margin={{bottom: "none"}}>Blood pressure</Paragraph>
