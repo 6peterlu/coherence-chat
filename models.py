@@ -22,10 +22,6 @@ dose_medication_linker = db.Table('dose_medication_linker',
     db.Column('medication_id', db.Integer, db.ForeignKey('medication.id', ondelete='CASCADE', name="dose_medication_linker_medication_fkey_custom"))
 )
 
-# health_metric_user_linker = db.Table('health_metric_user_linker',
-#     db.Column('health_metric_id', db.Integer, db.ForeignKey('health_metric.id', name="health_metric_user_linker_health_metric_fkey_custom")),
-#     db.Column('user_id', db.Integer, db.ForeignKey('user.id', name="health_metric_user_linker_user_fkey_custom"))
-# )
 
 class User(db.Model):
     __tablename__ = 'user'
@@ -40,6 +36,7 @@ class User(db.Model):
     timezone = db.Column(db.String, nullable=False)
     password_hash = db.Column(db.String, nullable=True)
     tracked_health_metrics = db.Column(postgresql.ARRAY(db.String), default=[])
+    pending_announcement = db.Column(db.String)
 
     def __init__(
         self,
@@ -258,9 +255,7 @@ class DoseWindow(db.Model):
         return True
 
     def remove_boundary_event(self, days_delta=0):
-        print("remove boundary event called")
         start_of_day, end_of_day = self.user.past_day_bounds(days_delta)
-        print(start_of_day, end_of_day)
         EventLog.query.filter(
             EventLog.dose_window_id == self.id,
             EventLog.event_time >= start_of_day,
@@ -276,6 +271,7 @@ class DoseWindow(db.Model):
         if alarm_starttime < get_time_now():
             alarm_starttime += timedelta(days=1)
         return alarm_starttime
+
     @property
     def next_end_date(self):
         alarm_endtime = get_time_now().replace(hour=self.end_hour, minute=self.end_minute, second=0, microsecond=0)
@@ -332,7 +328,16 @@ class Medication(db.Model):
     dose_windows = db.relationship("DoseWindow", secondary=dose_medication_linker, back_populates="medications", order_by="DoseWindow.id.asc()")
     active = db.Column(db.Boolean, nullable=False)
 
-    def __init__(self, user_id, medication_name, scheduler_tuple=None, instructions=None, events=[], dose_windows=[], active=True):
+    def __init__(
+        self,
+        user_id,
+        medication_name,
+        scheduler_tuple=None,
+        instructions=None,
+        events=[],
+        dose_windows=[],
+        active=True,
+    ):
         self.user_id = user_id
         self.medication_name = medication_name
         self.instructions = instructions
@@ -421,6 +426,7 @@ class UserSchema(Schema):
     doses = fields.List(fields.Nested(
         lambda: MedicationSchema(exclude=("user", "dose_windows"))
     ))
+    pending_announcement = fields.String()
 
 class DoseWindowSchema(Schema):
     id = fields.Integer()

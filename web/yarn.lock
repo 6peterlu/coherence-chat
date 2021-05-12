@@ -3320,6 +3320,13 @@ chartjs-plugin-datalabels@^2.0.0-beta.1:
   resolved "https://registry.yarnpkg.com/chartjs-plugin-datalabels/-/chartjs-plugin-datalabels-2.0.0-beta.1.tgz#63ad7962c9e3b90c386e65181db17b4372e123bd"
   integrity sha512-BpPZiupDSl/uwfECfMYAHpUPCt48UrgQ3FCF9Js1jmpPW7yfX/aoO8/4r+jTaZk/IMRKJr7D3beBckfGz09PPw==
 
+chartjs-plugin-zoom@^1.0.0-beta.5:
+  version "1.0.0-beta.5"
+  resolved "https://registry.yarnpkg.com/chartjs-plugin-zoom/-/chartjs-plugin-zoom-1.0.0-beta.5.tgz#a44f41a2b7061856229fb59dd160b3108e4a3f12"
+  integrity sha512-ltt6zMo43bG0qgWrsKfuAF8MY20X2tdeOWcHvscGuhGGgD5HQAn3/FgHNeGOn0co4Z7FlpVH1nHZ62TK8A0B0Q==
+  dependencies:
+    hammerjs "^2.0.8"
+
 check-types@^11.1.1:
   version "11.1.2"
   resolved "https://registry.yarnpkg.com/check-types/-/check-types-11.1.2.tgz#86a7c12bf5539f6324eb0e70ca8896c0e38f3e2f"
@@ -5536,6 +5543,11 @@ gzip-size@5.1.1:
   dependencies:
     duplexer "^0.1.1"
     pify "^4.0.1"
+
+hammerjs@^2.0.8:
+  version "2.0.8"
+  resolved "https://registry.yarnpkg.com/hammerjs/-/hammerjs-2.0.8.tgz#04ef77862cff2bb79d30f7692095930222bf60f1"
+  integrity sha1-BO93hiz/K7edMPdpIJWTAiK/YPE=
 
 handle-thing@^2.0.0:
   version "2.0.1"
@@ -9289,6 +9301,11 @@ react-error-overlay@^6.0.9:
   version "6.0.9"
   resolved "https://registry.yarnpkg.com/react-error-overlay/-/react-error-overlay-6.0.9.tgz#3c743010c9359608c375ecd6bc76f35d93995b0a"
   integrity sha512-nQTTcUu+ATDbrSD1BZHr5kgSD4oF8OFjxun8uAaL8RwPBacGBNPf/yAuVVdx17N8XNzRDMrZ9XcKZHCjPW+9ew==
+
+react-ga@^3.3.0:
+  version "3.3.0"
+  resolved "https://registry.yarnpkg.com/react-ga/-/react-ga-3.3.0.tgz#c91f407198adcb3b49e2bc5c12b3fe460039b3ca"
+  integrity sha512-o8RScHj6Lb8cwy3GMrVH6NJvL+y0zpJvKtc0+wmH7Bt23rszJmnqEQxRbyrqUzk9DTJIHoP42bfO5rswC9SWBQ==
 
 react-input-autosize@^3.0.0:
   version "3.0.0"

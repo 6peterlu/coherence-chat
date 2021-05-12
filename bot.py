@@ -490,6 +490,7 @@ def auth_patient_data():
         "phoneNumber": user.phone_number,
         "eventData": event_data,
         "patientName": user.name,
+        "patientId": user.id,
         "takeNow": dose_to_take_now,
         "pausedService": bool(paused_service),
         "behaviorLearningScores": behavior_learning_scores,
@@ -549,6 +550,7 @@ def resume_user_new():
 @auth.login_required
 def set_tracking_health_metric():
     metrics_to_track = request.json["metricList"]
+    print(metrics_to_track)
     g.user.tracked_health_metrics = metrics_to_track
     db.session.commit()
     return jsonify()
@@ -736,6 +738,20 @@ def admin_resume_user():
     user = User.query.get(user_id)
     if user is not None:
         user.resume(scheduler, send_intro_text_new, send_upcoming_dose_message, silent=True)
+    return jsonify()
+
+
+@app.route("/admin/setPendingAnnouncement", methods=["POST"])
+@auth.login_required
+def admin_set_pending_announcement():
+    if g.user.phone_number != ADMIN_PHONE_NUMBER:
+        return jsonify(), 401
+    announcement = request.json["announcement"]
+    users = User.query.all()
+    for user in users:
+        if not user.paused:
+            user.pending_announcement = announcement;
+    db.session.commit()
     return jsonify()
 
 
@@ -1101,6 +1117,16 @@ def bot():
                             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                             to=incoming_phone_number
                         )
+        if user.pending_announcement:
+            log_event_new(f"feature_announcement", user.id, None, None, description=user.pending_announcement)
+            if "NOALERTS" not in os.environ:
+                client.messages.create(
+                    body=user.pending_announcement,
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                    to=incoming_phone_number
+                )
+            user.pending_announcement = None
+            db.session.commit()
     if user and user.paused:
         if "NOALERTS" not in os.environ:
             raw_message = request.values.get('Body', '')

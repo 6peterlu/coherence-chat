@@ -5,25 +5,17 @@ object-assign
 */
 
 /*!
- * Chart.js v3.2.1
- * https://www.chartjs.org
- * (c) 2021 Chart.js Contributors
- * Released under the MIT License
- */
-
-/*!
- * chartjs-plugin-datalabels v2.0.0-beta.1
- * https://chartjs-plugin-datalabels.netlify.app
- * (c) 2017-2021 chartjs-plugin-datalabels contributors
- * Released under the MIT license
- */
-
-/*!
  * cookie
  * Copyright(c) 2012-2014 Roman Shtylman
  * Copyright(c) 2015 Douglas Christopher Wilson
  * MIT Licensed
  */
+
+/*! Hammer.JS - v2.0.7 - 2016-04-22
+ * http://hammerjs.github.io/
+ *
+ * Copyright (c) 2016 Jorik Tangelder;
+ * Licensed under the MIT license */
 
 /**
  * @license

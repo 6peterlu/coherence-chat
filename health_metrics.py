@@ -12,12 +12,12 @@ def process_health_metric_event_stream(hm_event_stream, tracked_health_metrics):
     print(tracked_health_metrics)
     print(hm_event_stream)
     output_dict = {}
+    for event_type in tracked_health_metrics:
+        output_dict[event_type] = []
     for event in hm_event_stream:
         event_type = event.event_type[3:]  # get rid of "hm_"
         if event_type in tracked_health_metrics:
             print("in here")
-            if event_type not in output_dict:
-                output_dict[event_type] = []
             new_hm_event = {"time": event.event_time, "value": deserialize_metric(event)}
             output_dict[event_type].append(new_hm_event)
     return output_dict
