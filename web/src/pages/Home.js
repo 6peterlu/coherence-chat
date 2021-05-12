@@ -63,9 +63,9 @@ const Home = () => {
         }
         console.log(loadedData);
         setPatientData(loadedData);
-        if (!impersonating) { // only track non impersonating data
-            trackPatientPortalLoad(loadedData.id);
-        }
+        // if (impersonateOptions === null) { // only track non impersonating data
+        trackPatientPortalLoad(loadedData.id);
+        // }
         setCookie('token', loadedData.token, {secure: true});  // refresh login token
         if (loadedData.impersonateList) {
             setImpersonateOptions(
