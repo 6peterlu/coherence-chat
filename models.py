@@ -37,6 +37,9 @@ class User(db.Model):
     password_hash = db.Column(db.String, nullable=True)
     tracked_health_metrics = db.Column(postgresql.ARRAY(db.String), default=[])
     pending_announcement = db.Column(db.String)
+    free_trial = db.Column(db.Boolean)
+    onboarding = db.Column(db.Boolean)
+    end_of_service = db.Column(db.DateTime)
 
     def __init__(
         self,
@@ -48,6 +51,9 @@ class User(db.Model):
         manual_takeover=False,
         paused=False,
         timezone="US/Pacific",
+        free_trial=False,
+        end_of_service=None,
+        onboarding=False
     ):
         self.phone_number = phone_number
         self.name = name
@@ -57,6 +63,9 @@ class User(db.Model):
         self.manual_takeover = manual_takeover
         self.paused = paused
         self.timezone = timezone
+        self.free_trial = free_trial
+        self.onboarding = onboarding
+        self.end_of_service = end_of_service
 
     # TODO: determine bounds from dose window settings. for now, it's hardcoded to 4AM (which is not gonna work).
     @property

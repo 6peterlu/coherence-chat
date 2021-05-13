@@ -24,15 +24,12 @@ import {
     trackPausedService
 } from '../analytics';
 import { Scatter } from 'react-chartjs-2';
-import 'chartjs-plugin-zoom';
 import { Box, Button, CheckBoxGroup, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select } from "grommet";
 import { Add, Checkmark, CircleInformation, Clear, Close, FormNextLink} from "grommet-icons";
 import { DateTime } from 'luxon';
 import 'chartjs-adapter-luxon';
 import TimeInput from "../components/TimeInput";
 import AnimatingButton from "../components/AnimatingButton";
-
-import 'chartjs-plugin-zoom'; // hmm
 
 const Home = () => {
 
@@ -46,6 +43,8 @@ const Home = () => {
     const [editingDoseWindow, setEditingDoseWindow] = React.useState(null);
     const [deletingDoseWindow, setDeletingDoseWindow] = React.useState(null);
     const [editingHealthTracking, setEditingHealthTracking] = React.useState(null);
+    const [timeRange, setTimeRange] = React.useState({label: "all time", value: null});
+    console.log(timeRange);
     const [animating, setAnimating] = React.useState(false);  // this is setting animating for ALL buttons for now
 
     const dateRange = [DateTime.local(2021, 4, 1), DateTime.local(2021, 5, 31)]
@@ -63,8 +62,8 @@ const Home = () => {
         }
         console.log(loadedData);
         setPatientData(loadedData);
-        if (!impersonating) { // only track non impersonating data
-            trackPatientPortalLoad(loadedData.id);
+        if (loadedData.impersonateList === null) { // only track non impersonating data
+            trackPatientPortalLoad(loadedData.patientId);
         }
         setCookie('token', loadedData.token, {secure: true});  // refresh login token
         if (loadedData.impersonateList) {
@@ -156,16 +155,23 @@ const Home = () => {
                             borderColor: 'rgba(255, 99, 132, 0.2)'
                         }], options:{
                                 scales: {
-                                    x: {type: "time", time: {unit: "day"}, grid: {"color": ["#777"]}, ticks:{color: "#FFF"}},
+                                    x: {
+                                        type: "time",
+                                        time: {unit: "day"},
+                                        grid: {"color": ["#777"]},
+                                        ticks:{color: "#FFF"},
+                                        min: timeRange.value !== null ? DateTime.local().minus({days: timeRange.value}).toISODate() : null},
                                     y: {grid: {"color": ["#AAA"]}, ticks:{color: "#FFF"}, title: {text:units[metric], display: true, color: "#FFF"}}
                                 },
                                 color: "white",
                                 plugins: {
                                     legend: {display: false},
                                 },
-                                zoom: {
-                                    enabled:true,
-                                    mode:'xy'
+                                elements: {
+                                    point: {
+                                        hitRadius: 10,
+                                        hoverRadius: 10
+                                    }
                                 },
                                 showLine: true
                         }
@@ -195,7 +201,13 @@ const Home = () => {
                         }
                     ], options:{
                         scales: {
-                            x: {type: "time", time: {unit: "day"}, grid: {"color": ["#777"]}, ticks:{color: "#FFF"}},
+                            x: {
+                                type: "time",
+                                time: {unit: "day"},
+                                grid: {"color": ["#777"]},
+                                ticks:{color: "#FFF"},
+                                min: timeRange.value !== null ? DateTime.local().minus({days: timeRange.value}).toISODate() : null
+                            },
                             y: {grid: {"color": ["#AAA"]}, ticks:{color: "#FFF"}, title: {text:units[metric], display: true, color: "#FFF"}}
                         },
 
@@ -213,11 +225,7 @@ const Home = () => {
         console.log(data);
 
         return data;
-    }, [patientData]);
-
-    // scatter chart options
-
-    // const options =
+    }, [patientData, timeRange]);
 
     const renderImpersonateListItem = React.useCallback((listItem) => {
         console.log(listItem);
@@ -313,17 +321,33 @@ const Home = () => {
                 {<AnimatingButton
                     onClick={async () => {
                         setAnimating(true);
+                        console.log("set animating");
                         await updateDoseWindow(editingDoseWindow);
                         await loadData();
                         setEditingDoseWindow(null);
                         if (impersonateOptions === null) {
-                            trackSubmitEditedDoseWindow(patientData.id);
+                            trackSubmitEditedDoseWindow(patientData.patientId);
                         }
                     }}
-                    label={validDoseWindows ? "Update" : "Invalid dose window"}
+                    label={validDoseWindows ? editingDoseWindow.id ? "Update" : "Create" : "Invalid dose window"}
                     disabled={!validDoseWindows}
                     animating={animating}
                 />}
+                {editingDoseWindow.id ? <AnimatingButton onClick={() => {
+                    setDeletingDoseWindow(editingDoseWindow);
+                    if (impersonateOptions === null) {
+                        trackStartDeletingDoseWindow(patientData.patientId);
+                    }
+                }}
+                    disabled={animating}
+                    size="small"
+                    padding={{horizontal: "none"}}
+                    margin={{top: "medium"}}
+                    label="Delete dose window"
+                    color="status-error"
+                    plain={true}
+                    alignSelf="center"
+                /> : null}
             </>
         )
     }, [animating, editingDoseWindow, impersonateOptions, loadData, patientData, validDoseWindows]);
@@ -342,15 +366,8 @@ const Home = () => {
         return 1;
     }
 
-
+    console.log(timeRange.label);
     return (
-        // <>
-        //     {cookies.token ? (<p>Logged in!</p>) : <Redirect to="/login"/>}
-        //     <p>{JSON.stringify(patientData)}</p>
-        //     <button onClick={logout}>Logout</button>
-        //     {patientData.impersonateList ? <Select options={impersonateOptions} onChange={(selectedValue) => { loadDataForUser(selectedValue)}}/> : null}
-        //     {impersonating ? <p>Impersonating {impersonating}</p> : null}
-        // </>
         <Box>
             {impersonateOptions !== null ?
                 <Box direction="row" align="center" gap="small" pad={{"horizontal": "medium"}}>
@@ -434,7 +451,7 @@ const Home = () => {
                         const dt = DateTime.fromISO(date);
                         setSelectedDay(dt.day);
                         if (impersonateOptions === null) {
-                            trackViewedDayDetails(patientData.id);
+                            trackViewedDayDetails(patientData.patientId);
                         }
                     }}
                     showAdjacentDays={false}
@@ -494,6 +511,16 @@ const Home = () => {
                         <Paragraph size="small" textAlign="center">Tracking is a brand new feature that allows you to text us health data such as blood pressure, weight, or glucose. You can then view your historical data here at any time.</Paragraph>
                     </>
                 : null}
+                {Object.keys(formattedHealthMetricData).length !== 0 ?
+                <Box margin={{top: "small"}}>
+                    <Select
+                        options={[{label: "week", value: 7}, {label: "month", value: 30}, {label: "3 months", value: 90}, {label: "year", value: 365}, {label: "all time", value: null}]}
+                        children={(option) => {return <Paragraph margin="small">{option.label}</Paragraph>}}
+                        onChange={({value}) => { setTimeRange(value)}}
+                        valueLabel={<Paragraph margin={{vertical: "xsmall", horizontal: "small"}}>{timeRange.label}</Paragraph>}
+                        // labelKey="label"
+                    />
+                </Box> : null}
                 {formattedHealthMetricData && "blood pressure" in formattedHealthMetricData ? (
                     <Box pad={{horizontal: "large"}} fill="horizontal">
                         <Paragraph size="small" margin={{bottom: "none"}}>Blood pressure</Paragraph>
@@ -521,7 +548,7 @@ const Home = () => {
                 <Button label={Object.keys(formattedHealthMetricData).length === 0 ? "Start tracking": "Edit tracking"} onClick={() => {
                     setEditingHealthTracking(Object.keys(formattedHealthMetricData));
                     if (impersonateOptions === null) {
-                        trackStartEditingHealthMetrics(patientData.id);
+                        trackStartEditingHealthMetrics(patientData.patientId);
                     }
                 }} margin={{top: "medium"}}/>
             </Box>
@@ -548,7 +575,7 @@ const Home = () => {
                             await loadData();
                             setEditingHealthTracking(null);
                             if (impersonateOptions === null) {
-                                trackSubmitEditingHealthMetrics(patientData.id);
+                                trackSubmitEditingHealthMetrics(patientData.patientId);
                             }
                         }}/>
                     </Box>
@@ -570,15 +597,9 @@ const Home = () => {
                                     <Button label="edit" onClick={() => {
                                         setEditingDoseWindow(dw);
                                         if (impersonateOptions === null) {
-                                            trackStartEditingDoseWindow(patientData.id);
+                                            trackStartEditingDoseWindow(patientData.patientId);
                                         }
                                     }} size="small" margin={{horizontal: "none"}}/>
-                                    <Button onClick={() => {
-                                        setDeletingDoseWindow(dw);
-                                        if (impersonateOptions === null) {
-                                            trackStartDeletingDoseWindow(patientData.id);
-                                        }
-                                    }} icon={<Close/>} size="small" padding={{horizontal: "none"}}/>
                                 </Grid>
                             )
                         }) : null
@@ -586,7 +607,7 @@ const Home = () => {
                     <Button label="Add dose window" onClick={() => {
                         setEditingDoseWindow({start_hour: 0, start_minute:0, end_hour: 0, end_minute: 0});
                         if (impersonateOptions === null) {
-                            trackStartAddingDoseWindow(patientData.id);
+                            trackStartAddingDoseWindow(patientData.patientId);
                         }
                     }} icon={<Add/>}/>
             </Box>
@@ -630,8 +651,9 @@ const Home = () => {
                                 await deleteDoseWindow(deletingDoseWindow.id)
                                 await loadData();
                                 setDeletingDoseWindow(null);
+                                setEditingDoseWindow(null);
                                 if (impersonateOptions === null) {
-                                    trackSubmitDeletingDoseWindow(patientData.id);
+                                    trackSubmitDeletingDoseWindow(patientData.patientId);
                                 }
                             }} label="Confirm" animating={animating}/>
                         </Box>
@@ -653,12 +675,12 @@ const Home = () => {
                             if (patientData.pausedService) {
                                 await resumeUser();
                                 if (impersonateOptions === null) {
-                                    trackResumedService(patientData.id);
+                                    trackResumedService(patientData.patientId);
                                 }
                             } else {
                                 await pauseUser();
                                 if (impersonateOptions === null) {
-                                    trackPausedService(patientData.id);
+                                    trackPausedService(patientData.patientId);
                                 }
                             }
                             loadData();
