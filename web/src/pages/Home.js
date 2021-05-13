@@ -24,15 +24,12 @@ import {
     trackPausedService
 } from '../analytics';
 import { Scatter } from 'react-chartjs-2';
-import 'chartjs-plugin-zoom';
 import { Box, Button, CheckBoxGroup, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select } from "grommet";
 import { Add, Checkmark, CircleInformation, Clear, Close, FormNextLink} from "grommet-icons";
 import { DateTime } from 'luxon';
 import 'chartjs-adapter-luxon';
 import TimeInput from "../components/TimeInput";
 import AnimatingButton from "../components/AnimatingButton";
-
-import 'chartjs-plugin-zoom'; // hmm
 
 const Home = () => {
 
@@ -46,6 +43,8 @@ const Home = () => {
     const [editingDoseWindow, setEditingDoseWindow] = React.useState(null);
     const [deletingDoseWindow, setDeletingDoseWindow] = React.useState(null);
     const [editingHealthTracking, setEditingHealthTracking] = React.useState(null);
+    const [timeRange, setTimeRange] = React.useState({label: "all time", value: null});
+    console.log(timeRange);
     const [animating, setAnimating] = React.useState(false);  // this is setting animating for ALL buttons for now
 
     const dateRange = [DateTime.local(2021, 4, 1), DateTime.local(2021, 5, 31)]
@@ -156,16 +155,23 @@ const Home = () => {
                             borderColor: 'rgba(255, 99, 132, 0.2)'
                         }], options:{
                                 scales: {
-                                    x: {type: "time", time: {unit: "day"}, grid: {"color": ["#777"]}, ticks:{color: "#FFF"}},
+                                    x: {
+                                        type: "time",
+                                        time: {unit: "day"},
+                                        grid: {"color": ["#777"]},
+                                        ticks:{color: "#FFF"},
+                                        min: timeRange ? DateTime.local().minus({days: timeRange.value}).toISODate() : null},
                                     y: {grid: {"color": ["#AAA"]}, ticks:{color: "#FFF"}, title: {text:units[metric], display: true, color: "#FFF"}}
                                 },
                                 color: "white",
                                 plugins: {
                                     legend: {display: false},
                                 },
-                                zoom: {
-                                    enabled:true,
-                                    mode:'xy'
+                                elements: {
+                                    point: {
+                                        hitRadius: 10,
+                                        hoverRadius: 10
+                                    }
                                 },
                                 showLine: true
                         }
@@ -213,7 +219,7 @@ const Home = () => {
         console.log(data);
 
         return data;
-    }, [patientData]);
+    }, [patientData, timeRange]);
 
     const renderImpersonateListItem = React.useCallback((listItem) => {
         console.log(listItem);
@@ -338,7 +344,7 @@ const Home = () => {
         return 1;
     }
 
-
+    console.log(timeRange.label);
     return (
         <Box>
             {impersonateOptions !== null ?
@@ -483,6 +489,14 @@ const Home = () => {
                         <Paragraph size="small" textAlign="center">Tracking is a brand new feature that allows you to text us health data such as blood pressure, weight, or glucose. You can then view your historical data here at any time.</Paragraph>
                     </>
                 : null}
+                {Object.keys(formattedHealthMetricData).length !== 0 ? <Select
+                    options={[{label: "week", value: 7}, {label: "month", value: 30}, {label: "3 months", value: 90}, {label: "year", value: 365}]}
+                    children={(option) => {return option.label}}
+                    onChange={({value}) => { setTimeRange(value)}}
+                    value={timeRange}
+                    labelKey="label"
+                /> : null}
+                {<Paragraph>{timeRange.label}</Paragraph>}
                 {formattedHealthMetricData && "blood pressure" in formattedHealthMetricData ? (
                     <Box pad={{horizontal: "large"}} fill="horizontal">
                         <Paragraph size="small" margin={{bottom: "none"}}>Blood pressure</Paragraph>
