@@ -1127,7 +1127,7 @@ def bot():
                 )
             user.pending_announcement = None
             db.session.commit()
-    if user and user.paused:
+    if user and user.onboarding:
         if "NOALERTS" not in os.environ:
             raw_message = request.values.get('Body', '')
             onboarding_events = ["confirm_join_trial", "num_dose_windows", "dw_start_time", "dw_end_time"]

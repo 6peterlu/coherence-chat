@@ -6,7 +6,6 @@ from marshmallow import Schema, fields
 from werkzeug.security import check_password_hash, generate_password_hash
 from itsdangerous import (TimedJSONWebSignatureSerializer
                           as Serializer, BadSignature, SignatureExpired)
-import re
 import os
 
 db = SQLAlchemy()
@@ -37,8 +36,7 @@ class User(db.Model):
     password_hash = db.Column(db.String, nullable=True)
     tracked_health_metrics = db.Column(postgresql.ARRAY(db.String), default=[])
     pending_announcement = db.Column(db.String)
-    free_trial = db.Column(db.Boolean)
-    onboarding = db.Column(db.Boolean)
+    onboarding_type = db.Column(db.String)  # "free trial", "standard", None
     end_of_service = db.Column(db.DateTime)
 
     def __init__(
