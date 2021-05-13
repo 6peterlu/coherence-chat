@@ -160,7 +160,7 @@ const Home = () => {
                                         time: {unit: "day"},
                                         grid: {"color": ["#777"]},
                                         ticks:{color: "#FFF"},
-                                        min: timeRange ? DateTime.local().minus({days: timeRange.value}).toISODate() : null},
+                                        min: timeRange.value !== null ? DateTime.local().minus({days: timeRange.value}).toISODate() : null},
                                     y: {grid: {"color": ["#AAA"]}, ticks:{color: "#FFF"}, title: {text:units[metric], display: true, color: "#FFF"}}
                                 },
                                 color: "white",
@@ -201,7 +201,13 @@ const Home = () => {
                         }
                     ], options:{
                         scales: {
-                            x: {type: "time", time: {unit: "day"}, grid: {"color": ["#777"]}, ticks:{color: "#FFF"}},
+                            x: {
+                                type: "time",
+                                time: {unit: "day"},
+                                grid: {"color": ["#777"]},
+                                ticks:{color: "#FFF"},
+                                min: timeRange.value !== null ? DateTime.local().minus({days: timeRange.value}).toISODate() : null
+                            },
                             y: {grid: {"color": ["#AAA"]}, ticks:{color: "#FFF"}, title: {text:units[metric], display: true, color: "#FFF"}}
                         },
 
@@ -315,6 +321,7 @@ const Home = () => {
                 {<AnimatingButton
                     onClick={async () => {
                         setAnimating(true);
+                        console.log("set animating");
                         await updateDoseWindow(editingDoseWindow);
                         await loadData();
                         setEditingDoseWindow(null);
@@ -322,10 +329,25 @@ const Home = () => {
                             trackSubmitEditedDoseWindow(patientData.patientId);
                         }
                     }}
-                    label={validDoseWindows ? "Update" : "Invalid dose window"}
+                    label={validDoseWindows ? editingDoseWindow.id ? "Update" : "Create" : "Invalid dose window"}
                     disabled={!validDoseWindows}
                     animating={animating}
                 />}
+                {editingDoseWindow.id ? <AnimatingButton onClick={() => {
+                    setDeletingDoseWindow(editingDoseWindow);
+                    if (impersonateOptions === null) {
+                        trackStartDeletingDoseWindow(patientData.patientId);
+                    }
+                }}
+                    disabled={animating}
+                    size="small"
+                    padding={{horizontal: "none"}}
+                    margin={{top: "medium"}}
+                    label="Delete dose window"
+                    color="status-error"
+                    plain={true}
+                    alignSelf="center"
+                /> : null}
             </>
         )
     }, [animating, editingDoseWindow, impersonateOptions, loadData, patientData, validDoseWindows]);
@@ -489,14 +511,16 @@ const Home = () => {
                         <Paragraph size="small" textAlign="center">Tracking is a brand new feature that allows you to text us health data such as blood pressure, weight, or glucose. You can then view your historical data here at any time.</Paragraph>
                     </>
                 : null}
-                {Object.keys(formattedHealthMetricData).length !== 0 ? <Select
-                    options={[{label: "week", value: 7}, {label: "month", value: 30}, {label: "3 months", value: 90}, {label: "year", value: 365}]}
-                    children={(option) => {return option.label}}
-                    onChange={({value}) => { setTimeRange(value)}}
-                    value={timeRange}
-                    labelKey="label"
-                /> : null}
-                {<Paragraph>{timeRange.label}</Paragraph>}
+                {Object.keys(formattedHealthMetricData).length !== 0 ?
+                <Box margin={{top: "small"}}>
+                    <Select
+                        options={[{label: "week", value: 7}, {label: "month", value: 30}, {label: "3 months", value: 90}, {label: "year", value: 365}, {label: "all time", value: null}]}
+                        children={(option) => {return <Paragraph margin="small">{option.label}</Paragraph>}}
+                        onChange={({value}) => { setTimeRange(value)}}
+                        valueLabel={<Paragraph margin={{vertical: "xsmall", horizontal: "small"}}>{timeRange.label}</Paragraph>}
+                        // labelKey="label"
+                    />
+                </Box> : null}
                 {formattedHealthMetricData && "blood pressure" in formattedHealthMetricData ? (
                     <Box pad={{horizontal: "large"}} fill="horizontal">
                         <Paragraph size="small" margin={{bottom: "none"}}>Blood pressure</Paragraph>
@@ -576,12 +600,6 @@ const Home = () => {
                                             trackStartEditingDoseWindow(patientData.patientId);
                                         }
                                     }} size="small" margin={{horizontal: "none"}}/>
-                                    <Button onClick={() => {
-                                        setDeletingDoseWindow(dw);
-                                        if (impersonateOptions === null) {
-                                            trackStartDeletingDoseWindow(patientData.patientId);
-                                        }
-                                    }} icon={<Close/>} size="small" padding={{horizontal: "none"}}/>
                                 </Grid>
                             )
                         }) : null
@@ -633,6 +651,7 @@ const Home = () => {
                                 await deleteDoseWindow(deletingDoseWindow.id)
                                 await loadData();
                                 setDeletingDoseWindow(null);
+                                setEditingDoseWindow(null);
                                 if (impersonateOptions === null) {
                                     trackSubmitDeletingDoseWindow(patientData.patientId);
                                 }
