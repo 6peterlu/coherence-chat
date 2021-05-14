@@ -5,6 +5,7 @@
     <button onclick="refreshData()">Pull data</button>
     <button onclick="toggleOnlineStatus()" id="onlineToggleButton">Go online</button>
     <textarea id="announcement" placeholder="announcement"></textarea>
+    <input id="announcementUserId" placeholder="announcementUserId"></input>
     <button onclick="createAnnouncement()">Create announcement</button>
     <div id="overviewDiv" style="display:flex; flex-direction: row; justify-content: space-between;">
         <div>
@@ -95,8 +96,13 @@
 
         function createAnnouncement() {
             const announcement = document.getElementById("announcement").value;
+            const userId = document.getElementById("announcementUserId").value;
             if (announcement && announcement.length > 0) {
-                post("admin/setPendingAnnouncement", { announcement }).then(() => {
+                const payload = { announcement };
+                if (userId) {
+                    payload.userId = userId;
+                }
+                post("admin/setPendingAnnouncement", payload).then(() => {
                     refreshData();
                 });
             }
@@ -270,7 +276,7 @@
             });
         }
         const refreshData = () => {
-            get("admin/everything", {}).then(response => response.json()).then(result => {
+            get("admin/everything", {}).then(response => {console.log(response); return response.json()}).then(result => {
                 const userDetailedDataDiv = document.getElementById("userDetailedData");
                 const portedUsers = [];
                 userDetailedDataDiv.innerHTML = '';

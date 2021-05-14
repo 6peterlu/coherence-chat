@@ -747,7 +747,11 @@ def admin_set_pending_announcement():
     if g.user.phone_number != ADMIN_PHONE_NUMBER:
         return jsonify(), 401
     announcement = request.json["announcement"]
-    users = User.query.all()
+    user_id = request.json.get("userId")
+    if user_id:
+        users = [User.query.get(user_id)]
+    else:
+        users = User.query.all()
     for user in users:
         if not user.paused:
             user.pending_announcement = announcement;
