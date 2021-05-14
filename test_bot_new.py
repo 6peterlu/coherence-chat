@@ -94,16 +94,15 @@ def test_thanks_with_manual_takeover(
 @freeze_time("2012-01-01 17:00:00")  # within range of dose_window_record
 @mock.patch("bot.segment_message")
 @mock.patch("bot.get_take_message_new")
-@mock.patch("bot.remove_jobs_helper")
 def test_take(
-    remove_jobs_mock, take_message_mock, segment_message_mock,
+    take_message_mock, segment_message_mock,
      client, db_session, user_record,
     dose_window_record, medication_record, scheduler
 ):
     # seed scheduler jobs to test removal
-    scheduler.add_job(f"{dose_window_record.id}-followup-new", stub_fn)
-    scheduler.add_job(f"{dose_window_record.id}-absent-new", stub_fn)
-    scheduler.add_job(f"{dose_window_record.id}-boundary-new", stub_fn)
+    scheduler.add_job(f"{dose_window_record.id}-followup-new", stub_fn, trigger="date", run_date=datetime(2012, 1, 1, 18, tzinfo=utc))
+    scheduler.add_job(f"{dose_window_record.id}-absent-new", stub_fn, trigger="date", run_date=datetime(2012, 1, 1, 18, tzinfo=utc))
+    scheduler.add_job(f"{dose_window_record.id}-boundary-new", stub_fn, trigger="date", run_date=datetime(2012, 1, 1, 18, tzinfo=utc))
     local_tz = tzlocal.get_localzone()  # handles test machine in diff tz
     segment_message_mock.return_value = [{'type': 'take', 'modifiers': {'emotion': 'neutral'}, "raw": "T"}]
     client.post("/bot", query_string={"From": "+13604508655"})
@@ -115,7 +114,6 @@ def test_take(
     assert all_events[0].dose_window_id == dose_window_record.id
     assert all_events[0].medication_id == medication_record.id
     assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 17, tzinfo=utc)  # match freezegun time
-    assert remove_jobs_mock.called
     for job_type in ["followup", "absent", "boundary"]:
         assert scheduler.get_job(f"{dose_window_record.id}-{job_type}-new") is None
 
@@ -421,6 +419,23 @@ def test_take_with_input_time_am_pm_defined_fuzzy_rerecord(
     assert all_events[0].medication_id is medication_record.id
     assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 15, 0, tzinfo=utc)
     assert all_events[1].event_type == "attempted_rerecord"
+
+@freeze_time("2012-01-02 8:30:00")  # 12:30am
+@mock.patch("bot.segment_message")
+def test_take_after_midnight(segment_message_mock, client, db_session, user_record, past_midnight_dose_window_record, scheduler, past_midnight_medication_record):
+    scheduler.add_job(f"{past_midnight_dose_window_record.id}-absent-new", stub_fn, trigger="date", run_date=datetime(2012, 1, 2, 9, tzinfo=utc))
+    scheduler.add_job(f"{past_midnight_dose_window_record.id}-followup-new", stub_fn, trigger="date", run_date=datetime(2012, 1, 2, 9, tzinfo=utc))
+    scheduler.add_job(f"{past_midnight_dose_window_record.id}-boundary-new", stub_fn, trigger="date", run_date=datetime(2012, 1, 2, 9, tzinfo=utc))
+    segment_message_mock.return_value = [{
+        'type': 'take',
+        'modifiers': {'emotion': 'neutral'},
+        "raw": "T", 'payload': {"time": datetime(2012, 1, 2, 0, 5, tzinfo=utc), "am_pm_defined": True, "needs_tz_convert": True}
+    }]
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert scheduler.get_job(f"{past_midnight_dose_window_record.id}-boundary-new") is None
+
+
+
 
 @freeze_time("2012-01-01 17:00:00")  # within range of dose_window_record
 @mock.patch("bot.segment_message")

@@ -110,6 +110,19 @@ def dose_window_record(db_session, user_record):
     db_session.commit()
     return dose_window_obj
 
+@pytest.fixture
+def past_midnight_dose_window_record(db_session, user_record):
+    dose_window_obj = DoseWindow(
+        start_hour=9+7,
+        start_minute=0,
+        end_hour=2+7,
+        end_minute=0,
+        user_id=user_record.id
+    )
+    db_session.add(dose_window_obj)
+    db_session.commit()
+    return dose_window_obj
+
 
 @pytest.fixture
 def dose_window_record_out_of_range(db_session, user_record):
@@ -159,6 +172,18 @@ def medication_record_for_dose_window_out_of_range(db_session, dose_window_recor
         user_id=user_record.id,
         medication_name="Zoloft",
         dose_windows=[dose_window_record_out_of_range],
+        scheduler_tuple=(scheduler, test_scheduled_function)
+    )
+    db_session.add(medication_obj)
+    db_session.commit()
+    return medication_obj
+
+@pytest.fixture
+def past_midnight_medication_record(db_session, user_record, past_midnight_dose_window_record, scheduler):
+    medication_obj = Medication(
+        user_id=user_record.id,
+        medication_name="Zoloft",
+        dose_windows=[past_midnight_dose_window_record],
         scheduler_tuple=(scheduler, test_scheduled_function)
     )
     db_session.add(medication_obj)

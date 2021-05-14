@@ -797,9 +797,6 @@ def bot():
     incoming_msg_list = segment_message(request.values.get('Body', ''))
     incoming_phone_number = request.values.get('From', None)
     user, dose_window = get_current_user_and_dose_window(incoming_phone_number[2:])
-    print(f"user: {user}")
-    if user is not None:
-        print(f"paused: {user.paused}")
     if user and not user.paused:
         # we weren't able to parse any part of the message
         if len(incoming_msg_list) == 0:

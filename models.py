@@ -1,3 +1,4 @@
+import pytz
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects import postgresql
 from datetime import datetime, timedelta, timezone as dt_timezone
@@ -70,6 +71,10 @@ class User(db.Model):
     def current_day_bounds(self):
         local_timezone = timezone(self.timezone)
         local_time_now = get_time_now().astimezone(local_timezone)
+        print("in current day bounds method")
+        print(local_time_now)
+        if local_time_now.hour < 4:  # go back to previous day since you're after midnight
+            local_time_now -= timedelta(days=1)
         start_of_day = local_time_now.replace(hour=4, minute=0, second=0, microsecond=0) # 4AM -> 4AM
         end_of_day = start_of_day + timedelta(days=1)
         return start_of_day, end_of_day
@@ -84,6 +89,9 @@ class User(db.Model):
 
     def get_day_delta(self, input_time):
         start_of_day, _ = self.current_day_bounds
+        print("computing day delta")
+        print(input_time)
+        print(start_of_day)
         return (input_time - start_of_day).days
 
 
@@ -256,8 +264,11 @@ class DoseWindow(db.Model):
 
 
     def is_recorded(self, days_delta=0):
+        print(days_delta)
+        print(self.medications)
         for medication in self.medications:
             if not medication.is_recorded_for_day(self, days_delta=days_delta):
+                print("medication not recorded")
                 return False
         return True
 
@@ -320,6 +331,10 @@ class DoseWindow(db.Model):
         if day_agnostic:
             time_now = get_time_now()
             time_to_compare.replace(time_now.year, time_now.month, time_now.day)
+        print("within dosing period")
+        print(self.next_start_date - timedelta(days=1))
+        print(time_to_compare)
+        print(self.next_end_date - timedelta(days=1))
         # boundary condition
         return self.next_end_date - timedelta(days=1) > time_to_compare and self.next_start_date - timedelta(days=1) <= time_to_compare
 
@@ -354,7 +369,11 @@ class Medication(db.Model):
             associate_medication_with_dose_window(self, dose_window, scheduler_tuple=scheduler_tuple)
 
     def is_recorded_for_day(self, dose_window_obj, days_delta=0):
+        print("hello?")
         start_of_day, end_of_day = self.user.past_day_bounds(days_delta)
+        print("day bounds")
+        print(start_of_day)
+        print(end_of_day)
         relevant_medication_history_records = EventLog.query.filter(
             EventLog.dose_window_id == dose_window_obj.id,
             EventLog.medication_id == self.id,
@@ -362,6 +381,7 @@ class Medication(db.Model):
             EventLog.event_time < end_of_day,
             EventLog.event_type.in_(["take", "skip"])
         ).all()
+        print(relevant_medication_history_records)
         return len(relevant_medication_history_records) > 0
 
 
