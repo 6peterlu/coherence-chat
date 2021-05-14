@@ -485,7 +485,7 @@ def auth_patient_data():
     paused_service = user.paused
     behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
     dose_to_take_now = False if dose_window is None else not dose_window.is_recorded()
-    dose_windows = [DoseWindowSchema().dump(dw) for dw in user.active_dose_windows]
+    dose_windows = [DoseWindowSchema().dump(dw) for dw in sorted(user.active_dose_windows, key=lambda dw: dw.bounds_for_current_day[0])]  # sort by start time
     return jsonify({
         "phoneNumber": user.phone_number,
         "eventData": event_data,
