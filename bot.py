@@ -513,6 +513,9 @@ def update_dose_window_new():
     else:
         dose_window = DoseWindow(0, 0, 0, 0, g.user.id)  # if no id given, make a new one
         db.session.add(dose_window)
+        new_med = Medication(g.user.id, "", dose_windows=[dose_window])
+        db.session.add(new_med)
+        db.session.commit()
     if dose_window is None:
         return jsonify(), 400
     dose_window.start_hour = int(incoming_dw_data["start_hour"])

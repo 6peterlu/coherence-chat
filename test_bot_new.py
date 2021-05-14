@@ -10,7 +10,9 @@ from requests.auth import _basic_auth_str
 
 
 from models import (
+    DoseWindow,
     EventLog,
+    Medication,
     Online,
     User,
     # schemas
@@ -1030,3 +1032,13 @@ def test_announcement(client, db_session, user_record):
     client.post("/bot", query_string={"From": "+13604508655"})
     announcement_events = db_session.query(EventLog).filter(EventLog.event_type == "feature_announcement", EventLog.user_id == user_record.id).all()
     assert len(announcement_events) == 1
+
+
+def test_user_create_dose_window(client, db_session, user_record):
+    client.post(
+        "/doseWindow/update/new",
+        headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), None)},
+        json={"updatedDoseWindow": {"start_hour": 0, "start_minute":0, "end_hour": 0, "end_minute": 0}}
+    )
+    assert len(db_session.query(DoseWindow).all()) == 1
+    assert len(db_session.query(Medication).all()) == 1
