@@ -50,9 +50,8 @@ class User(db.Model):
         manual_takeover=False,
         paused=False,
         timezone="US/Pacific",
-        free_trial=False,
         end_of_service=None,
-        onboarding=False
+        onboarding_type="standard"  # paying user
     ):
         self.phone_number = phone_number
         self.name = name
@@ -62,8 +61,7 @@ class User(db.Model):
         self.manual_takeover = manual_takeover
         self.paused = paused
         self.timezone = timezone
-        self.free_trial = free_trial
-        self.onboarding = onboarding
+        self.onboarding_type = onboarding_type
         self.end_of_service = end_of_service
 
     # TODO: determine bounds from dose window settings. for now, it's hardcoded to 4AM (which is not gonna work).
@@ -437,6 +435,7 @@ class UserSchema(Schema):
         lambda: MedicationSchema(exclude=("user", "dose_windows"))
     ))
     pending_announcement = fields.String()
+    onboarding_type = fields.String()
 
 class DoseWindowSchema(Schema):
     id = fields.Integer()

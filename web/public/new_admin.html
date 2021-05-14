@@ -5,6 +5,7 @@
     <button onclick="refreshData()">Pull data</button>
     <button onclick="toggleOnlineStatus()" id="onlineToggleButton">Go online</button>
     <textarea id="announcement" placeholder="announcement"></textarea>
+    <input id="announcementUserId" placeholder="announcementUserId"></input>
     <button onclick="createAnnouncement()">Create announcement</button>
     <div id="overviewDiv" style="display:flex; flex-direction: row; justify-content: space-between;">
         <div>
@@ -19,6 +20,10 @@
     <div>
         <input id="newUserPhoneNumber" type="number" placeholder="3604508655"/>
         <input id="newUserName" placeholder="name"/>
+        <select id='newUserOnboardingType' style="margin: 5px;">
+            <option value="standard">No free trial</option>
+            <option value="free trial">30-day free trial</option>
+        </select>
         <button id="createNewUserButton" onclick="createNewUser()">Create new user</button>
     </div>
     <div id="userDetailedData"></div>
@@ -38,7 +43,7 @@
             },
             mode: "cors"
         };
-        const apiURL = "https://coherence-chat.herokuapp.com";
+        const apiURL = "http://localhost:5000"; // "https://coherence-chat.herokuapp.com";
         // HTTP helpers
         const get = async (route, queryArgs) => {
 
@@ -95,8 +100,13 @@
 
         function createAnnouncement() {
             const announcement = document.getElementById("announcement").value;
+            const userId = document.getElementById("announcementUserId").value;
             if (announcement && announcement.length > 0) {
-                post("admin/setPendingAnnouncement", { announcement }).then(() => {
+                const payload = { announcement };
+                if (userId) {
+                    payload.userId = userId;
+                }
+                post("admin/setPendingAnnouncement", payload).then(() => {
                     refreshData();
                 });
             }
@@ -147,7 +157,7 @@
             htmlOut += "<p style='font-weight:bold;'>Name</p>";
             htmlOut += `
                 <div style='display: flex; flex-direction: row; ${userData.user.manual_takeover ? 'background-color: #bd5c59' : ''}'>
-                    <p style="padding-left: 20px;">${userData.user.id} | ${userData.user.name}: ${userData.user.phone_number} | pending announcement: ${userData.user.pending_announcement}</p>
+                    <p style="padding-left: 20px;">${userData.user.id} | ${userData.user.name}: ${userData.user.phone_number} | pending announcement: ${userData.user.pending_announcement}${userData.user.onboarding_type !== null ? ` | onboarding status: ${userData.user.onboarding_type}` : ''}</p>
                     <button style="margin: 10px;" id="manualTakeover-${userData.user.id}" onclick=toggleManualTakeover(\'${userData.user.id}\')>${userData.user.manual_takeover ? 'Stop taking over user' : 'Manually takeover user' }</button>
                     <button style="margin: 10px;" id="pause-${userData.user.id}"
                         onclick=${userData.user.paused  ? `resumeUser(\'${userData.user.id}\')` : `pauseUser(\'${userData.user.id}\')`}>
@@ -221,9 +231,10 @@
             const phoneNumber = document.getElementById("newUserPhoneNumber").value;
             const name = document.getElementById("newUserName").value;
             const createButton = document.getElementById("createNewUserButton");
+            const onboardingType = document.getElementById("newUserOnboardingType").value;
             createButton.disabled = true;
             createButton.innerHTML = "creating new user...";
-            post("admin/createUser", { phoneNumber, name }).then(result => {
+            post("admin/createUser", { phoneNumber, name, onboardingType }).then(result => {
                 refreshData();
             });
         }
@@ -270,7 +281,7 @@
             });
         }
         const refreshData = () => {
-            get("admin/everything", {}).then(response => response.json()).then(result => {
+            get("admin/everything", {}).then(response => {console.log(response); return response.json()}).then(result => {
                 const userDetailedDataDiv = document.getElementById("userDetailedData");
                 const portedUsers = [];
                 userDetailedDataDiv.innerHTML = '';
