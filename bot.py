@@ -218,7 +218,7 @@ def get_thanks_message():
 
 def get_health_metric_response_message(health_metric_type, description, user):
     timezone_translated_time = get_time_now().astimezone(timezone(user.timezone)).strftime('%b %d, %I:%M %p')
-    if health_metric_type == "blood glucose":
+    if health_metric_type == "glucose":
         return BLOOD_GLUCOSE_MESSAGE.substitute(blood_glucose=description, time=timezone_translated_time)
     if health_metric_type == "weight":
         return WEIGHT_MESSAGE.substitute(weight=description, time=timezone_translated_time)
@@ -1127,7 +1127,7 @@ def bot():
                 )
             user.pending_announcement = None
             db.session.commit()
-    if user and user.onboarding:
+    if user and user.onboarding_type:
         if "NOALERTS" not in os.environ:
             raw_message = request.values.get('Body', '')
             onboarding_events = ["confirm_join_trial", "num_dose_windows", "dw_start_time", "dw_end_time"]
