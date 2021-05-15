@@ -1,8 +1,8 @@
 from models import (
     DoseWindow,
     EventLog,
-    Online,
-    db
+    db,
+    UserState
 )
 from time_helpers import get_time_now
 from pytz import timezone
@@ -45,10 +45,12 @@ from constants import (
     ACTION_MENU,
     USER_ERROR_REPORT,
     USER_ERROR_RESPONSE,
+    TIMEZONE_REQUEST,
     WEIGHT_MESSAGE,
     WELCOME_BACK_MESSAGES
 )
 from ai import get_reminder_time_within_range
+from nlp import get_datetime_obj_from_string
 
 BUFFER_TIME_MINS = 10
 
@@ -393,6 +395,108 @@ def active_state_message_handler(
         user.pending_announcement = None
         db.session.commit()
 
+
+def intro_state_message_handler(
+    user,
+    incoming_phone_number,
+    raw_message
+):
+    if raw_message.lower() == "c":
+        new_event = EventLog("confirm_join_trial", user.id, None, None)
+        user.state = UserState.DOSE_WINDOWS_REQUESTED
+        db.session.add(new_event)
+        db.session.commit()
+        if "NOALERTS" not in os.environ:
+            from bot import client
+            client.messages.create(
+                body=REQUEST_DOSE_WINDOW_COUNT,
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=incoming_phone_number
+            )
+
+def dose_windows_requested_message_handler(
+    user, incoming_phone_number, raw_message
+):
+    from bot import client
+    try:
+        print("in here1")
+        num_dose_windows = int(raw_message)
+        new_event = EventLog("num_dose_windows", user.id, None, None, description=num_dose_windows)
+        user.state = UserState.DOSE_WINDOW_TIMES_REQUESTED
+        db.session.add(new_event)
+        db.session.commit()
+        if "NOALERTS" not in os.environ:
+            client.messages.create(
+                body=REQUEST_DOSE_WINDOW_START_TIME.substitute(count=1),
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=incoming_phone_number
+            )
+    except ValueError:
+        if "NOALERTS" not in os.environ:
+            client.messages.create(
+                body=COULDNT_PARSE_NUMBER,
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=incoming_phone_number
+            )
+
+
+def dose_window_times_requested_message_handler(
+    user, incoming_phone_number, raw_message
+):
+    onboarding_events = ["num_dose_windows", "dw_start_time", "dw_end_time"]
+    relevant_events = EventLog.query.filter(EventLog.event_type.in_(onboarding_events), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
+    num_dose_windows_event = list(filter(lambda e: e.event_type == "num_dose_windows", relevant_events))
+    dose_window_start_events = list(filter(lambda e: e.event_type == "dw_start_time", relevant_events))
+    dose_window_end_events = list(filter(lambda e: e.event_type == "dw_end_time", relevant_events))
+    print("in here2")
+    num_dose_windows = int(num_dose_windows_event[0].description)
+    extracted_dt, _, __ = get_datetime_obj_from_string(raw_message, format_restrictions=True)
+    from bot import client
+    if extracted_dt is None:
+        if "NOALERTS" not in os.environ:
+            client.messages.create(
+                body=COULDNT_PARSE_DATE,
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=incoming_phone_number
+            )
+    else:  # date parseable
+        if len(dose_window_start_events) == num_dose_windows:
+            print("in here4")
+            new_event = EventLog("dw_end_time", user.id, None, None)
+            user.state = UserState.TIMEZONE_REQUESTED
+            db.session.add(new_event)
+            db.session.commit()
+            if "NOALERTS" not in os.environ:
+                client.messages.create(
+                    body=TIMEZONE_REQUEST,
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                    to=incoming_phone_number
+                )
+        elif len(dose_window_end_events) == len(dose_window_start_events):
+            print("in here5")
+            new_event = EventLog("dw_start_time", user.id, None, None)
+            db.session.add(new_event)
+            db.session.commit()
+            if "NOALERTS" not in os.environ:
+                client.messages.create(
+                    body=REQUEST_DOSE_WINDOW_END_TIME.substitute(count=len(dose_window_start_events) + 1),
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                    to=incoming_phone_number
+                )
+        else:
+            print("in here6")
+            new_event = EventLog("dw_end_time", user.id, None, None)
+            db.session.add(new_event)
+            db.session.commit()
+            if "NOALERTS" not in os.environ:
+                client.messages.create(
+                    body=REQUEST_DOSE_WINDOW_START_TIME.substitute(count=len(dose_window_start_events) + 1),
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                    to=incoming_phone_number
+                )
+
+
+# helpers
 
 def text_fallback(phone_number):
     from bot import client, get_online_status  # inline import to avoid circular issues

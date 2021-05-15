@@ -34,6 +34,9 @@ from nlp import segment_message, get_datetime_obj_from_string
 from health_metrics import METRIC_LIST, process_health_metric_event_stream
 from message_handlers import (
     active_state_message_handler,
+    dose_window_times_requested_message_handler,
+    dose_windows_requested_message_handler,
+    intro_state_message_handler,
     log_event_new,
     maybe_schedule_absent_new,
     remove_jobs_helper,
@@ -718,6 +721,7 @@ def get_online_status():
     return online_record.online
 
 
+# TODO: write tests
 @app.route('/bot', methods=['POST'])
 def bot():
     raw_message = request.values.get('Body', '')
@@ -727,104 +731,14 @@ def bot():
     if user:
         if user.state == UserState.ACTIVE:
             active_state_message_handler(incoming_msg_list, user, dose_window, incoming_phone_number, raw_message)
-        if user and user.onboarding_type:
-            raw_message = request.values.get('Body', '')
-            onboarding_events = ["confirm_join_trial", "num_dose_windows", "dw_start_time", "dw_end_time", "timezone"]
-            relevant_events = EventLog.query.filter(EventLog.event_type.in_(onboarding_events), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
-            confirm_join_event = list(filter(lambda e: e.event_type == "confirm_join_trial", relevant_events))
-            num_dose_windows_event = list(filter(lambda e: e.event_type == "num_dose_windows", relevant_events))
-            dose_window_start_events = list(filter(lambda e: e.event_type == "dw_start_time", relevant_events))
-            dose_window_end_events = list(filter(lambda e: e.event_type == "dw_end_time", relevant_events))
-            timezone_events = list(filter(lambda e: e.event_type == "timezone", relevant_events))
-            print(confirm_join_event)
-            print(num_dose_windows_event)
-            print(dose_window_start_events)
-            print(dose_window_end_events)
-            if raw_message.lower() == "c" and not confirm_join_event:
-                new_event = EventLog("confirm_join_trial", user.id, None, None)
-                db.session.add(new_event)
-                db.session.commit()
-                if "NOALERTS" not in os.environ:
-                    client.messages.create(
-                        body=REQUEST_DOSE_WINDOW_COUNT,
-                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                        to=incoming_phone_number
-                    )
-            elif confirm_join_event and not num_dose_windows_event:
-                try:
-                    print("in here1")
-                    num_dose_windows = int(raw_message)
-                    new_event = EventLog("num_dose_windows", user.id, None, None, description=num_dose_windows)
-                    db.session.add(new_event)
-                    db.session.commit()
-                    if "NOALERTS" not in os.environ:
-                        client.messages.create(
-                            body=REQUEST_DOSE_WINDOW_START_TIME.substitute(count=1),
-                            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                            to=incoming_phone_number
-                        )
-                except ValueError:
-                    if "NOALERTS" not in os.environ:
-                        client.messages.create(
-                            body=COULDNT_PARSE_NUMBER,
-                            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                            to=incoming_phone_number
-                        )
-            elif confirm_join_event and num_dose_windows_event:
-                print("in here2")
-                num_dose_windows = int(num_dose_windows_event[0].description)
-                if len(dose_window_end_events) == num_dose_windows:
-                    print("in here3")
-                    pass  # we're done with onboarding flow
-                else:
-                    extracted_dt, _, __ = get_datetime_obj_from_string(raw_message, format_restrictions=True)
-                    if extracted_dt is None:
-                        if "NOALERTS" not in os.environ:
-                            client.messages.create(
-                                body=COULDNT_PARSE_DATE,
-                                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                                to=incoming_phone_number
-                            )
-                    else:  # date parseable
-                        if len(dose_window_start_events) == num_dose_windows:
-                            print("in here4")
-                            new_event = EventLog("dw_end_time", user.id, None, None)
-                            db.session.add(new_event)
-                            db.session.commit()
-                            if "NOALERTS" not in os.environ:
-                                client.messages.create(
-                                    body=ONBOARDING_COMPLETE,
-                                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                                    to=incoming_phone_number
-                                )
-                        elif len(dose_window_end_events) == len(dose_window_start_events):
-                            print("in here5")
-                            new_event = EventLog("dw_start_time", user.id, None, None)
-                            db.session.add(new_event)
-                            db.session.commit()
-                            if "NOALERTS" not in os.environ:
-                                client.messages.create(
-                                    body=REQUEST_DOSE_WINDOW_END_TIME.substitute(count=len(dose_window_start_events) + 1),
-                                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                                    to=incoming_phone_number
-                                )
-                        else:
-                            print("in here6")
-                            new_event = EventLog("dw_end_time", user.id, None, None)
-                            db.session.add(new_event)
-                            db.session.commit()
-                            if "NOALERTS" not in os.environ:
-                                client.messages.create(
-                                    body=REQUEST_DOSE_WINDOW_START_TIME.substitute(count=len(dose_window_start_events) + 1),
-                                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                                    to=incoming_phone_number
-                                )
-            if "NOALERTS" not in os.environ:
-                client.messages.create(
-                    body=f"User {user.name} has responded to onboarding message.",
-                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                    to="+13604508655"  # admin phone #
-                )
+        if user.state == UserState.INTRO:
+            intro_state_message_handler(user, incoming_phone_number, raw_message)
+        if user.state == UserState.DOSE_WINDOWS_REQUESTED:
+            dose_windows_requested_message_handler(user, incoming_phone_number, raw_message)
+        if user.state == UserState.DOSE_WINDOW_TIMES_REQUESTED:
+            dose_window_times_requested_message_handler(user, incoming_phone_number, raw_message)
+        if user.state == UserState.TIMEZONE_REQUESTED:
+            pass  # TODO: implement
     return jsonify()
 
 

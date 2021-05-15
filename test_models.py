@@ -278,7 +278,6 @@ def test_medication_schema(dose_window_record, medication_record, user_record):
         'user': {
             'phone_number': '3604508655',
             'name': 'Peter',
-            'paused': False,
             'manual_takeover': False,
             'id': user_record.id,
             'timezone': 'US/Pacific',
