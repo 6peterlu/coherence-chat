@@ -93,7 +93,9 @@ def test_user_schema(user_record, dose_window_record, medication_record, medicat
         "paused": False,
         "phone_number": "3604508655",
         "timezone": "US/Pacific",
-        "pending_announcement": None
+        "pending_announcement": None,
+        'onboarding_type': 'standard',
+        'state': 'intro'
     }
 
 def test_dose_window_schema(dose_window_record, medication_record, medication_record_2, user_record):
@@ -126,6 +128,8 @@ def test_dose_window_schema(dose_window_record, medication_record, medication_re
             'paused': False,
             'timezone': 'US/Pacific',
             'pending_announcement': None,
+            'onboarding_type': 'standard',
+            'state': 'intro'
         }
     }
 
@@ -281,6 +285,8 @@ def test_medication_schema(dose_window_record, medication_record, user_record):
             'id': user_record.id,
             'timezone': 'US/Pacific',
             'pending_announcement': None,
+            'onboarding_type': 'standard',
+            'state': 'intro'
         },
         'active': True,
         'id': medication_record.id,

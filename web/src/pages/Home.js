@@ -215,6 +215,12 @@ const Home = () => {
                         plugins: {
                             datalabels: {color: 'black'}
                         },
+                        elements: {
+                            point: {
+                                hitRadius: 10,
+                                hoverRadius: 10
+                            }
+                        },
                         showLine: true
                     }
                     };

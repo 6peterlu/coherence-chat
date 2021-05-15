@@ -4,10 +4,12 @@ from sqlalchemy.dialects import postgresql
 from datetime import datetime, timedelta, timezone as dt_timezone
 from pytz import utc as pytzutc, timezone
 from marshmallow import Schema, fields
+from marshmallow_enum import EnumField
 from werkzeug.security import check_password_hash, generate_password_hash
 from itsdangerous import (TimedJSONWebSignatureSerializer
                           as Serializer, BadSignature, SignatureExpired)
 import os
+import enum
 
 db = SQLAlchemy()
 
@@ -22,6 +24,37 @@ dose_medication_linker = db.Table('dose_medication_linker',
     db.Column('medication_id', db.Integer, db.ForeignKey('medication.id', ondelete='CASCADE', name="dose_medication_linker_medication_fkey_custom"))
 )
 
+
+# enum type for sqlalchemy integration, src: https://www.michaelcho.me/article/using-python-enums-in-sqlalchemy-models
+class IntEnum(db.TypeDecorator):
+    """
+    Enables passing in a Python enum and storing the enum's *value* in the db.
+    The default would have stored the enum's *name* (ie the string).
+    """
+    impl = db.Integer
+
+    def __init__(self, enumtype, *args, **kwargs):
+        super(IntEnum, self).__init__(*args, **kwargs)
+        self._enumtype = enumtype
+
+    def process_bind_param(self, value, _):
+        if isinstance(value, int):
+            return value
+
+        return value.value
+
+    def process_result_value(self, value, _):
+        return self._enumtype(value)
+
+class UserState(enum.Enum):
+    INTRO = 'intro'
+    DOSE_WINDOWS_REQUESTED = 'dose_windows_requested'
+    DOSE_WINDOW_TIMES_REQUESTED = 'dose_window_times_requested'
+    TIMEZONE_REQUESTED = 'timezone_requested'
+    PAYMENT_METHOD_REQUESTED = 'payment_method_requested'
+    PAUSED = 'paused'
+    ACTIVE = 'active'
+    SUBSCRIPTION_EXPIRED = 'subscription_expired'
 
 class User(db.Model):
     __tablename__ = 'user'
@@ -39,6 +72,11 @@ class User(db.Model):
     pending_announcement = db.Column(db.String)
     onboarding_type = db.Column(db.String)  # "free trial", "standard", None
     end_of_service = db.Column(db.DateTime)
+    state = db.Column(
+        db.Enum(UserState, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False
+    )
+
 
     def __init__(
         self,
@@ -51,7 +89,8 @@ class User(db.Model):
         paused=False,
         timezone="US/Pacific",
         end_of_service=None,
-        onboarding_type="standard"  # paying user
+        onboarding_type="standard",  # paying user
+        state=UserState.INTRO
     ):
         self.phone_number = phone_number
         self.name = name
@@ -63,6 +102,7 @@ class User(db.Model):
         self.timezone = timezone
         self.onboarding_type = onboarding_type
         self.end_of_service = end_of_service
+        self.state = state
 
     # TODO: determine bounds from dose window settings. for now, it's hardcoded to 4AM (which is not gonna work).
     @property
@@ -436,6 +476,7 @@ class UserSchema(Schema):
     ))
     pending_announcement = fields.String()
     onboarding_type = fields.String()
+    state = EnumField(UserState, by_value=True)
 
 class DoseWindowSchema(Schema):
     id = fields.Integer()
