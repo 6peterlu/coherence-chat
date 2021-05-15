@@ -71,6 +71,7 @@ def active_state_message_handler(
         log_event_new("not_interpretable", user.id, None if dose_window is None else dose_window.id, description=raw_message)
         text_fallback(incoming_phone_number)
     for incoming_msg in incoming_msg_list:
+        print(user.manual_takeover)
         if user.manual_takeover:
             log_event_new("manually_silenced", user.id, None if dose_window is None else dose_window.id, description=incoming_msg["raw"])
             text_fallback(incoming_phone_number)
@@ -393,9 +394,8 @@ def active_state_message_handler(
         db.session.commit()
 
 
-# instance methods that require client or scheduler
 def text_fallback(phone_number):
-    from bot import client, get_online_status
+    from bot import client, get_online_status  # inline import to avoid circular issues
     if get_online_status():
         # if we're online, don't send the unknown text and let us respond.
         if "NOALERTS" not in os.environ:

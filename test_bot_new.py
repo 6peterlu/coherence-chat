@@ -764,76 +764,6 @@ def test_requested_alarm_time_out_of_range(
     assert all_events[0].medication_id is None
     assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 17, tzinfo=utc)
 
-# TODO: reenable tests for message_handlers
-# @freeze_time("2012-01-01 17:00:00")
-# @mock.patch("bot.segment_message")
-# @mock.patch("bot.remove_jobs_helper")
-# @mock.patch("bot.get_reminder_time_within_range")
-# def test_activity(
-#     get_reminder_time_mock, remove_jobs_mock,  segment_message_mock,
-#     client, db_session, user_record, dose_window_record,
-#     medication_record, scheduler
-# ):
-#     get_reminder_time_mock.return_value = datetime(2012, 1, 1, 17, 25, tzinfo=utc)
-#     segment_message_mock.return_value = [{
-#         'type': 'activity',
-#         'payload': {
-#             'type': 'short',
-#             'response': "Computing ideal reminder time...done. Enjoy your walk! We'll check in later.",
-#             'concept': 'leisure'
-#         },
-#         'raw': 'walking'
-#     }]
-#     client.post("/bot", query_string={"From": "+13604508655"})
-#     # assert remove_jobs_mock.called
-#     all_events = db_session.query(EventLog).all()
-#     assert len(all_events) == 2
-#     assert all_events[0].event_type == "activity"
-#     assert all_events[0].user_id == user_record.id
-#     assert all_events[0].dose_window_id == dose_window_record.id
-#     assert all_events[0].medication_id is None
-#     assert all_events[1].event_type == "reminder_delay"
-#     assert all_events[1].user_id == user_record.id
-#     assert all_events[1].dose_window_id == dose_window_record.id
-#     assert all_events[1].medication_id is None
-#     scheduled_job = scheduler.get_job(f"{dose_window_record.id}-followup-new")
-#     assert scheduled_job is not None
-#     assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 25, tzinfo=utc)
-
-# @freeze_time("2012-01-01 17:00:00")
-# @mock.patch("bot.segment_message")
-# @mock.patch("bot.remove_jobs_helper")
-# @mock.patch("bot.get_reminder_time_within_range")
-# def test_activity_near_boundary(
-#     get_reminder_time_mock, remove_jobs_mock,  segment_message_mock,
-#     client, db_session, user_record, dose_window_record,
-#     medication_record, scheduler
-# ):
-#     get_reminder_time_mock.return_value = datetime(2012, 1, 1, 18, 0, tzinfo=utc)
-#     segment_message_mock.return_value = [{
-#         'type': 'activity',
-#         'payload': {
-#             'type': 'short',
-#             'response': "Computing ideal reminder time...done. Enjoy your walk! We'll check in later.",
-#             'concept': 'leisure'
-#         },
-#         'raw': 'walking'
-#     }]
-#     client.post("/bot", query_string={"From": "+13604508655"})
-#     # assert remove_jobs_mock.called
-#     all_events = db_session.query(EventLog).all()
-#     assert len(all_events) == 2
-#     assert all_events[0].event_type == "activity"
-#     assert all_events[0].user_id == user_record.id
-#     assert all_events[0].dose_window_id == dose_window_record.id
-#     assert all_events[0].medication_id is None
-#     assert all_events[1].event_type == "reminder_delay"
-#     assert all_events[1].user_id == user_record.id
-#     assert all_events[1].dose_window_id == dose_window_record.id
-#     assert all_events[1].medication_id is None
-#     scheduled_job = scheduler.get_job(f"{dose_window_record.id}-followup-new")
-#     assert scheduled_job is not None
-#     assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 50, tzinfo=utc)
 
 @freeze_time("2012-01-01 17:55:00")
 @mock.patch("bot.segment_message")
@@ -890,22 +820,14 @@ def test_activity_out_of_range(
     assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 17, tzinfo=utc)
 
 
-def test_send_followup_text_new(dose_window_record, db_session):
-    send_followup_text_new(dose_window_record.id)
-    # assert mock_remove_jobs.called
-    # assert mock_maybe_schedule_absent.called
+@freeze_time("2012-01-01 17:00:00")
+@mock.patch("bot.maybe_schedule_absent_new")
+def test_send_intro_text_new(mock_schedule_absent_new, dose_window_record, medication_record, db_session):
+    send_intro_text_new(dose_window_record.id)
+    assert mock_schedule_absent_new.called
     all_event_logs = db_session.query(EventLog).all()
     assert len(all_event_logs) == 1
-    assert all_event_logs[0].event_type == "followup"
-
-# @freeze_time("2012-01-01 17:00:00")
-# @mock.patch("bot.get_reminder_time_within_range")
-# def test_send_intro_text_new(mock_get_reminder_time, dose_window_record, medication_record, db_session):
-#     mock_get_reminder_time.return_value = datetime(2012, 1, 1, 18, tzinfo=utc)
-#     send_intro_text_new(dose_window_record.id)
-#     all_event_logs = db_session.query(EventLog).all()
-#     assert len(all_event_logs) == 1
-#     assert all_event_logs[0].event_type == "initial"
+    assert all_event_logs[0].event_type == "initial"
 
 @freeze_time("2012-01-01 17:00:00")
 def test_intro_text_not_sent_if_already_recorded(
@@ -913,25 +835,6 @@ def test_intro_text_not_sent_if_already_recorded(
     send_intro_text_new(dose_window_record.id)
     all_event_logs = db_session.query(EventLog).all()
     assert len(all_event_logs) == 1
-
-
-def test_send_absent_text_new(
-    dose_window_record, db_session
-):
-    send_absent_text_new(dose_window_record.id)
-    # assert mock_maybe_schedule_absent.called
-    all_event_logs = db_session.query(EventLog).all()
-    assert len(all_event_logs) == 1
-    assert all_event_logs[0].event_type == "absent"
-
-# @freeze_time("2012-01-01 17:00:00")
-# @mock.patch("bot.get_reminder_time_within_range")
-# def test_maybe_schedule_absent_new(mock_get_reminder_time, dose_window_record, db_session, scheduler):
-#     mock_get_reminder_time.return_value = datetime(2012, 1, 1, 17, 45, tzinfo=utc)
-#     maybe_schedule_absent_new(dose_window_record)
-#     scheduled_job = scheduler.get_job(f"{dose_window_record.id}-absent-new")
-#     assert scheduled_job is not None
-#     assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 45, tzinfo=utc)
 
 
 # /admin tests

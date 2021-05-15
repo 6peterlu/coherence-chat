@@ -1034,6 +1034,7 @@ def send_boundary_text_new(dose_window_obj_id):
 # NEW
 def send_intro_text_new(dose_window_obj_id, manual=False, welcome_back=False):
     dose_window_obj = DoseWindow.query.get(dose_window_obj_id)
+    print(dose_window_obj.is_recorded())
     if not dose_window_obj.is_recorded():  # only send if the dose window object hasn't been recorded yet.
         if "NOALERTS" not in os.environ:
             client.messages.create(
