@@ -243,9 +243,10 @@ def medication_record_for_paused_user_2(db_session, dose_window_record_for_pause
     db_session.commit()
     return medication_obj
 
-@pytest.fixture
-def online_record(db_session):
-    online_obj = Online(online=False)
-    db_session.add(online_obj)
-    db_session.commit()
-    return online_obj
+# @pytest.fixture
+# def online_record(db_session):
+#     online_obj = Online(online=False)
+#     db_session.add(online_obj)
+#     db_session.commit()
+#     print("creating online record fixture")
+#     return online_obj
