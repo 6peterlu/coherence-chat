@@ -21,6 +21,7 @@ from constants import (
     COULDNT_PARSE_DATE,
     COULDNT_PARSE_NUMBER,
     FUTURE_MESSAGE_SUFFIXES,
+    INCORRECT_FREE_TRIAL_CODE,
     INITIAL_MSGS,
     FOLLOWUP_MSGS,
     INITIAL_SUFFIXES,
@@ -33,6 +34,7 @@ from constants import (
     REQUEST_DOSE_WINDOW_COUNT,
     REQUEST_DOSE_WINDOW_END_TIME,
     REQUEST_DOSE_WINDOW_START_TIME,
+    REQUEST_PAYMENT_METHOD,
     REQUEST_WEBSITE,
     SECRET_CODE_MESSAGE,
     SKIP_MSG,
@@ -494,6 +496,68 @@ def dose_window_times_requested_message_handler(
                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                     to=incoming_phone_number
                 )
+
+def timezone_requested_message_handler(
+    user, incoming_phone_number, raw_message
+):
+    from bot import client
+    timezone_list = ["US/Pacific", "US/Mountain", "US/Central", "US/Eastern"]
+    try:
+        print("in here1")
+        tz_index = int(raw_message) - 1
+        new_event = EventLog("num_dose_windows", user.id, None, None, description=timezone_list[tz_index])
+        if user.onboarding_type == "free trial":
+            user.state = UserState.PAUSED
+            if "NOALERTS" not in os.environ:
+                client.messages.create(
+                    body=ONBOARDING_COMPLETE,
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                    to=incoming_phone_number
+                )
+        else:
+            if "NOALERTS" not in os.environ:
+                client.messages.create(
+                    body=REQUEST_PAYMENT_METHOD,
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                    to=incoming_phone_number
+                )
+            user.state = UserState.PAYMENT_METHOD_REQUESTED
+        db.session.add(new_event)
+        db.session.commit()
+    except ValueError:
+        if "NOALERTS" not in os.environ:
+            client.messages.create(
+                body=COULDNT_PARSE_NUMBER,
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=incoming_phone_number
+            )
+
+def payment_requested_message_handler(
+    user, incoming_phone_number, raw_message
+):
+    from bot import client
+    valid_free_trial_codes = ["VPC30"]
+    if raw_message in valid_free_trial_codes:
+        user.onboarding_type = "free trial"
+        user.state = UserState.PAUSED
+        if "NOALERTS" not in os.environ:
+            client.messages.create(
+                body=ONBOARDING_COMPLETE,
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=incoming_phone_number
+            )
+            client.messages.create(
+                body=f"Phone number {incoming_phone_number} completed onboarding (free trial).",
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to="+13604508655"  # admin
+            )
+    else:
+        if "NOALERTS" not in os.environ:
+            client.messages.create(
+                body=INCORRECT_FREE_TRIAL_CODE,
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=incoming_phone_number
+            )
 
 
 # helpers

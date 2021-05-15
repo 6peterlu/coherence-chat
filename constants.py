@@ -158,9 +158,13 @@ REQUEST_DOSE_WINDOW_START_TIME = Template("When would you like dose window $coun
 
 REQUEST_DOSE_WINDOW_END_TIME = Template("When would you like dose window $count to end?")
 
+REQUEST_PAYMENT_METHOD = "We don't have a free trial code on record for you. You can either enter it now, or go to https://coherence-chat.herokuapp.com to create an account and fill in your payment information. Coherence is $6.99 / month with no long term commitment."
+
+INCORRECT_FREE_TRIAL_CODE = "Sorry, that wasn't a valid code. Feel free to text our customer service line at (650) 667-1146‬ with any questions, or sign up for a paid account at https://coherence-chat.herokuapp.com."
+
 ONBOARDING_COMPLETE = "Great, you'll get your first Coherence reminders starting tomorrow. Thanks again for trying us out! If you have any questions or concerns, text us at (650) 667-1146‬, our customer service line."
 
-TIMEZONE_REQUEST = "Thanks for letting me know your dose windows. What timezone are you in? This will help us send you reminders at the right times."
+TIMEZONE_REQUEST = "Thanks for letting me know your dose windows. What timezone are you in? This will help us send you reminders at the right times. Please respond with a number.\n[1] Pacific\n[2] Mountain\n[3] Central\n[4] Eastern"
 
 BLOOD_GLUCOSE_MESSAGE = Template("🕒 $time\nBlood glucose recorded: $blood_glucose mg/dl.\n📝📝📝📝")
 

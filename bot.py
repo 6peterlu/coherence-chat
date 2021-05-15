@@ -39,9 +39,11 @@ from message_handlers import (
     intro_state_message_handler,
     log_event_new,
     maybe_schedule_absent_new,
+    payment_requested_message_handler,
     remove_jobs_helper,
     send_absent_text_new,
-    send_followup_text_new
+    send_followup_text_new,
+    timezone_requested_message_handler
 )
 from time_helpers import get_time_now
 
@@ -278,39 +280,39 @@ def round_date(dt, delta=ACTIVITY_BUCKET_SIZE_MINUTES, round_up=False):
 #     return activity_data
 
 
-def generate_behavior_learning_scores_new(user_behavior_events, user):
-    # end time is end of yesterday.
-    end_time = get_time_now().astimezone(timezone(user.timezone)).replace(hour=0, minute=0, second=0, microsecond=0)
-    user_behavior_events_until_today = list(filter(lambda event: event.aware_event_time < end_time, user_behavior_events))
-    if len(user_behavior_events_until_today) == 0 or len(user.doses) == 0:
-        return {}
-    behavior_scores_by_day = {}
-    # starts at earliest day
-    current_day_bucket = user_behavior_events_until_today[0].aware_event_time.astimezone(timezone(user.timezone)).replace(hour=0, minute=0, second=0, microsecond=0)
-    # latest_day = user_behavior_events_until_today[len(user_behavior_events_until_today) - 1].aware_event_time.astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
-    while current_day_bucket < end_time:
-        current_day_events = list(filter(lambda event: event.aware_event_time < current_day_bucket + timedelta(days=1) and event.aware_event_time > current_day_bucket, user_behavior_events_until_today))
-        current_day_take_skip = list(filter(lambda event: event.event_type in ["take", "skip"], current_day_events))
-        unique_time_buckets = []
-        for k, _ in groupby([event.event_time for event in current_day_events], round_date):
-            unique_time_buckets.append(k)
-        behavior_score_for_day = len(current_day_take_skip) * 3 / len(user.doses) + len(unique_time_buckets) * 2 / len (user.doses) - 3
-        behavior_scores_by_day[current_day_bucket] = behavior_score_for_day
-        current_day_bucket += timedelta(days=1)
-    score_sum = 0
-    starting_buffer = len(behavior_scores_by_day) - 7  # combine all data before last 7 days
-    output_scores = []
-    for day in behavior_scores_by_day:
-        score_sum += behavior_scores_by_day[day]
-        if score_sum < 0:
-            score_sum = 0
-        elif score_sum > 100:
-            score_sum = 100
-        if starting_buffer <= 0:
-            output_scores.append((day.strftime('%a'), int(score_sum)))
-        else:
-            starting_buffer -= 1
-    return output_scores
+# def generate_behavior_learning_scores_new(user_behavior_events, user):
+#     # end time is end of yesterday.
+#     end_time = get_time_now().astimezone(timezone(user.timezone)).replace(hour=0, minute=0, second=0, microsecond=0)
+#     user_behavior_events_until_today = list(filter(lambda event: event.aware_event_time < end_time, user_behavior_events))
+#     if len(user_behavior_events_until_today) == 0 or len(user.doses) == 0:
+#         return {}
+#     behavior_scores_by_day = {}
+#     # starts at earliest day
+#     current_day_bucket = user_behavior_events_until_today[0].aware_event_time.astimezone(timezone(user.timezone)).replace(hour=0, minute=0, second=0, microsecond=0)
+#     # latest_day = user_behavior_events_until_today[len(user_behavior_events_until_today) - 1].aware_event_time.astimezone(timezone(USER_TIMEZONE)).replace(hour=0, minute=0, second=0, microsecond=0)
+#     while current_day_bucket < end_time:
+#         current_day_events = list(filter(lambda event: event.aware_event_time < current_day_bucket + timedelta(days=1) and event.aware_event_time > current_day_bucket, user_behavior_events_until_today))
+#         current_day_take_skip = list(filter(lambda event: event.event_type in ["take", "skip"], current_day_events))
+#         unique_time_buckets = []
+#         for k, _ in groupby([event.event_time for event in current_day_events], round_date):
+#             unique_time_buckets.append(k)
+#         behavior_score_for_day = len(current_day_take_skip) * 3 / len(user.doses) + len(unique_time_buckets) * 2 / len (user.doses) - 3
+#         behavior_scores_by_day[current_day_bucket] = behavior_score_for_day
+#         current_day_bucket += timedelta(days=1)
+#     score_sum = 0
+#     starting_buffer = len(behavior_scores_by_day) - 7  # combine all data before last 7 days
+#     output_scores = []
+#     for day in behavior_scores_by_day:
+#         score_sum += behavior_scores_by_day[day]
+#         if score_sum < 0:
+#             score_sum = 0
+#         elif score_sum > 100:
+#             score_sum = 100
+#         if starting_buffer <= 0:
+#             output_scores.append((day.strftime('%a'), int(score_sum)))
+#         else:
+#             starting_buffer -= 1
+#     return output_scores
 
 
 def get_current_user_and_dose_window(truncated_phone_number):
@@ -430,7 +432,7 @@ def auth_patient_data():
         current_day += timedelta(days=1)
 
     paused_service = user.state == UserState.PAUSED
-    behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
+    # behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
     dose_to_take_now = False if dose_window is None else not dose_window.is_recorded()
     dose_windows = [DoseWindowSchema().dump(dw) for dw in sorted(user.active_dose_windows, key=lambda dw: dw.bounds_for_current_day[0])]  # sort by start time
     return jsonify({
@@ -440,7 +442,8 @@ def auth_patient_data():
         "patientId": user.id,
         "takeNow": dose_to_take_now,
         "pausedService": bool(paused_service),
-        "behaviorLearningScores": behavior_learning_scores,
+        "state": user.state.value,
+        # "behaviorLearningScores": behavior_learning_scores,
         "doseWindows": dose_windows,
         "impersonateList": User.query.with_entities(User.name, User.phone_number).all() if user.phone_number == ADMIN_PHONE_NUMBER else None,
         "month": calendar_month,
@@ -538,7 +541,7 @@ def react_login():
         return jsonify(), 401
     if user.verify_password(password):
         print("returning token")
-        return jsonify({"token": user.generate_auth_token().decode('ascii'), "status": "success"}), 200  # return token
+        return jsonify({"token": user.generate_auth_token().decode('ascii'), "status": "success", "state": user.state.value}), 200  # return token
     if user.password_hash and password:
         return jsonify(), 401
     phone_number_formatted = f"+11{phone_number}"
@@ -560,7 +563,7 @@ def react_login():
     if not password:
         return jsonify({"status": "register"})
     user.set_password(password)
-    return jsonify({"status": "success", "token": user.generate_auth_token().decode('ascii')})
+    return jsonify({"status": "success", "token": user.generate_auth_token().decode('ascii'), "state": user.state.value})
 
 @app.route("/admin", methods=["GET"])
 def new_admin_page():
@@ -729,6 +732,7 @@ def bot():
     incoming_phone_number = request.values.get('From', None)
     user, dose_window = get_current_user_and_dose_window(incoming_phone_number[2:])
     if user:
+        print(f"current user state: {user.state}")
         if user.state == UserState.ACTIVE:
             active_state_message_handler(incoming_msg_list, user, dose_window, incoming_phone_number, raw_message)
         if user.state == UserState.INTRO:
@@ -738,7 +742,9 @@ def bot():
         if user.state == UserState.DOSE_WINDOW_TIMES_REQUESTED:
             dose_window_times_requested_message_handler(user, incoming_phone_number, raw_message)
         if user.state == UserState.TIMEZONE_REQUESTED:
-            pass  # TODO: implement
+            timezone_requested_message_handler(user, incoming_phone_number, raw_message)
+        if user.state == UserState.PAYMENT_METHOD_REQUESTED:
+            payment_requested_message_handler(user, incoming_phone_number, raw_message)
     return jsonify()
 
 
