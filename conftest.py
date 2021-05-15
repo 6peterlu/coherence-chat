@@ -5,6 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 import sqlalchemy as sa
 from pytest_postgresql.janitor import DatabaseJanitor
 from models import (
+    UserState,
     db,
     # tables
     Online,
@@ -79,7 +80,8 @@ def _db(app):
 def user_record(db_session):
     user_obj = User(
         phone_number="3604508655",
-        name="Peter"
+        name="Peter",
+        state=UserState.ACTIVE
     )
     db_session.add(user_obj)
     db_session.commit()
@@ -90,7 +92,8 @@ def user_record_with_manual_takeover(db_session):
     user_obj = User(
         phone_number="3604508655",
         name="Peter",
-        manual_takeover=True
+        manual_takeover=True,
+        state=UserState.ACTIVE
     )
     db_session.add(user_obj)
     db_session.commit()
@@ -196,7 +199,7 @@ def user_record_paused(db_session):
     user_obj = User(
         phone_number="3604508656",
         name="Peter",
-        paused=True
+        state=UserState.PAUSED
     )
     db_session.add(user_obj)
     db_session.commit()

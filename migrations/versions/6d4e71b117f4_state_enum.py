@@ -22,7 +22,7 @@ def upgrade():
     user_state.create(op.get_bind())
     op.add_column('user', sa.Column('state', user_state, nullable=True))
     op.execute("UPDATE public.user SET state = 'active'")  # on migration, everyone gets set to active
-    op.alter_column('user', sa.Column('state', nullable=False))
+    op.alter_column('user', 'state', nullable=False)
     # ### end Alembic commands ###
 
 

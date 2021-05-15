@@ -65,7 +65,6 @@ class User(db.Model):
     doses = db.relationship("Medication", backref="user", passive_deletes=True, cascade="delete, merge, save-update", order_by="Medication.id.asc()")
     events = db.relationship("EventLog", backref="user", order_by="EventLog.event_time.asc()", passive_deletes=True, cascade="delete, merge, save-update")
     manual_takeover = db.Column(db.Boolean, nullable=False)
-    paused = db.Column(db.Boolean, nullable=False)
     timezone = db.Column(db.String, nullable=False)
     password_hash = db.Column(db.String, nullable=True)
     tracked_health_metrics = db.Column(postgresql.ARRAY(db.String), default=[])
@@ -86,7 +85,6 @@ class User(db.Model):
         doses=[],
         events=[],
         manual_takeover=False,
-        paused=False,
         timezone="US/Pacific",
         end_of_service=None,
         onboarding_type="standard",  # paying user
@@ -98,7 +96,6 @@ class User(db.Model):
         self.doses = doses
         self.events = events
         self.manual_takeover = manual_takeover
-        self.paused = paused
         self.timezone = timezone
         self.onboarding_type = onboarding_type
         self.end_of_service = end_of_service
@@ -129,23 +126,27 @@ class User(db.Model):
 
 
     def resume(self, scheduler, send_intro_text_new, send_upcoming_dose_message, silent=False):
-        if self.paused:
-            self.paused = False
+        print(self.state)
+        if self.state == UserState.PAUSED:
+            self.state = UserState.ACTIVE
             sorted_dose_windows = sorted(self.dose_windows, key=lambda dw: dw.next_start_date)
             for i, dose_window in enumerate(sorted_dose_windows):
                 if dose_window.active:
+                    print("scheduling initial job")
                     dose_window.schedule_initial_job(scheduler, send_intro_text_new)
                     if not silent:
+                        print("not silent")
                         # send resume messages
                         if dose_window.within_dosing_period() and not dose_window.is_recorded():
+                            print("sending intro text")
                             send_intro_text_new(dose_window.id, welcome_back=True)
                         elif i == 0:  # upcoming dose
                             send_upcoming_dose_message(self, dose_window)
             db.session.commit()
 
     def pause(self, scheduler, send_pause_message, silent=False):
-        if not self.paused:
-            self.paused = True
+        if self.state == UserState.ACTIVE:
+            self.state = UserState.PAUSED
             for dose_window in self.dose_windows:
                 dose_window.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
             if not silent:
@@ -222,7 +223,7 @@ class DoseWindow(db.Model):
         # need a scheduler object to take actions
         if scheduler_tuple is not None:
             scheduler, func_to_schedule = scheduler_tuple
-            if self.active and scheduler_tuple and self.medications and not self.user.paused:
+            if self.active and scheduler_tuple and self.medications and not self.user.state == UserState.PAUSED:
                 self.schedule_initial_job(scheduler, func_to_schedule)
             if not self.active and scheduler_tuple:
                 self.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
@@ -273,7 +274,7 @@ class DoseWindow(db.Model):
 
 
     def schedule_initial_job(self, scheduler, send_intro_text_new):
-        if scheduler.get_job(f"{self.id}-initial-new") is None and not self.user.paused:
+        if scheduler.get_job(f"{self.id}-initial-new") is None and not self.user.state == UserState.PAUSED:
             scheduler.add_job(
                 f"{self.id}-initial-new",
                 send_intro_text_new,
@@ -466,7 +467,6 @@ class UserSchema(Schema):
     phone_number = fields.String()
     name = fields.String()
     manual_takeover = fields.Boolean()
-    paused = fields.Boolean()
     timezone = fields.String()
     dose_windows = fields.List(fields.Nested(
         lambda: DoseWindowSchema(exclude=("user", "medications"))
