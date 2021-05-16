@@ -5,6 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 import sqlalchemy as sa
 from pytest_postgresql.janitor import DatabaseJanitor
 from models import (
+    UserState,
     db,
     # tables
     Online,
@@ -79,7 +80,8 @@ def _db(app):
 def user_record(db_session):
     user_obj = User(
         phone_number="3604508655",
-        name="Peter"
+        name="Peter",
+        state=UserState.ACTIVE
     )
     db_session.add(user_obj)
     db_session.commit()
@@ -90,7 +92,8 @@ def user_record_with_manual_takeover(db_session):
     user_obj = User(
         phone_number="3604508655",
         name="Peter",
-        manual_takeover=True
+        manual_takeover=True,
+        state=UserState.ACTIVE
     )
     db_session.add(user_obj)
     db_session.commit()
@@ -103,6 +106,19 @@ def dose_window_record(db_session, user_record):
         start_hour=9+7,
         start_minute=0,
         end_hour=11+7,
+        end_minute=0,
+        user_id=user_record.id
+    )
+    db_session.add(dose_window_obj)
+    db_session.commit()
+    return dose_window_obj
+
+@pytest.fixture
+def past_midnight_dose_window_record(db_session, user_record):
+    dose_window_obj = DoseWindow(
+        start_hour=9+7,
+        start_minute=0,
+        end_hour=2+7,
         end_minute=0,
         user_id=user_record.id
     )
@@ -165,13 +181,25 @@ def medication_record_for_dose_window_out_of_range(db_session, dose_window_recor
     db_session.commit()
     return medication_obj
 
+@pytest.fixture
+def past_midnight_medication_record(db_session, user_record, past_midnight_dose_window_record, scheduler):
+    medication_obj = Medication(
+        user_id=user_record.id,
+        medication_name="Zoloft",
+        dose_windows=[past_midnight_dose_window_record],
+        scheduler_tuple=(scheduler, test_scheduled_function)
+    )
+    db_session.add(medication_obj)
+    db_session.commit()
+    return medication_obj
+
 
 @pytest.fixture
 def user_record_paused(db_session):
     user_obj = User(
         phone_number="3604508656",
         name="Peter",
-        paused=True
+        state=UserState.PAUSED
     )
     db_session.add(user_obj)
     db_session.commit()
@@ -218,9 +246,10 @@ def medication_record_for_paused_user_2(db_session, dose_window_record_for_pause
     db_session.commit()
     return medication_obj
 
-@pytest.fixture
-def online_record(db_session):
-    online_obj = Online(online=False)
-    db_session.add(online_obj)
-    db_session.commit()
-    return online_obj
+# @pytest.fixture
+# def online_record(db_session):
+#     online_obj = Online(online=False)
+#     db_session.add(online_obj)
+#     db_session.commit()
+#     print("creating online record fixture")
+#     return online_obj

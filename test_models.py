@@ -90,9 +90,11 @@ def test_user_schema(user_record, dose_window_record, medication_record, medicat
         "id": user_record.id,
         "manual_takeover": False,
         "name": "Peter",
-        "paused": False,
         "phone_number": "3604508655",
-        "timezone": "US/Pacific"
+        "timezone": "US/Pacific",
+        "pending_announcement": None,
+        'onboarding_type': 'standard',
+        'state': 'active'
     }
 
 def test_dose_window_schema(dose_window_record, medication_record, medication_record_2, user_record):
@@ -122,8 +124,10 @@ def test_dose_window_schema(dose_window_record, medication_record, medication_re
             'manual_takeover': False,
             'phone_number': '3604508655',
             'id': user_record.id,
-            'paused': False,
-            'timezone': 'US/Pacific'
+            'timezone': 'US/Pacific',
+            'pending_announcement': None,
+            'onboarding_type': 'standard',
+            'state': 'active'
         }
     }
 
@@ -274,10 +278,12 @@ def test_medication_schema(dose_window_record, medication_record, user_record):
         'user': {
             'phone_number': '3604508655',
             'name': 'Peter',
-            'paused': False,
             'manual_takeover': False,
             'id': user_record.id,
-            'timezone': 'US/Pacific'
+            'timezone': 'US/Pacific',
+            'pending_announcement': None,
+            'onboarding_type': 'standard',
+            'state': 'active'
         },
         'active': True,
         'id': medication_record.id,
@@ -356,14 +362,3 @@ def test_delete_past_boundary_record(dose_window_record, boundary_event_record, 
     dose_window_record.remove_boundary_event(days_delta=-1)
     assert len(db_session.query(EventLog).all()) == 0
 
-def test_start_tracking_health_metric(user_record, health_metric_record, db_session):
-    assert len(user_record.health_metrics) == 0
-    health_metric_record.users.append(user_record)
-    db_session.commit()
-    assert len(user_record.health_metrics) == 1
-    health_metric_record.users.remove(user_record)
-    db_session.commit()
-    assert len(user_record.health_metrics) == 0
-    user_record.health_metrics.append(health_metric_record)
-    db_session.commit()
-    assert len(health_metric_record.users) == 1

@@ -1,13 +1,15 @@
+import pytz
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects import postgresql
 from datetime import datetime, timedelta, timezone as dt_timezone
 from pytz import utc as pytzutc, timezone
 from marshmallow import Schema, fields
+from marshmallow_enum import EnumField
 from werkzeug.security import check_password_hash, generate_password_hash
 from itsdangerous import (TimedJSONWebSignatureSerializer
                           as Serializer, BadSignature, SignatureExpired)
-import re
 import os
+import enum
 
 db = SQLAlchemy()
 
@@ -23,6 +25,37 @@ dose_medication_linker = db.Table('dose_medication_linker',
 )
 
 
+# enum type for sqlalchemy integration, src: https://www.michaelcho.me/article/using-python-enums-in-sqlalchemy-models
+class IntEnum(db.TypeDecorator):
+    """
+    Enables passing in a Python enum and storing the enum's *value* in the db.
+    The default would have stored the enum's *name* (ie the string).
+    """
+    impl = db.Integer
+
+    def __init__(self, enumtype, *args, **kwargs):
+        super(IntEnum, self).__init__(*args, **kwargs)
+        self._enumtype = enumtype
+
+    def process_bind_param(self, value, _):
+        if isinstance(value, int):
+            return value
+
+        return value.value
+
+    def process_result_value(self, value, _):
+        return self._enumtype(value)
+
+class UserState(enum.Enum):
+    INTRO = 'intro'
+    DOSE_WINDOWS_REQUESTED = 'dose_windows_requested'
+    DOSE_WINDOW_TIMES_REQUESTED = 'dose_window_times_requested'
+    TIMEZONE_REQUESTED = 'timezone_requested'
+    PAYMENT_METHOD_REQUESTED = 'payment_method_requested'
+    PAUSED = 'paused'
+    ACTIVE = 'active'
+    SUBSCRIPTION_EXPIRED = 'subscription_expired'
+
 class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
@@ -32,14 +65,17 @@ class User(db.Model):
     doses = db.relationship("Medication", backref="user", passive_deletes=True, cascade="delete, merge, save-update", order_by="Medication.id.asc()")
     events = db.relationship("EventLog", backref="user", order_by="EventLog.event_time.asc()", passive_deletes=True, cascade="delete, merge, save-update")
     manual_takeover = db.Column(db.Boolean, nullable=False)
-    paused = db.Column(db.Boolean, nullable=False)
     timezone = db.Column(db.String, nullable=False)
     password_hash = db.Column(db.String, nullable=True)
     tracked_health_metrics = db.Column(postgresql.ARRAY(db.String), default=[])
     pending_announcement = db.Column(db.String)
-    free_trial = db.Column(db.Boolean)
-    onboarding = db.Column(db.Boolean)
+    onboarding_type = db.Column(db.String)  # "free trial", "standard", None
     end_of_service = db.Column(db.DateTime)
+    state = db.Column(
+        db.Enum(UserState, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False
+    )
+
 
     def __init__(
         self,
@@ -49,11 +85,10 @@ class User(db.Model):
         doses=[],
         events=[],
         manual_takeover=False,
-        paused=False,
         timezone="US/Pacific",
-        free_trial=False,
         end_of_service=None,
-        onboarding=False
+        onboarding_type="standard",  # paying user
+        state=UserState.INTRO
     ):
         self.phone_number = phone_number
         self.name = name
@@ -61,17 +96,18 @@ class User(db.Model):
         self.doses = doses
         self.events = events
         self.manual_takeover = manual_takeover
-        self.paused = paused
         self.timezone = timezone
-        self.free_trial = free_trial
-        self.onboarding = onboarding
+        self.onboarding_type = onboarding_type
         self.end_of_service = end_of_service
+        self.state = state
 
     # TODO: determine bounds from dose window settings. for now, it's hardcoded to 4AM (which is not gonna work).
     @property
     def current_day_bounds(self):
         local_timezone = timezone(self.timezone)
         local_time_now = get_time_now().astimezone(local_timezone)
+        if local_time_now.hour < 4:  # go back to previous day since you're after midnight
+            local_time_now -= timedelta(days=1)
         start_of_day = local_time_now.replace(hour=4, minute=0, second=0, microsecond=0) # 4AM -> 4AM
         end_of_day = start_of_day + timedelta(days=1)
         return start_of_day, end_of_day
@@ -90,23 +126,27 @@ class User(db.Model):
 
 
     def resume(self, scheduler, send_intro_text_new, send_upcoming_dose_message, silent=False):
-        if self.paused:
-            self.paused = False
+        print(self.state)
+        if self.state == UserState.PAUSED:
+            self.state = UserState.ACTIVE
             sorted_dose_windows = sorted(self.dose_windows, key=lambda dw: dw.next_start_date)
             for i, dose_window in enumerate(sorted_dose_windows):
                 if dose_window.active:
+                    print("scheduling initial job")
                     dose_window.schedule_initial_job(scheduler, send_intro_text_new)
                     if not silent:
+                        print("not silent")
                         # send resume messages
                         if dose_window.within_dosing_period() and not dose_window.is_recorded():
+                            print("sending intro text")
                             send_intro_text_new(dose_window.id, welcome_back=True)
                         elif i == 0:  # upcoming dose
                             send_upcoming_dose_message(self, dose_window)
             db.session.commit()
 
     def pause(self, scheduler, send_pause_message, silent=False):
-        if not self.paused:
-            self.paused = True
+        if self.state == UserState.ACTIVE:
+            self.state = UserState.PAUSED
             for dose_window in self.dose_windows:
                 dose_window.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
             if not silent:
@@ -183,7 +223,7 @@ class DoseWindow(db.Model):
         # need a scheduler object to take actions
         if scheduler_tuple is not None:
             scheduler, func_to_schedule = scheduler_tuple
-            if self.active and scheduler_tuple and self.medications and not self.user.paused:
+            if self.active and scheduler_tuple and self.medications and not self.user.state == UserState.PAUSED:
                 self.schedule_initial_job(scheduler, func_to_schedule)
             if not self.active and scheduler_tuple:
                 self.remove_jobs(scheduler, ["initial", "followup", "boundary", "absent"])
@@ -234,7 +274,7 @@ class DoseWindow(db.Model):
 
 
     def schedule_initial_job(self, scheduler, send_intro_text_new):
-        if scheduler.get_job(f"{self.id}-initial-new") is None and not self.user.paused:
+        if scheduler.get_job(f"{self.id}-initial-new") is None and not self.user.state == UserState.PAUSED:
             scheduler.add_job(
                 f"{self.id}-initial-new",
                 send_intro_text_new,
@@ -427,7 +467,6 @@ class UserSchema(Schema):
     phone_number = fields.String()
     name = fields.String()
     manual_takeover = fields.Boolean()
-    paused = fields.Boolean()
     timezone = fields.String()
     dose_windows = fields.List(fields.Nested(
         lambda: DoseWindowSchema(exclude=("user", "medications"))
@@ -436,6 +475,8 @@ class UserSchema(Schema):
         lambda: MedicationSchema(exclude=("user", "dose_windows"))
     ))
     pending_announcement = fields.String()
+    onboarding_type = fields.String()
+    state = EnumField(UserState, by_value=True)
 
 class DoseWindowSchema(Schema):
     id = fields.Integer()
