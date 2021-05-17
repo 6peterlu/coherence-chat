@@ -55,6 +55,7 @@ class UserState(enum.Enum):
     PAUSED = 'paused'
     ACTIVE = 'active'
     SUBSCRIPTION_EXPIRED = 'subscription_expired'
+    PAYMENT_VERIFICATION_PENDING = 'payment_verification_pending'
 
 class User(db.Model):
     __tablename__ = 'user'

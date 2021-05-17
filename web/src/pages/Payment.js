@@ -47,7 +47,7 @@ const Payment = () => {
         return <Spinner />
     }
 
-    if (paymentData.client_secret) {
+    if (paymentData.state === 'payment_method_requested') {
         const stripePromise = loadStripe(paymentData.publishable_key);
         return (
             <Elements stripe={stripePromise}>
@@ -60,7 +60,10 @@ const Payment = () => {
                 </Box>
             </Elements>
         );
-    } else {
+    } else if (paymentData.state === "payment_verification_pending") {
+        return <Paragraph>We're verifying your payment information. You'll get a text when you're verified with further instructions. Thanks for your patience!</Paragraph>
+    }
+    else {
         return (
             <Box>
                 <Paragraph>Your subscription status: active</Paragraph>

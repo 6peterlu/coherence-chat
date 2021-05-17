@@ -947,7 +947,11 @@ def user_get_payment_info():
     print("hello?")
     print(g.user)
     print(g.user.stripe_customer_id)
-    if g.user.stripe_customer_id is not None:
+    if g.user.state == UserState.PAYMENT_VERIFICATION_PENDING:
+        return_dict = {
+            "state": g.user.state.value
+        }
+    elif g.user.stripe_customer_id is not None:
         print("attempting to retrieve stripe")
         return_dict = {
             "state": g.user.state.value,
@@ -971,6 +975,7 @@ def user_get_payment_info():
             "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"]
         }
         g.user.stripe_customer_id = customer.id
+        g.user.state = UserState.PAYMENT_VERIFICATION_PENDING
         db.session.commit()
         return jsonify(return_dict)
     # return jsonify({"state": g.user.state.value, "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"]})
@@ -994,7 +999,7 @@ def stripe_webhook():
             return jsonify(), 401
         print("bill paid handler triggered")
         print(event)
-        # the user is functionally on a "free trial" until 1 month + 1 day, but they already paid at the start
+        # the user is officially on a "free trial" until 1 month + 1 day, but they already paid at the start
         subscription_end_day = get_start_of_day(related_user.timezone, days_delta=1, months_delta=1)
         print(subscription_end_day)
         # give them till start of tomorrow for free
@@ -1012,7 +1017,7 @@ def stripe_webhook():
                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                     to=f"+1{related_user.phone_number}"
                 )
-        db.session.commit()
+            db.session.commit()
     else:
         print(f"unhandled event type {event.type}")
 
