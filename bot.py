@@ -743,15 +743,15 @@ def bot():
         print(f"current user state: {user.state}")
         if user.state == UserState.ACTIVE:
             active_state_message_handler(incoming_msg_list, user, dose_window, incoming_phone_number, raw_message)
-        if user.state == UserState.INTRO:
+        elif user.state == UserState.INTRO:
             intro_state_message_handler(user, incoming_phone_number, raw_message)
-        if user.state == UserState.DOSE_WINDOWS_REQUESTED:
+        elif user.state == UserState.DOSE_WINDOWS_REQUESTED:
             dose_windows_requested_message_handler(user, incoming_phone_number, raw_message)
-        if user.state == UserState.DOSE_WINDOW_TIMES_REQUESTED:
+        elif user.state == UserState.DOSE_WINDOW_TIMES_REQUESTED:
             dose_window_times_requested_message_handler(user, incoming_phone_number, raw_message)
-        if user.state == UserState.TIMEZONE_REQUESTED:
+        elif user.state == UserState.TIMEZONE_REQUESTED:
             timezone_requested_message_handler(user, incoming_phone_number, raw_message)
-        if user.state == UserState.PAYMENT_METHOD_REQUESTED:
+        elif user.state == UserState.PAYMENT_METHOD_REQUESTED:
             payment_requested_message_handler(user, incoming_phone_number, raw_message)
     return jsonify()
 
