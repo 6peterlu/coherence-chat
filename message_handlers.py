@@ -506,7 +506,7 @@ def timezone_requested_message_handler(
     try:
         print("in here1")
         tz_index = int(raw_message) - 1
-        if tz_index < 1 or tz_index > 4:
+        if tz_index < 0 or tz_index > 3:
             if "NOALERTS" not in os.environ:
                 client.messages.create(
                     body=NUMBER_OUT_OF_RANGE_TIMEZONE,
