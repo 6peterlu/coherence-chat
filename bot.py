@@ -947,11 +947,11 @@ def user_get_payment_info():
     print("hello?")
     print(g.user)
     print(g.user.stripe_customer_id)
-    if g.user.state == UserState.PAYMENT_VERIFICATION_PENDING:
-        return_dict = {
-            "state": g.user.state.value
-        }
-    elif g.user.stripe_customer_id is not None:
+    # if g.user.state == UserState.PAYMENT_VERIFICATION_PENDING:
+    #     return_dict = {
+    #         "state": g.user.state.value
+    #     }
+    if g.user.stripe_customer_id is not None:
         print("attempting to retrieve stripe")
         return_dict = {
             "state": g.user.state.value,
@@ -975,7 +975,7 @@ def user_get_payment_info():
             "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"]
         }
         g.user.stripe_customer_id = customer.id
-        g.user.state = UserState.PAYMENT_VERIFICATION_PENDING
+        # g.user.state = UserState.PAYMENT_VERIFICATION_PENDING
         db.session.commit()
         return jsonify(return_dict)
     # return jsonify({"state": g.user.state.value, "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"]})
