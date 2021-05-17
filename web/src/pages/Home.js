@@ -361,7 +361,7 @@ const Home = () => {
     if (!cookies.token) {
         return <Redirect to="/login"/>;
     }
-    if (patientData.state === "payment_method_requested") {
+    if (patientData !== null && patientData.state === "payment_method_requested") {
         return <Redirect to="/payment"/>
     }
 

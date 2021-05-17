@@ -45,7 +45,7 @@ from message_handlers import (
     send_followup_text_new,
     timezone_requested_message_handler
 )
-from time_helpers import get_time_now
+from time_helpers import convert_naive_to_local_machine_time, get_start_of_day, get_time_now
 
 from ai import get_reminder_time_within_range
 
@@ -57,6 +57,9 @@ from apscheduler.events import (
 from flask_httpauth import HTTPBasicAuth
 
 from flask_apscheduler.auth import HTTPBasicAuth as SchedulerAuth
+
+# payments
+import stripe
 
 
 ALL_EVENTS = [
@@ -200,6 +203,10 @@ client = Client(account_sid, auth_token)
 scheduler = APScheduler()
 
 
+# set stripe API key
+stripe.api_key = os.environ["STRIPE_API_KEY"]
+
+
 def get_initial_message(dose_window_obj, time_string, welcome_back=False, phone_number=None):
     current_time_of_day = get_time_of_day(dose_window_obj)
     if welcome_back:
@@ -213,6 +220,7 @@ def get_initial_message(dose_window_obj, time_string, welcome_back=False, phone_
 
 @auth.verify_password
 def verify_password(token, _):
+    print("verifying pass")
     # first try to authenticate by token
     user = User.verify_auth_token(token)
     if not user:
@@ -931,6 +939,83 @@ def user_edit_dose_window():
         )
     return jsonify()
 
+
+# TODO: error handling
+@app.route("/user/getPaymentData", methods=["GET"])
+@auth.login_required
+def user_get_payment_info():
+    print("hello?")
+    print(g.user)
+    if g.user.stripe_customer_id is not None:
+        print("attempting to retrieve stripe")
+        return_dict = {
+            "state": g.user.state.value,
+            "subscription_end_date": convert_naive_to_local_machine_time(g.user.end_of_service)
+        }
+        return jsonify(return_dict)
+    else:
+        # create customer id
+        customer = stripe.Customer.create(name=g.user.name, phone=g.user.phone_number)
+        subscription = stripe.Subscription.create(
+            customer=customer.id,
+            items=[{
+                'price': "price_1IrxibEInVrsQDJoNPvvYYkl",  # from stripe dashboard
+            }],
+            payment_behavior='default_incomplete',
+            expand=['latest_invoice.payment_intent'],
+        )
+        return_dict = {
+            "state": g.user.state.value,
+            "client_secret": subscription.latest_invoice.payment_intent.client_secret,
+            "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"]
+        }
+        g.user.stripe_customer_id = customer.id
+        db.session.commit()
+        return jsonify(return_dict)
+    # return jsonify({"state": g.user.state.value, "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"]})
+
+
+# TODO: error handling
+@app.route("/webhook/stripe", methods=["POST"])
+def stripe_webhook():
+    payload = request.json
+    try:
+        event = stripe.Event.construct_from(
+            payload, stripe.api_key
+        )
+    except ValueError:
+        # Invalid payload
+        return jsonify(), 400
+    if event.type == "invoice.payment_succeeded":  # consider bill paid
+        related_user = User.query.filter(User.stripe_customer_id == event.data["object"]["customer"]).one_or_none()
+        if related_user is None:
+            print("couldn't find user for stripe customer id.")
+            return jsonify(), 401
+        print("bill paid handler triggered")
+        print(event)
+        # the user is functionally on a "free trial" until 1 month + 1 day, but they already paid at the start
+        subscription_end_day = get_start_of_day(related_user.timezone, days_delta=1, months_delta=1)
+        print(subscription_end_day)
+        # give them till start of tomorrow for free
+        stripe.Subscription.modify(
+            sid=event.data["object"]["subscription"],
+            trial_end=int(subscription_end_day.timestamp()),
+            proration_behavior="none"
+        )
+        related_user.end_of_service = subscription_end_day
+        if related_user.state == UserState.PAYMENT_METHOD_REQUESTED:
+            related_user.state == UserState.PAUSED
+            if "NOALERTS" not in os.environ:
+                client.messages.create(
+                    body=ONBOARDING_COMPLETE,
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                    to=f"+1{related_user.phone_number}"
+                )
+        db.session.commit()
+    else:
+        print(f"unhandled event type {event.type}")
+
+    return jsonify(), 200
 
 def exists_remaining_reminder_job(dose_id, job_list):
     for job in job_list:

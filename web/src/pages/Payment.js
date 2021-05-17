@@ -1,15 +1,26 @@
 import React from "react";
-import { Paragraph } from "grommet";
-import { pullPatientData } from "../api";
+import { Box, Paragraph, Spinner } from "grommet";
+import { pullPatientPaymentData } from "../api";
 import { useCookies } from 'react-cookie';
 import { useHistory } from "react-router-dom";
 
+import { DateTime } from "luxon";
+import { Elements } from '@stripe/react-stripe-js';
+
+import {loadStripe} from '@stripe/stripe-js';
+
+import StripeCardEntry from "../components/StripeCardEntry";
+
 const Payment = () => {
-    const [patientData, setPatientData] = React.useState(null);
-    const [_, setCookie, removeCookie] = useCookies(['token']);
+      // Initialize an instance of stripe.
+
+    const [loading, setLoading] = React.useState(true);
+    const [paymentData, setPaymentData] = React.useState(null);
+    const [_, __, removeCookie] = useCookies(['token']);
     const history = useHistory();
     const loadData = React.useCallback(async () => {
-        let loadedData = await pullPatientData(5);  // TODO: split /patientData into multiple routes
+        setLoading(true);
+        let loadedData = await pullPatientPaymentData();
         if (loadedData === null) {
             removeCookie("token");
             history.push("/login");
@@ -22,15 +33,41 @@ const Payment = () => {
             history.push("/finishOnboarding");
         }
         console.log(loadedData);
-        setPatientData(loadedData);
-        setCookie('token', loadedData.token, {secure: true});  // refresh login token
-    }, [history, removeCookie, setCookie])
+        setPaymentData(loadedData);
+        setLoading(false);
+    }, [history, removeCookie]);
+
     React.useEffect(() => {
-        if (patientData === null) {
+        if (loading) {
             loadData();
         }
-    }, [loadData, patientData])
-    return <Paragraph>Enter payment info</Paragraph>;
+    }, [loadData, loading])
+
+    if (loading) {
+        return <Spinner />
+    }
+
+    if (paymentData.client_secret) {
+        const stripePromise = loadStripe(paymentData.publishable_key);
+        return (
+            <Elements stripe={stripePromise}>
+                <Box>
+                    <StripeCardEntry
+                        submitText="Start Coherence subscription"
+                        clientSecret={paymentData.client_secret}
+                        afterSubmitAction={loadData}
+                    />
+                </Box>
+            </Elements>
+        );
+    } else {
+        return (
+            <Box>
+                <Paragraph>Your subscription status: active</Paragraph>
+                <Paragraph>expires on {DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}</Paragraph>
+            </Box>
+        );
+    }
 }
 
 export default Payment;

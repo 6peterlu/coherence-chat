@@ -75,6 +75,7 @@ class User(db.Model):
         db.Enum(UserState, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False
     )
+    stripe_customer_id = db.Column(db.String)  # cross reference for stripe customer object. This indicates whether the user has previously added payment info
 
 
     def __init__(
