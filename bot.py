@@ -946,6 +946,7 @@ def user_edit_dose_window():
 def user_get_payment_info():
     print("hello?")
     print(g.user)
+    print(g.user.stripe_customer_id)
     if g.user.stripe_customer_id is not None:
         print("attempting to retrieve stripe")
         return_dict = {
