@@ -54,6 +54,7 @@ from constants import (
 )
 from ai import get_reminder_time_within_range
 from nlp import get_datetime_obj_from_string
+from time_helpers import get_start_of_day
 
 BUFFER_TIME_MINS = 10
 
@@ -517,6 +518,7 @@ def timezone_requested_message_handler(
             new_event = EventLog("num_dose_windows", user.id, None, None, description=timezone_list[tz_index])
             if user.onboarding_type == "free trial":
                 user.state = UserState.PAUSED
+                user.end_of_service = get_start_of_day(user.timezone, days_delta=1, months_delta=1)
                 if "NOALERTS" not in os.environ:
                     client.messages.create(
                         body=ONBOARDING_COMPLETE,

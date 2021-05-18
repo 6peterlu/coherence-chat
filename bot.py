@@ -1003,7 +1003,7 @@ def user_submit_payment_info():
     return jsonify()
 
 
-# TODO: error handling
+# TODO: unit tests?
 @app.route("/webhook/stripe", methods=["POST"])
 def stripe_webhook():
     payload = request.json

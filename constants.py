@@ -156,9 +156,9 @@ NUMBER_OUT_OF_RANGE_TIMEZONE = "Please enter a number from 1 to 4."
 
 COULDNT_PARSE_DATE = "Sorry, I couldn't figure out what time you meant. Try typing the time in a more standard format, such as 5:00 PM. If you get stuck here, text us at (650) 667-1146, and we'll get it sorted out ASAP. Thanks!"
 
-REQUEST_DOSE_WINDOW_START_TIME = Template("When would you like dose window $count to start?")
+REQUEST_DOSE_WINDOW_START_TIME = Template("What time would you like dose window $count to start?")
 
-REQUEST_DOSE_WINDOW_END_TIME = Template("When would you like dose window $count to end?")
+REQUEST_DOSE_WINDOW_END_TIME = Template("What time would you like dose window $count to end?")
 
 REQUEST_PAYMENT_METHOD = "I don't have a free trial code on record for you. You can either enter it now, or go to https://coherence-chat.herokuapp.com to create an account and fill in your payment information. Coherence is $6.99 / month with no long term commitment."
 
