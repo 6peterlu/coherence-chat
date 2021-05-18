@@ -359,7 +359,7 @@ const Home = () => {
     if (!cookies.token) {
         return <Redirect to="/login"/>;
     }
-    if (patientData !== null && patientData.state === "payment_method_requested", "subscription_expired") {
+    if (patientData !== null && ["payment_method_requested", "subscription_expired"].includes(patientData.state)) {
         return <Redirect to="/payment"/>
     }
     if (patientData !== null && ["intro", "dose_windows_requested", "dose_window_times_requested", "timezone_requested"].includes(patientData.state)) {
