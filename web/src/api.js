@@ -108,3 +108,8 @@ export const setHealthMetricsTracking = async (metricList) => {
   const response = await post("user/healthMetrics/set", { metricList });
   return response;
 }
+
+export const submitPaymentInfo = async () => {
+  const response = await post("user/submitPaymentInfo", {});
+  return response;
+}

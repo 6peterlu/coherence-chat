@@ -32,8 +32,6 @@ import TimeInput from "../components/TimeInput";
 import AnimatingButton from "../components/AnimatingButton";
 
 const Home = () => {
-
-    console.log(DateTime.local().zoneName)
     const [cookies, setCookie, removeCookie] = useCookies(['token']);
     const [patientData, setPatientData] = React.useState(null);
     const [calendarMonth, setCalendarMonth] = React.useState(5);

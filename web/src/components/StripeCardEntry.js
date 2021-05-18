@@ -6,6 +6,7 @@ import {
   } from '@stripe/react-stripe-js';
 import AnimatingButton from "../components/AnimatingButton";
 import { Paragraph, Spinner } from "grommet";
+import { submitPaymentInfo } from "../api";
 
 const StripeCardEntry = ({submitText, clientSecret, afterSubmitAction}) => {
     const stripe = useStripe();
@@ -40,7 +41,8 @@ const StripeCardEntry = ({submitText, clientSecret, afterSubmitAction}) => {
             <AnimatingButton
                 label={submitText ? submitText : "Save payment information"}
                 onClick={async () => {
-                    await submitPayment();
+                    await submitPaymentInfo(); // submits to our backend
+                    await submitPayment();  // submits to stripe
                     afterSubmitAction();  // any reloading that needs to be done after submitting payment info
                 }}
                 animating={validatingCard}
