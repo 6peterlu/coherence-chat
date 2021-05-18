@@ -947,17 +947,16 @@ def user_get_payment_info():
     print("hello?")
     print(g.user)
     print(g.user.stripe_customer_id)
-    # if g.user.state == UserState.PAYMENT_VERIFICATION_PENDING:
-    #     return_dict = {
-    #         "state": g.user.state.value
-    #     }
-    if g.user.stripe_customer_id is not None:
+    if g.user.state == UserState.PAYMENT_VERIFICATION_PENDING:
+        return_dict = {
+            "state": g.user.state.value
+        }
+    elif g.user.stripe_customer_id is not None:
         print("attempting to retrieve stripe")
         return_dict = {
             "state": g.user.state.value,
             "subscription_end_date": convert_naive_to_local_machine_time(g.user.end_of_service)
         }
-        return jsonify(return_dict)
     else:
         # create customer id
         customer = stripe.Customer.create(name=g.user.name, phone=g.user.phone_number)
@@ -975,9 +974,9 @@ def user_get_payment_info():
             "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"]
         }
         g.user.stripe_customer_id = customer.id
-        # g.user.state = UserState.PAYMENT_VERIFICATION_PENDING
+        g.user.state = UserState.PAYMENT_VERIFICATION_PENDING
         db.session.commit()
-        return jsonify(return_dict)
+    return jsonify(return_dict)
     # return jsonify({"state": g.user.state.value, "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"]})
 
 
@@ -993,24 +992,27 @@ def stripe_webhook():
         # Invalid payload
         return jsonify(), 400
     if event.type == "invoice.payment_succeeded":  # consider bill paid
+        print("received event")
         related_user = User.query.filter(User.stripe_customer_id == event.data["object"]["customer"]).one_or_none()
+        print(related_user)
         if related_user is None:
             print("couldn't find user for stripe customer id.")
             return jsonify(), 401
-        print("bill paid handler triggered")
-        print(event)
-        # the user is officially on a "free trial" until 1 month + 1 day, but they already paid at the start
-        subscription_end_day = get_start_of_day(related_user.timezone, days_delta=1, months_delta=1)
-        print(subscription_end_day)
-        # give them till start of tomorrow for free
-        stripe.Subscription.modify(
-            sid=event.data["object"]["subscription"],
-            trial_end=int(subscription_end_day.timestamp()),
-            proration_behavior="none"
-        )
-        related_user.end_of_service = subscription_end_day
-        if related_user.state == UserState.PAYMENT_METHOD_REQUESTED:
-            related_user.state == UserState.PAUSED
+        if related_user.state == UserState.PAYMENT_VERIFICATION_PENDING:
+            print("bill paid handler triggered")
+            print(event)
+            # the user is officially on a "free trial" until 1 month + 1 day, but they already paid at the start
+            subscription_end_day = get_start_of_day(related_user.timezone, days_delta=1, months_delta=1)
+            print(subscription_end_day)
+            # give them till start of tomorrow for free
+            stripe.Subscription.modify(
+                sid=event.data["object"]["subscription"],
+                trial_end=int(subscription_end_day.timestamp()),
+                proration_behavior="none"
+            )
+            related_user.end_of_service = subscription_end_day
+            print(related_user.state)
+            related_user.state = UserState.PAUSED
             if "NOALERTS" not in os.environ:
                 client.messages.create(
                     body=ONBOARDING_COMPLETE,
