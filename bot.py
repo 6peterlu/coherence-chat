@@ -967,6 +967,11 @@ def user_get_payment_info():
     }
     if g.user.state == UserState.PAUSED or g.user.state == UserState.ACTIVE:
         return_dict["subscription_end_date"] = convert_naive_to_local_machine_time(g.user.end_of_service)
+        if g.user.stripe_customer_id is not None:
+            customer = stripe.Customer.retrieve(g.user.stripe_customer_id, expand=["invoice_settings.default_payment_method"])
+            default_payment_method = customer.invoice_settings.default_payment_method
+            return_dict["payment_method"] = None if default_payment_method is None else {"brand": default_payment_method.card.brand, "last4": default_payment_method.card.last4 }
+        # get stripe payment method data
     elif g.user.state == UserState.SUBSCRIPTION_EXPIRED:
         return_dict["subscription_end_date"] = convert_naive_to_local_machine_time(g.user.end_of_service)
         return_dict["subscription_expired"] = True
@@ -1014,7 +1019,10 @@ def stripe_webhook():
     except ValueError:
         # Invalid payload
         return jsonify(), 400
-    if event.type == "invoice.payment_succeeded":  # consider bill paid
+    if event.type == "payment_intent.succeeded":
+        # set submitted card as customer's default payment method for future charging
+        stripe.Customer.modify(event.data.object.customer, invoice_settings={"default_payment_method": event.data.object.payment_method})
+    elif event.type == "invoice.payment_succeeded":  # consider bill paid
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
         if related_user is None:
             return jsonify(), 401

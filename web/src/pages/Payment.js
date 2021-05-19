@@ -26,13 +26,9 @@ const Payment = () => {
             history.push("/login");
         }
         console.log(loadedData.state);
-        if (["paused", "active"].includes(loadedData.state)) {
-            history.push("/");
-        }
         if (["intro", "dose_windows_requested", "dose_window_times_requested", "timezone_requested"].includes(loadedData.state)) {
             history.push("/finishOnboarding");
         }
-        console.log(loadedData);
         setPaymentData(loadedData);
         setLoading(false);
     }, [history, removeCookie]);
@@ -71,12 +67,27 @@ const Payment = () => {
                 <Button label="Renew for $6.99"/>
             </Box>
         );
-
-    } else {
+    } else if (["paused", "active"].includes(paymentData.state)) {
         return (
-            <Box>
-                <Paragraph>Your subscription status: active</Paragraph>
-                <Paragraph>expires on {DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}</Paragraph>
+            <Box margin="large">
+                <Heading size="small">Manage your subscription</Heading>
+                {paymentData.payment_method ? (
+                    <>
+                        <Paragraph alignSelf="center">Your subscription will be automatically renewed on {DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}.</Paragraph>
+                        <Paragraph alignSelf="center">Payment data on file: {paymentData.payment_method.brand} ending in {paymentData.payment_method.last4}</Paragraph>
+                    </>
+                ): (
+                    <>
+                        <Paragraph alignSelf="center">Your free trial will end on {DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}.</Paragraph>
+                        <Button label="Enter payment information"/>
+                    </>
+                )
+                }
+
+                <Box direction="row" justify="between">
+                    <Button label="Go back" margin={{vertical: "small"}} onClick={() => {history.push("/")}}/>
+                    <Button label={paymentData.payment_method ? "Cancel subscription" : "Stop free trial"} margin={{vertical: "small"}}/>
+                </Box>
             </Box>
         );
     }
