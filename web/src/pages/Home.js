@@ -60,6 +60,7 @@ const Home = () => {
             return;
         }
         console.log(loadedData);
+        loadedData.state = "subscription_expired";  // TESTING
         setPatientData(loadedData);
         if (loadedData.impersonateList === null) { // only track non impersonating data
             trackPatientPortalLoad(loadedData.patientId);
@@ -360,7 +361,7 @@ const Home = () => {
     if (!cookies.token) {
         return <Redirect to="/login"/>;
     }
-    if (patientData !== null && ["payment_method_requested", "subscription_expired"].includes(patientData.state)) {
+    if (patientData !== null && ["payment_method_requested"].includes(patientData.state)) {
         return <Redirect to="/payment"/>
     }
     if (patientData !== null && ["intro", "dose_windows_requested", "dose_window_times_requested", "timezone_requested"].includes(patientData.state)) {
@@ -395,6 +396,20 @@ const Home = () => {
             <Box align="center">
                 <Heading size="small">Good {currentTimeOfDay}{patientData ? `, ${patientData.patientName}` : ""}.</Heading>
             </Box>
+            { patientData && patientData.state === "subscription_expired" ?
+                <Box
+                    align="center"
+                    background={{"color":"status-error", "dark": true}}
+                    round="medium"
+                    margin={{horizontal: "large", bottom: "medium"}}
+                    pad="medium"
+                >
+                    <Paragraph textAlign="center" margin={{vertical: "none"}}>Your subscription expired on {DateTime.fromHTTP(patientData.subscriptionEndDate).toLocaleString(DateTime.DATE_MED)}.</Paragraph>
+                    <Button label="Renew subscription" onClick={() => { history.push("/payment") }} margin={{top: "small"}}/>
+                </Box>
+                :
+                null
+            }
             <Box>
                 {patientData && patientData.takeNow ?
                     <Box
@@ -695,7 +710,9 @@ const Home = () => {
                                 }
                             }
                             loadData();
-                        }} label={`${patientData.pausedService ? "Resume" : "Pause"} Coherence`} />
+                        }} label={`${patientData.pausedService ? "Resume" : "Pause"} Coherence`}
+                        disabled={patientData.state === "subscription_expired"}
+                    />
                     {patientData.pausedService ? <Paragraph size="small" color="status-warning" textAlign="center">While Coherence is paused, we can't respond to any texts you send us, or remind you about your medications.</Paragraph> : null}
                 </> : null}
             </Box>

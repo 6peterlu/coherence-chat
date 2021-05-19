@@ -17,6 +17,8 @@ from models import (
     User,
     # schemas
     UserSchema,
+    # enums
+    UserState
 )
 
 @pytest.fixture
@@ -919,3 +921,27 @@ def test_user_create_dose_window(client, db_session, user_record):
     )
     assert len(db_session.query(DoseWindow).all()) == 1
     assert len(db_session.query(Medication).all()) == 1
+
+
+@freeze_time("2012-01-01 17:00:00")
+def test_user_subscription_expire_bot_endpoint(client, db_session, user_record):
+    user_record.end_of_service = datetime(2011, 1, 1)
+    db_session.add(user_record)  # add needed only for mock db_session
+    db_session.commit()
+    assert user_record.state == UserState.ACTIVE
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert user_record.state == UserState.SUBSCRIPTION_EXPIRED
+
+
+@freeze_time("2012-01-01 17:00:00")
+def test_user_subscription_expire_other_endpoint(client, db_session, user_record):
+    user_record.end_of_service = datetime(2011, 1, 1)
+    db_session.add(user_record)  # add needed only for mock db_session
+    db_session.commit()
+    assert user_record.state == UserState.ACTIVE
+    client.get(
+        "/patientData/new",
+        query_string={"calendarMonth": "5"},
+        headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), None)}
+    )
+    assert user_record.state == UserState.SUBSCRIPTION_EXPIRED

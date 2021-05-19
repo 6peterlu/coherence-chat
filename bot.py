@@ -232,6 +232,14 @@ def verify_password(token, _):
     if not user:
         return False  # kick you to login screen
     g.user = user
+
+    # side effect, update user status to subscription passed if time has passed
+    # probably bad practice but i'm not sure if @before_request has a g.user object.
+    # I don't see how it would
+    if get_time_now() > convert_naive_to_local_machine_time(g.user.end_of_service):
+        if g.user.state in [UserState.ACTIVE, UserState.PAUSED]:
+            g.user.state = UserState.SUBSCRIPTION_EXPIRED
+            db.session.commit()
     return True
 
 
@@ -260,6 +268,9 @@ def serve_css(path):
 @app.route("/svg/<path:path>", methods=["GET"])
 def serve_svg(path):
     return send_from_directory('svg', path)
+
+
+
 
 # send alert texts on exceptions
 @app.errorhandler(HTTPException)
@@ -456,7 +467,7 @@ def auth_patient_data():
         event_data.append(daily_event_summary)
         current_day += timedelta(days=1)
 
-    paused_service = user.state == UserState.PAUSED
+    paused_service = user.state != UserState.ACTIVE
     # behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
     dose_to_take_now = False if dose_window is None else not dose_window.is_recorded()
     dose_windows = [DoseWindowSchema().dump(dw) for dw in sorted(user.active_dose_windows, key=lambda dw: dw.bounds_for_current_day[0])]  # sort by start time
@@ -474,6 +485,7 @@ def auth_patient_data():
         "month": calendar_month,
         "impersonating": impersonating,
         "healthMetricData": process_health_metric_event_stream(health_metric_events, user.tracked_health_metrics),
+        "subscriptionEndDate": convert_naive_to_local_machine_time(g.user.end_of_service) if g.user.end_of_service is not None else None,
         "token": g.user.generate_auth_token().decode('ascii')  # refresh auth token
     })
 
@@ -757,6 +769,11 @@ def bot():
     incoming_phone_number = request.values.get('From', None)
     user, dose_window = get_current_user_and_dose_window(incoming_phone_number[2:])
     if user:
+        if user.end_of_service is not None:
+            if get_time_now() > convert_naive_to_local_machine_time(user.end_of_service):
+                if user.state in [UserState.ACTIVE, UserState.PAUSED]:
+                    user.state = UserState.SUBSCRIPTION_EXPIRED
+                    db.session.commit()
         print(f"current user state: {user.state}")
         if user.state == UserState.ACTIVE:
             active_state_message_handler(incoming_msg_list, user, dose_window, incoming_phone_number, raw_message)

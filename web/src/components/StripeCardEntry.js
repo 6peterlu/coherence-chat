@@ -8,7 +8,7 @@ import AnimatingButton from "../components/AnimatingButton";
 import { Paragraph, Spinner } from "grommet";
 import { submitPaymentInfo } from "../api";
 
-const StripeCardEntry = ({submitText, clientSecret, afterSubmitAction}) => {
+const StripeCardEntry = ({ submitText, clientSecret, afterSubmitAction, payOnSubmit }) => {
     const stripe = useStripe();
     const elements = useElements();
     const [validatingCard, setValidatingCard] = React.useState(false);

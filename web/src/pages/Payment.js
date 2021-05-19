@@ -13,7 +13,6 @@ import StripeCardEntry from "../components/StripeCardEntry";
 
 const Payment = () => {
       // Initialize an instance of stripe.
-
     const [loading, setLoading] = React.useState(true);
     const [paymentData, setPaymentData] = React.useState(null);
     const [_, __, removeCookie] = useCookies(['token']);
@@ -67,11 +66,20 @@ const Payment = () => {
                 <Button label="Renew for $6.99"/>
             </Box>
         );
-    } else if (["paused", "active"].includes(paymentData.state)) {
+    } else if (["paused", "active", "subscription_expired"].includes(paymentData.state)) {
         return (
             <Box margin="large">
                 <Heading size="small">Manage your subscription</Heading>
-                {paymentData.payment_method ? (
+                {paymentData.state === "subscription_expired" ? (
+                    <>
+                        <Paragraph alignSelf="center">Your subscription expired on {DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}</Paragraph>
+                        {paymentData.payment_method ? (
+                            <Button label="Renew for $6.99"/>
+                        ) : (
+                            <StripeCardEntry afterSubmitAction={loadData} clientSecret={paymentData.client_secret} />
+                        )}
+                    </>
+                ) : paymentData.payment_method ? (
                     <>
                         <Paragraph alignSelf="center">Your subscription will be automatically renewed on {DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}.</Paragraph>
                         <Paragraph alignSelf="center">Payment data on file: {paymentData.payment_method.brand} ending in {paymentData.payment_method.last4}</Paragraph>
@@ -90,6 +98,8 @@ const Payment = () => {
                 </Box>
             </Box>
         );
+    } else if (paymentData.state === "subscription_expired") {
+        return
     }
 }
 
