@@ -26,6 +26,7 @@ from constants import (
     FOLLOWUP_MSGS,
     INITIAL_SUFFIXES,
     MANUAL_TEXT_NEEDED_MSG,
+    NUMBER_OUT_OF_RANGE_TIMEZONE,
     ONBOARDING_COMPLETE,
     PAUSE_MESSAGE,
     REMINDER_OUT_OF_RANGE_MSG,
@@ -53,6 +54,7 @@ from constants import (
 )
 from ai import get_reminder_time_within_range
 from nlp import get_datetime_obj_from_string
+from time_helpers import get_start_of_day
 
 BUFFER_TIME_MINS = 10
 
@@ -505,25 +507,34 @@ def timezone_requested_message_handler(
     try:
         print("in here1")
         tz_index = int(raw_message) - 1
-        new_event = EventLog("num_dose_windows", user.id, None, None, description=timezone_list[tz_index])
-        if user.onboarding_type == "free trial":
-            user.state = UserState.PAUSED
+        if tz_index < 0 or tz_index > 3:
             if "NOALERTS" not in os.environ:
                 client.messages.create(
-                    body=ONBOARDING_COMPLETE,
+                    body=NUMBER_OUT_OF_RANGE_TIMEZONE,
                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                     to=incoming_phone_number
                 )
         else:
-            if "NOALERTS" not in os.environ:
-                client.messages.create(
-                    body=REQUEST_PAYMENT_METHOD,
-                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                    to=incoming_phone_number
-                )
-            user.state = UserState.PAYMENT_METHOD_REQUESTED
-        db.session.add(new_event)
-        db.session.commit()
+            new_event = EventLog("num_dose_windows", user.id, None, None, description=timezone_list[tz_index])
+            if user.onboarding_type == "free trial":
+                user.state = UserState.PAUSED
+                user.end_of_service = get_start_of_day(user.timezone, days_delta=1, months_delta=1)
+                if "NOALERTS" not in os.environ:
+                    client.messages.create(
+                        body=ONBOARDING_COMPLETE,
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                        to=incoming_phone_number
+                    )
+            else:
+                if "NOALERTS" not in os.environ:
+                    client.messages.create(
+                        body=REQUEST_PAYMENT_METHOD,
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                        to=incoming_phone_number
+                    )
+                user.state = UserState.PAYMENT_METHOD_REQUESTED
+            db.session.add(new_event)
+            db.session.commit()
     except ValueError:
         if "NOALERTS" not in os.environ:
             client.messages.create(

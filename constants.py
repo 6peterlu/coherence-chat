@@ -152,17 +152,19 @@ REQUEST_DOSE_WINDOW_COUNT = "Glad to hear it. How many dose windows would you li
 
 COULDNT_PARSE_NUMBER = "Sorry, I can only understand a number input, like 2."
 
+NUMBER_OUT_OF_RANGE_TIMEZONE = "Please enter a number from 1 to 4."
+
 COULDNT_PARSE_DATE = "Sorry, I couldn't figure out what time you meant. Try typing the time in a more standard format, such as 5:00 PM. If you get stuck here, text us at (650) 667-1146, and we'll get it sorted out ASAP. Thanks!"
 
-REQUEST_DOSE_WINDOW_START_TIME = Template("When would you like dose window $count to start?")
+REQUEST_DOSE_WINDOW_START_TIME = Template("What time would you like dose window $count to start?")
 
-REQUEST_DOSE_WINDOW_END_TIME = Template("When would you like dose window $count to end?")
+REQUEST_DOSE_WINDOW_END_TIME = Template("What time would you like dose window $count to end?")
 
-REQUEST_PAYMENT_METHOD = "We don't have a free trial code on record for you. You can either enter it now, or go to https://coherence-chat.herokuapp.com to create an account and fill in your payment information. Coherence is $6.99 / month with no long term commitment."
+REQUEST_PAYMENT_METHOD = "I don't have a free trial code on record for you. You can either enter it now, or go to https://coherence-chat.herokuapp.com to create an account and fill in your payment information. Coherence is $6.99 / month with no long term commitment."
 
 INCORRECT_FREE_TRIAL_CODE = "Sorry, that wasn't a valid code. Feel free to text our customer service line at (650) 667-1146‬ with any questions, or sign up for a paid account at https://coherence-chat.herokuapp.com."
 
-ONBOARDING_COMPLETE = "Great, you'll get your first Coherence reminders starting tomorrow. Thanks again for trying us out! If you have any questions or concerns, text us at (650) 667-1146‬, our customer service line."
+ONBOARDING_COMPLETE = "Great, you'll get your first Coherence reminders starting tomorrow. If you have any questions or concerns, text my customer service line at (650) 667-1146‬ ."
 
 TIMEZONE_REQUEST = "Thanks for letting me know your dose windows. What timezone are you in? This will help us send you reminders at the right times. Please respond with a number.\n[1] Pacific\n[2] Mountain\n[3] Central\n[4] Eastern"
 
@@ -171,3 +173,11 @@ BLOOD_GLUCOSE_MESSAGE = Template("🕒 $time\nBlood glucose recorded: $blood_glu
 WEIGHT_MESSAGE = Template("🕒 $time\nWeight recorded: $weight lbs.\n📝📝📝📝")
 
 BLOOD_PRESSURE_MESSAGE = Template("🕒 $time\nBlood pressure recorded: $blood_pressure mm/hg.\n📝📝📝📝")
+
+SERVER_ERROR_ALERT = Template("Server has error. ($code, $name, $description)")
+
+PAYMENT_METHOD_FAILURE = "I wasn't able to charge your payment method. Please try visiting https://coherence-chat.herokuapp.com to re-enter your information, or contact (650) 667-1146 if you need additional help. Thank you!"
+
+USER_SUBSCRIBED_NOTIF = Template("User with phone number $phone_number subscribed.")
+
+USER_PAYMENT_METHOD_FAIL_NOTIF = Template("User with phone number $phone_number had payment method validation failure.")

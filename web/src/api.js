@@ -54,6 +54,7 @@ const get = async (route, params) => {
   });
   if (fetchResult.ok) {
     const text = await fetchResult.text();
+    console.log(text);
     return JSON.parse(text);
   }
   console.log(
@@ -74,6 +75,12 @@ export const pullPatientData = async (calendarMonth) => {
 
 export const pullPatientDataForNumber = async (phoneNumber, calendarMonth) => {
   const response = await get("patientData/new", { phoneNumber, calendarMonth });
+  return response;
+}
+
+export const pullPatientPaymentData = async () => {
+  console.log("calling this at least?")
+  const response = await get("user/getPaymentData", {});
   return response;
 }
 
@@ -99,5 +106,10 @@ export const resumeUser = async () => {
 
 export const setHealthMetricsTracking = async (metricList) => {
   const response = await post("user/healthMetrics/set", { metricList });
+  return response;
+}
+
+export const submitPaymentInfo = async () => {
+  const response = await post("user/submitPaymentInfo", {});
   return response;
 }

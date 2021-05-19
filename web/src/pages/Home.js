@@ -1,6 +1,6 @@
 import React from "react";
 import { useCookies } from 'react-cookie';
-import { Redirect } from 'react-router-dom';
+import { Redirect, useHistory } from 'react-router-dom';
 import {
     deleteDoseWindow,
     pauseUser,
@@ -32,8 +32,6 @@ import TimeInput from "../components/TimeInput";
 import AnimatingButton from "../components/AnimatingButton";
 
 const Home = () => {
-
-    console.log(DateTime.local().zoneName)
     const [cookies, setCookie, removeCookie] = useCookies(['token']);
     const [patientData, setPatientData] = React.useState(null);
     const [calendarMonth, setCalendarMonth] = React.useState(5);
@@ -44,6 +42,7 @@ const Home = () => {
     const [deletingDoseWindow, setDeletingDoseWindow] = React.useState(null);
     const [editingHealthTracking, setEditingHealthTracking] = React.useState(null);
     const [timeRange, setTimeRange] = React.useState({label: "all time", value: null});
+    const history = useHistory();
     console.log(timeRange);
     const [animating, setAnimating] = React.useState(false);  // this is setting animating for ALL buttons for now
 
@@ -361,8 +360,11 @@ const Home = () => {
     if (!cookies.token) {
         return <Redirect to="/login"/>;
     }
-    if (patientData.state === "payment_method_requested") {
+    if (patientData !== null && ["payment_method_requested", "subscription_expired"].includes(patientData.state)) {
         return <Redirect to="/payment"/>
+    }
+    if (patientData !== null && ["intro", "dose_windows_requested", "dose_window_times_requested", "timezone_requested"].includes(patientData.state)) {
+        return <Redirect to="/finishOnboarding"/>
     }
 
     const orderDays = (t1, t2) => {
@@ -701,8 +703,9 @@ const Home = () => {
                 <Paragraph textAlign="center" margin={{vertical: "none"}}>Need help with anything?</Paragraph>
                 <Paragraph size="small" color="dark-3">Our customer service is just a text away at (650) 667-1146. Reach out any time and we'll get back to you in a few hours!</Paragraph>
             </Box>
-            <Box align="center" pad={{vertical: "medium"}} margin={{horizontal: "xlarge"}} border="top">
-                <Button onClick={logout} label="Log out" />
+            <Box align="center" pad={{vertical: "medium"}} margin={{horizontal: "xlarge"}} border="top" direction="row" justify={impersonateOptions ? "between" : "center"}>
+                {impersonateOptions ? <Button onClick={() => {history.push("/payment")}} label="Manage subscription" size="small"/> : null}
+                <Button onClick={logout} label="Log out" size="small"/>
             </Box>
         </Box>
     )
