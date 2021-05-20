@@ -57,7 +57,7 @@ const Payment = () => {
                 </Box>
             </Elements>
         );
-    } else if (paymentData.state === "payment_verification_pending") {
+    } else if (paymentData.secondary_state === "payment_verification_pending") {
         return <Paragraph>We're verifying your payment information. You'll get a text when you're verified with further instructions. Thanks for your patience!</Paragraph>
     } else if (paymentData.state === "subscription_expired") {
         return (
@@ -99,7 +99,7 @@ const Payment = () => {
             </Box>
         );
     } else if (paymentData.state === "subscription_expired") {
-        return
+        return <Paragraph>subscription expired</Paragraph>
     }
 }
 

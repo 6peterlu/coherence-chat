@@ -27,7 +27,8 @@ from models import (
     # database object
     db,
     # enums
-    UserState
+    UserState,
+    UserSecondaryState
 )
 
 from nlp import segment_message, get_datetime_obj_from_string
@@ -236,7 +237,7 @@ def verify_password(token, _):
     # side effect, update user status to subscription passed if time has passed
     # probably bad practice but i'm not sure if @before_request has a g.user object.
     # I don't see how it would
-    if get_time_now() > convert_naive_to_local_machine_time(g.user.end_of_service):
+    if g.user.end_of_service is not None and get_time_now() > convert_naive_to_local_machine_time(g.user.end_of_service):
         if g.user.state in [UserState.ACTIVE, UserState.PAUSED]:
             g.user.state = UserState.SUBSCRIPTION_EXPIRED
             db.session.commit()
@@ -479,6 +480,7 @@ def auth_patient_data():
         "takeNow": dose_to_take_now,
         "pausedService": bool(paused_service),
         "state": user.state.value,
+        "secondaryState": user.secondary_state.value if user.secondary_state else None,
         # "behaviorLearningScores": behavior_learning_scores,
         "doseWindows": dose_windows,
         "impersonateList": User.query.with_entities(User.name, User.phone_number).all() if user.phone_number == ADMIN_PHONE_NUMBER else None,
@@ -980,20 +982,11 @@ def user_edit_dose_window():
 @auth.login_required
 def user_get_payment_info():
     return_dict = {
-        "state": g.user.state.value
+        "state": g.user.state.value,
+        "secondary_state": g.user.secondary_state.value if g.user.secondary_state is not None else None
     }
-    if g.user.state == UserState.PAUSED or g.user.state == UserState.ACTIVE:
-        return_dict["subscription_end_date"] = convert_naive_to_local_machine_time(g.user.end_of_service)
-        if g.user.stripe_customer_id is not None:
-            customer = stripe.Customer.retrieve(g.user.stripe_customer_id, expand=["invoice_settings.default_payment_method"])
-            default_payment_method = customer.invoice_settings.default_payment_method
-            return_dict["payment_method"] = None if default_payment_method is None else {"brand": default_payment_method.card.brand, "last4": default_payment_method.card.last4 }
-        # get stripe payment method data
-    elif g.user.state == UserState.SUBSCRIPTION_EXPIRED:
-        return_dict["subscription_end_date"] = convert_naive_to_local_machine_time(g.user.end_of_service)
-        return_dict["subscription_expired"] = True
-    elif g.user.state == UserState.PAYMENT_METHOD_REQUESTED:
-        if g.user.stripe_customer_id is None:
+    if g.user.state in [UserState.PAUSED, UserState.ACTIVE, UserState.PAYMENT_METHOD_REQUESTED]:
+        if (g.user.state == UserState.PAYMENT_METHOD_REQUESTED or g.user.end_of_service is not None) and g.user.stripe_customer_id is None:  # if there's no stripe_customer_id, add one
             # create customer id
             customer = stripe.Customer.create(name=g.user.name, phone=g.user.phone_number)
             subscription = stripe.Subscription.create(
@@ -1009,26 +1002,37 @@ def user_get_payment_info():
             g.user.stripe_customer_id = customer.id
             db.session.commit()
         else:
-            customer = stripe.Customer.retrieve(g.user.stripe_customer_id, expand=["subscriptions"])
-            subscription = stripe.Subscription.retrieve(customer.subscriptions.data[0].id, expand=["latest_invoice.payment_intent"])
-            return_dict["client_secret"] = subscription.latest_invoice.payment_intent.client_secret
-            return_dict["publishable_key"] = os.environ["STRIPE_PUBLISHABLE_KEY"]
+            if g.user.stripe_customer_id is not None:
+                customer = stripe.Customer.retrieve(g.user.stripe_customer_id, expand=["subscriptions"])
+                subscription = stripe.Subscription.retrieve(customer.subscriptions.data[0].id, expand=["latest_invoice.payment_intent"])
+                return_dict["client_secret"] = subscription.latest_invoice.payment_intent.client_secret
+                return_dict["publishable_key"] = os.environ["STRIPE_PUBLISHABLE_KEY"]
+        if g.user.state in [UserState.PAUSED, UserState.ACTIVE]:
+            return_dict["subscription_end_date"] = convert_naive_to_local_machine_time(g.user.end_of_service) if g.user.end_of_service is not None else None
+            if g.user.stripe_customer_id is not None:
+                customer = stripe.Customer.retrieve(g.user.stripe_customer_id, expand=["invoice_settings.default_payment_method"])
+                default_payment_method = customer.invoice_settings.default_payment_method
+                return_dict["payment_method"] = None if default_payment_method is None else {"brand": default_payment_method.card.brand, "last4": default_payment_method.card.last4 }
+        # get stripe payment method data
+    elif g.user.state == UserState.SUBSCRIPTION_EXPIRED:
+        return_dict["subscription_end_date"] = convert_naive_to_local_machine_time(g.user.end_of_service)
+        return_dict["subscription_expired"] = True
     return jsonify(return_dict)
 
 
 @app.route("/user/submitPaymentInfo", methods=["POST"])
 @auth.login_required
 def user_submit_payment_info():
-    if g.user.state == UserState.PAYMENT_METHOD_REQUESTED:
-        g.user.state = UserState.PAYMENT_VERIFICATION_PENDING
+    if g.user.state == UserState.PAYMENT_METHOD_REQUESTED and g.user.secondary_state is None:
+        g.user.secondary_state = UserSecondaryState.PAYMENT_VERIFICATION_PENDING
         db.session.commit()
     return jsonify()
 
 
-# TODO: unit tests?
 @app.route("/webhook/stripe", methods=["POST"])
 def stripe_webhook():
     payload = request.json
+    print(payload)
     try:
         event = stripe.Event.construct_from(
             payload, stripe.api_key
@@ -1043,7 +1047,7 @@ def stripe_webhook():
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
         if related_user is None:
             return jsonify(), 401
-        if related_user.state == UserState.PAYMENT_VERIFICATION_PENDING:
+        if related_user.state == UserState.PAYMENT_METHOD_REQUESTED:
             # the user is officially on a "free trial" until 1 month + 1 day, but they already paid at the start
             subscription_end_day = get_start_of_day(related_user.timezone, days_delta=1, months_delta=1)
             # give them till start of tomorrow for free
@@ -1066,13 +1070,16 @@ def stripe_webhook():
                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                     to=f"+1{ADMIN_PHONE_NUMBER}"
                 )
+            if related_user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
+                related_user.secondary_state = None
             db.session.commit()
     elif event.type == "payment_intent.payment_failed" or event.type == "charge.failed" or event.type == "invoice.payment_failed":
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
         if related_user is None:
             return jsonify(), 401
-        if related_user.state == UserState.PAYMENT_VERIFICATION_PENDING:
-            related_user.state = UserState.PAYMENT_METHOD_REQUESTED
+        if related_user.state == UserState.PAYMENT_METHOD_REQUESTED:
+            if related_user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
+                related_user.secondary_state = None  # clear verifying status
             if "NOALERTS" not in os.environ:
                 client.messages.create(
                     body=PAYMENT_METHOD_FAILURE,

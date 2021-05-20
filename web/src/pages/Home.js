@@ -60,7 +60,6 @@ const Home = () => {
             return;
         }
         console.log(loadedData);
-        loadedData.state = "subscription_expired";  // TESTING
         setPatientData(loadedData);
         if (loadedData.impersonateList === null) { // only track non impersonating data
             trackPatientPortalLoad(loadedData.patientId);

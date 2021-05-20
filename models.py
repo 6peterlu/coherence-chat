@@ -55,6 +55,8 @@ class UserState(enum.Enum):
     PAUSED = 'paused'
     ACTIVE = 'active'
     SUBSCRIPTION_EXPIRED = 'subscription_expired'
+    PAYMENT_VERIFICATION_PENDING = 'payment_verification_pending'  # TODO: deprecate this
+class UserSecondaryState(enum.Enum):
     PAYMENT_VERIFICATION_PENDING = 'payment_verification_pending'
 
 class User(db.Model):
@@ -75,6 +77,10 @@ class User(db.Model):
     state = db.Column(
         db.Enum(UserState, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False
+    )
+    secondary_state = db.Column(
+        db.Enum(UserSecondaryState, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=True
     )
     stripe_customer_id = db.Column(db.String)  # cross reference for stripe customer object. This indicates whether the user has previously added payment info
 
