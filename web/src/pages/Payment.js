@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Button, Heading, Paragraph, Spinner } from "grommet";
+import { Box, Button, Heading, Layer, Paragraph, Spinner } from "grommet";
 import { pullPatientPaymentData } from "../api";
 import { useCookies } from 'react-cookie';
 import { useHistory } from "react-router-dom";
@@ -15,6 +15,7 @@ const Payment = () => {
       // Initialize an instance of stripe.
     const [loading, setLoading] = React.useState(true);
     const [paymentData, setPaymentData] = React.useState(null);
+    const [addCardModalVisible, setAddCardModalVisible] = React.useState(false);
     const [_, __, removeCookie] = useCookies(['token']);
     const history = useHistory();
     const loadData = React.useCallback(async () => {
@@ -53,6 +54,7 @@ const Payment = () => {
                         submitText="Start Coherence subscription ($6.99)"
                         clientSecret={paymentData.client_secret}
                         afterSubmitAction={loadData}
+                        payOnSubmit={true}
                     />
                 </Box>
             </Elements>
@@ -67,6 +69,7 @@ const Payment = () => {
             </Box>
         );
     } else if (["paused", "active", "subscription_expired"].includes(paymentData.state)) {
+        const stripePromise = loadStripe(paymentData.publishable_key);
         return (
             <Box margin="large">
                 <Heading size="small">Manage your subscription</Heading>
@@ -76,7 +79,7 @@ const Payment = () => {
                         {paymentData.payment_method ? (
                             <Button label="Renew for $6.99"/>
                         ) : (
-                            <StripeCardEntry afterSubmitAction={loadData} clientSecret={paymentData.client_secret} />
+                            <StripeCardEntry afterSubmitAction={loadData} clientSecret={paymentData.client_secret} payOnSubmit={true}/>
                         )}
                     </>
                 ) : paymentData.payment_method ? (
@@ -87,7 +90,24 @@ const Payment = () => {
                 ): (
                     <>
                         <Paragraph alignSelf="center">Your free trial will end on {DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}.</Paragraph>
-                        <Button label="Enter payment information"/>
+                        <Button label="Enter payment information" onClick={() => {setAddCardModalVisible(true)}}/>
+                        {addCardModalVisible ? (
+                            <Layer responsive={false}>
+                                <Box width="70vw" pad="large">
+                                    <Elements stripe={stripePromise}>
+                                        <StripeCardEntry
+                                            submitText={`Add card (will be charged on ${DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}.)`}
+                                            clientSecret={paymentData.client_secret}
+                                            afterSubmitAction={async () => {
+                                                await loadData();
+                                                setAddCardModalVisible(false);
+                                            }}
+                                            payOnSubmit={false}
+                                        />
+                                    </Elements>
+                                </Box>
+                            </Layer>
+                        ) : null}
                     </>
                 )
                 }
