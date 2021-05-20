@@ -977,15 +977,16 @@ def user_edit_dose_window():
     return jsonify()
 
 
-@app.route("/user/getStripeSecretKey", methods=["GET"])
-@auth.login_required
-def user_get_stripe_secret_key():
-    secret_key = None
-    sub_id = None
+def get_stripe_data(user):
     if g.user.stripe_customer_id is None:
         customer = stripe.Customer.create(name=g.user.name, phone=g.user.phone_number)
         g.user.stripe_customer_id = customer.id
         db.session.commit()
+    else:
+        customer = stripe.Customer.retrieve(
+            g.user.stripe_customer_id,
+            expand=["subscriptions", "invoice_settings.default_payment_method"]
+        )
     # case 1: user is creating and paying for subscription, return payment_intent
     # criteria for case 1: user is in payment_method_requested or subscription_expired
     if g.user.state in [UserState.PAYMENT_METHOD_REQUESTED, UserState.SUBSCRIPTION_EXPIRED]:
@@ -998,7 +999,6 @@ def user_get_stripe_secret_key():
             expand=['latest_invoice.payment_intent']
         )
         secret_key = subscription.latest_invoice.payment_intent.client_secret
-        sub_id = subscription.id
     # user is creating payment method but not paying immediately, return setup_intent
     # criteria for case 2: user is active or paused and has end_of_service
     elif g.user.state in [UserState.ACTIVE, UserState.PAUSED] and g.user.end_of_service is not None:
@@ -1012,8 +1012,7 @@ def user_get_stripe_secret_key():
             trial_end=int(convert_naive_to_local_machine_time(g.user.end_of_service).timestamp())
         )
         secret_key = subscription.latest_invoice.payment_intent.client_secret
-        sub_id = subscription.id
-    return jsonify({"client_secret": secret_key, "sub_id": sub_id})
+    return customer, secret_key
 
 
 @app.route("/user/cancelSubscription", methods=["POST"])
@@ -1028,7 +1027,6 @@ def user_cancel_subscription():
     return jsonify(), 200
 
 
-
 # TODO: error handling
 @app.route("/user/getPaymentData", methods=["GET"])
 @auth.login_required
@@ -1038,52 +1036,17 @@ def user_get_payment_info():
         "secondary_state": g.user.secondary_state.value if g.user.secondary_state is not None else None
     }
     if g.user.state in [UserState.PAUSED, UserState.ACTIVE, UserState.PAYMENT_METHOD_REQUESTED]:
-        if (g.user.state == UserState.PAYMENT_METHOD_REQUESTED or g.user.end_of_service is not None) and g.user.stripe_customer_id is None:  # if there's no stripe_customer_id, add one
-            # create customer id
-            customer = stripe.Customer.create(name=g.user.name, phone=g.user.phone_number)
-            if g.user.end_of_service is None:
-                subscription = stripe.Subscription.create(
-                    customer=customer.id,
-                    items=[{
-                        'price': "price_1IrxibEInVrsQDJoNPvvYYkl",  # from stripe dashboard
-                    }],
-                    payment_behavior='default_incomplete',
-                    expand=['latest_invoice.payment_intent'],
-                )
-                return_dict["client_secret"] = subscription.latest_invoice.payment_intent.client_secret
-            else:  # user on free trial, subscription starts at free trial end
-                subscription = stripe.Subscription.create(
-                    customer=customer.id,
-                    items=[{
-                        'price': "price_1IrxibEInVrsQDJoNPvvYYkl",  # from stripe dashboard
-                    }],
-                    payment_behavior='default_incomplete',
-                    expand=['pending_setup_intent'],
-                    trial_end=int(convert_naive_to_local_machine_time(g.user.end_of_service).timestamp())
-                )
-                # not an invoice yet, its a setup intent
-                return_dict["client_secret"] = subscription.pending_setup_intent.client_secret
-                print(subscription)
-            return_dict["publishable_key"] = os.environ["STRIPE_PUBLISHABLE_KEY"]
-            g.user.stripe_customer_id = customer.id
-            db.session.commit()
-        else:
-            if g.user.stripe_customer_id is not None:
-                customer = stripe.Customer.retrieve(g.user.stripe_customer_id, expand=["subscriptions", "invoice_settings.default_payment_method"])
-                print(customer)
-                subscription = stripe.Subscription.retrieve(customer.subscriptions.data[0].id, expand=["latest_invoice.payment_intent", "pending_setup_intent"])
-                # print(subscription)
-                if subscription.latest_invoice.payment_intent is not None:
-                    return_dict["client_secret"] = subscription.latest_invoice.payment_intent.client_secret
-                else:
-                    return_dict["client_secret"] = subscription.pending_setup_intent.client_secret
-                return_dict["publishable_key"] = os.environ["STRIPE_PUBLISHABLE_KEY"]
-        if g.user.state in [UserState.PAUSED, UserState.ACTIVE]:
+        customer, secret_key = get_stripe_data(g.user)
+        return_dict["client_secret"] = secret_key
+        return_dict["publishable_key"] = os.environ["STRIPE_PUBLISHABLE_KEY"]
+        g.user.stripe_customer_id = customer.id
+        db.session.commit()
+        if g.user.state in [UserState.PAUSED, UserState.ACTIVE]:  # subscription is currently active, retrive addl data
             return_dict["subscription_end_date"] = convert_naive_to_local_machine_time(g.user.end_of_service) if g.user.end_of_service is not None else None
             if g.user.stripe_customer_id is not None:
-                customer = stripe.Customer.retrieve(g.user.stripe_customer_id, expand=["invoice_settings.default_payment_method"])
                 default_payment_method = customer.invoice_settings.default_payment_method
                 return_dict["payment_method"] = None if default_payment_method is None else {"brand": default_payment_method.card.brand, "last4": default_payment_method.card.last4 }
+        print(return_dict)
         # get stripe payment method data
     elif g.user.state == UserState.SUBSCRIPTION_EXPIRED:
         return_dict["subscription_end_date"] = convert_naive_to_local_machine_time(g.user.end_of_service)

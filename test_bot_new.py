@@ -947,8 +947,8 @@ def test_user_subscription_expire_other_endpoint(client, db_session, user_record
     )
     assert user_record.state == UserState.SUBSCRIPTION_EXPIRED
 
-
-def test_stripe_webhook_payment_succeeded(client, db_session, user_record):
+@mock.patch("stripe.Subscription.modify")
+def test_stripe_webhook_payment_succeeded(mock_subscription_modify, client, db_session, user_record):
     user_record.stripe_customer_id = "test"
     user_record.state = UserState.PAYMENT_METHOD_REQUESTED
     user_record.secondary_state = UserSecondaryState.PAYMENT_VERIFICATION_PENDING
@@ -969,6 +969,7 @@ def test_stripe_webhook_payment_succeeded(client, db_session, user_record):
         },
         'type':'invoice.payment_succeeded'
     })
+    assert mock_subscription_modify.called
     assert user_record.state == UserState.PAUSED
     assert user_record.secondary_state is None
 
@@ -998,9 +999,10 @@ def test_stripe_webhook_payment_failed(client, db_session, user_record):
     assert user_record.secondary_state is None
 
 
-def test_early_adopter_payment_endpoint_side_effects(client, user_record):
-    client.get("/user/getPaymentData", headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")})
-    assert user_record.stripe_customer_id is None
+# just give people an early adopter flag.
+# def test_early_adopter_payment_endpoint_side_effects(client, user_record):
+#     client.get("/user/getPaymentData", headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")})
+#     assert user_record.stripe_customer_id is None
 
 @mock.patch("stripe.Customer.create")
 @mock.patch("stripe.Subscription.create")
@@ -1017,12 +1019,11 @@ def test_onboarding_flow_payment_endpoint_side_effects(mock_sub_create, mock_str
 @freeze_time("2012-01-01 17:00:00")
 @mock.patch("stripe.Customer.create")
 @mock.patch("stripe.Subscription.create")
-@mock.patch("stripe.Customer.retrieve")
-def test_trial_user_payment_endpoint_side_effects(mock_cus_retrieve, mock_sub_create, mock_stripe_create, client, db_session, user_record):
+def test_trial_user_payment_endpoint_side_effects(mock_sub_create, mock_stripe_create, client, db_session, user_record):
     mock_stripe_create.return_value.id = "cus_test"
+    mock_stripe_create.return_value.invoice_settings.default_payment_method = None
     mock_sub_create.return_value.latest_invoice.payment_intent.client_secret = "secret"
     user_record.end_of_service = datetime(2012,1,15)
-    mock_cus_retrieve.return_value.invoice_settings.default_payment_method = None
     db_session.add(user_record)
     db_session.commit()
     client.get("/user/getPaymentData", headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")})
