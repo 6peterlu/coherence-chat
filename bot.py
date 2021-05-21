@@ -488,6 +488,7 @@ def auth_patient_data():
         "impersonating": impersonating,
         "healthMetricData": process_health_metric_event_stream(health_metric_events, user.tracked_health_metrics),
         "subscriptionEndDate": convert_naive_to_local_machine_time(g.user.end_of_service) if g.user.end_of_service is not None else None,
+        "earlyAdopterStatus": bool(user.early_adopter),
         "token": g.user.generate_auth_token().decode('ascii')  # refresh auth token
     })
 

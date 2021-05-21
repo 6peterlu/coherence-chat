@@ -25,7 +25,7 @@ import {
 } from '../analytics';
 import { Scatter } from 'react-chartjs-2';
 import { Box, Button, CheckBoxGroup, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select } from "grommet";
-import { Add, Checkmark, CircleInformation, Clear, Close, FormNextLink} from "grommet-icons";
+import { Add, Checkmark, CircleInformation, Clear, Close, Fireball, FormNextLink} from "grommet-icons";
 import { DateTime } from 'luxon';
 import 'chartjs-adapter-luxon';
 import TimeInput from "../components/TimeInput";
@@ -392,6 +392,14 @@ const Home = () => {
                         }}
                     />
                 </Box> : null}
+            {patientData && patientData.earlyAdopterStatus ? (
+                <Box align="center" background="brand" justify="evenly">
+                    <Box direction="row" justify="center" align="center">
+                        <Paragraph size="small" margin={{right: "small"}}>COHERENCE EARLY ADOPTER</Paragraph>
+                        <Fireball/>
+                    </Box>
+                </Box>) : null
+            }
             <Box align="center">
                 <Heading size="small">Good {currentTimeOfDay}{patientData ? `, ${patientData.patientName}` : ""}.</Heading>
             </Box>
@@ -719,8 +727,8 @@ const Home = () => {
                 <Paragraph textAlign="center" margin={{vertical: "none"}}>Need help with anything?</Paragraph>
                 <Paragraph size="small" color="dark-3">Our customer service is just a text away at (650) 667-1146. Reach out any time and we'll get back to you in a few hours!</Paragraph>
             </Box>
-            <Box align="center" pad={{vertical: "medium"}} margin={{horizontal: "xlarge"}} border="top" direction="row" justify={impersonateOptions ? "between" : "center"}>
-                {impersonateOptions ? <Button onClick={() => {history.push("/payment")}} label="Manage subscription" size="small"/> : null}
+            <Box align="center" pad={{vertical: "medium"}} margin={{horizontal: "xlarge"}} border="top" direction="row" justify={patientData.earlyAdopterStatus ? "center" : "between"}>
+                {!patientData.earlyAdopterStatus ? <Button onClick={() => {history.push("/payment")}} label="Manage subscription" size="small"/> : null}
                 <Button onClick={logout} label="Log out" size="small"/>
             </Box>
         </Box>

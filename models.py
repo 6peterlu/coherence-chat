@@ -83,7 +83,7 @@ class User(db.Model):
         nullable=True
     )
     stripe_customer_id = db.Column(db.String)  # cross reference for stripe customer object. This indicates whether the user has previously added payment info
-
+    early_adopter = db.Column(db.Boolean)  # just some special treats for our early users!
 
     def __init__(
         self,
@@ -108,6 +108,7 @@ class User(db.Model):
         self.onboarding_type = onboarding_type
         self.end_of_service = end_of_service
         self.state = state
+        self.early_adopter = False  # all new created users are False
 
     # TODO: determine bounds from dose window settings. for now, it's hardcoded to 4AM (which is not gonna work).
     @property
