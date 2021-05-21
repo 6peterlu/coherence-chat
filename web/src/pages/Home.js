@@ -727,8 +727,8 @@ const Home = () => {
                 <Paragraph textAlign="center" margin={{vertical: "none"}}>Need help with anything?</Paragraph>
                 <Paragraph size="small" color="dark-3">Our customer service is just a text away at (650) 667-1146. Reach out any time and we'll get back to you in a few hours!</Paragraph>
             </Box>
-            <Box align="center" pad={{vertical: "medium"}} margin={{horizontal: "xlarge"}} border="top" direction="row" justify={patientData.earlyAdopterStatus ? "center" : "between"}>
-                {!patientData.earlyAdopterStatus ? <Button onClick={() => {history.push("/payment")}} label="Manage subscription" size="small"/> : null}
+            <Box align="center" pad={{vertical: "medium"}} margin={{horizontal: "xlarge"}} border="top" direction="row" justify={patientData && patientData.earlyAdopterStatus ? "center" : "between"}>
+                {patientData && !patientData.earlyAdopterStatus ? <Button onClick={() => {history.push("/payment")}} label="Manage subscription" size="small"/> : null}
                 <Button onClick={logout} label="Log out" size="small"/>
             </Box>
         </Box>
