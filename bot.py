@@ -988,44 +988,67 @@ def get_stripe_data(user):
             g.user.stripe_customer_id,
             expand=["subscriptions", "invoice_settings.default_payment_method"]
         )
-    # case 1: user is creating and paying for subscription, return payment_intent
-    # criteria for case 1: user is in payment_method_requested or subscription_expired
-    if g.user.state in [UserState.PAYMENT_METHOD_REQUESTED, UserState.SUBSCRIPTION_EXPIRED]:
-        subscription = stripe.Subscription.create(
-            customer=customer.id,
-            items=[{
-                'price': "price_1IrxibEInVrsQDJoNPvvYYkl",  # from stripe dashboard
-            }],
-            payment_behavior='default_incomplete',
-            expand=['latest_invoice.payment_intent']
-        )
-        secret_key = subscription.latest_invoice.payment_intent.client_secret
-    # user is creating payment method but not paying immediately, return setup_intent
-    # criteria for case 2: user is active or paused and has end_of_service
-    elif g.user.state in [UserState.ACTIVE, UserState.PAUSED] and g.user.end_of_service is not None:
-        subscription = stripe.Subscription.create(
-            customer=customer.id,
-            items=[{
-                'price': "price_1IrxibEInVrsQDJoNPvvYYkl",  # from stripe dashboard
-            }],
-            payment_behavior='default_incomplete',
-            expand=['pending_setup_intent'],
-            trial_end=int(convert_naive_to_local_machine_time(g.user.end_of_service).timestamp())
-        )
-        secret_key = subscription.latest_invoice.payment_intent.client_secret
+    if g.user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
+        return customer, None  # we're verifying, terminate early
+    # TODO: allow people to change their payment methods.
+    secret_key = None
+    if customer.invoice_settings.default_payment_method is None:
+        print(customer)
+        # cancel incomplete subscriptions
+        if customer.subscriptions is not None:  # it's none if we newly made a customer
+            for subscription in customer.subscriptions.data:
+                print("\n\n\n\n\n\nsubscription************\n\n\n\n\n\n")
+                print(subscription)
+                # subscription = stripe.Subscription.retrieve(subscription_id)
+                if subscription.status in ["incomplete", "trialing"]:
+                    stripe.Subscription.delete(subscription.id)
+        # case 1: user is creating and paying for subscription, return payment_intent
+        # criteria for case 1: user is in payment_method_requested or subscription_expired
+        if g.user.state in [UserState.PAYMENT_METHOD_REQUESTED, UserState.SUBSCRIPTION_EXPIRED]:
+            subscription = stripe.Subscription.create(
+                customer=customer.id,
+                items=[{
+                    'price': "price_1IrxibEInVrsQDJoNPvvYYkl",  # from stripe dashboard
+                }],
+                payment_behavior='default_incomplete',
+                expand=['latest_invoice.payment_intent']
+            )
+            secret_key = subscription.latest_invoice.payment_intent.client_secret
+        # user is creating payment method but not paying immediately, return setup_intent
+        # criteria for case 2: user is active or paused and has end_of_service
+        elif g.user.state in [UserState.ACTIVE, UserState.PAUSED] and g.user.end_of_service is not None:
+            active_subscription = None
+            for subscription in customer.subscriptions.data:
+                subscription = stripe.Subscription.retrieve(subscription.id, expand=["latest_invoice.payment_intent"])
+                if subscription.status == "active":
+                    active_subscription = subscription
+                    break
+            if active_subscription is None:
+                new_subscription = stripe.Subscription.create(
+                    customer=customer.id,
+                    items=[{
+                        'price': "price_1IrxibEInVrsQDJoNPvvYYkl",  # from stripe dashboard
+                    }],
+                    payment_behavior='default_incomplete',
+                    expand=['pending_setup_intent'],
+                    trial_end=int(convert_naive_to_local_machine_time(g.user.end_of_service).timestamp())
+                )
+                secret_key = new_subscription.pending_setup_intent.client_secret
+            else:
+                secret_key = active_subscription.latest_invoice.payment_intent.client_secret
     return customer, secret_key
 
 
-@app.route("/user/cancelSubscription", methods=["POST"])
-@auth.login_required
-def user_cancel_subscription():
-    if g.user.stripe_customer_id is None:
-        return jsonify(), 400
-    customer = stripe.Customer.retrieve(g.user.stripe_customer_id, expand=["subscriptions"])
-    if len(customer.subscriptions.data) == 0:
-        return jsonify(), 200
-    stripe.Subscription.delete(customer.subscriptions.data[0].id)
-    return jsonify(), 200
+# @app.route("/user/cancelSubscription", methods=["POST"])
+# @auth.login_required
+# def user_cancel_subscription():
+#     if g.user.stripe_customer_id is None:
+#         return jsonify(), 400
+#     customer = stripe.Customer.retrieve(g.user.stripe_customer_id, expand=["subscriptions"])
+#     if len(customer.subscriptions.data) == 0:
+#         return jsonify(), 200
+#     stripe.Subscription.delete(customer.subscriptions.data[0].id)
+#     return jsonify(), 200
 
 
 # TODO: error handling
@@ -1058,7 +1081,7 @@ def user_get_payment_info():
 @app.route("/user/submitPaymentInfo", methods=["POST"])
 @auth.login_required
 def user_submit_payment_info():
-    if g.user.state == UserState.PAYMENT_METHOD_REQUESTED and g.user.secondary_state is None:
+    if g.user.secondary_state is None:
         g.user.secondary_state = UserSecondaryState.PAYMENT_VERIFICATION_PENDING
         db.session.commit()
     return jsonify()
@@ -1077,7 +1100,11 @@ def stripe_webhook():
         return jsonify(), 400
     if event.type in ["payment_intent.succeeded", "setup_intent.succeeded"]:
         # set submitted card as customer's default payment method for future charging
+        related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
         stripe.Customer.modify(event.data.object.customer, invoice_settings={"default_payment_method": event.data.object.payment_method})
+        if related_user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
+            related_user.secondary_state = None
+            db.session.commit()
     elif event.type == "invoice.payment_succeeded":  # consider bill paid
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
         if related_user is None:
@@ -1105,9 +1132,6 @@ def stripe_webhook():
                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                     to=f"+1{ADMIN_PHONE_NUMBER}"
                 )
-            if related_user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
-                related_user.secondary_state = None
-            db.session.commit()
     elif event.type == "payment_intent.payment_failed" or event.type == "charge.failed" or event.type == "invoice.payment_failed":
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
         if related_user is None:
