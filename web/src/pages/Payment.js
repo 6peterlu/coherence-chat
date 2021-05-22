@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Button, Heading, Layer, Paragraph, Spinner } from "grommet";
-import { pullPatientPaymentData } from "../api";
+import { cancelSubscription, pullPatientPaymentData, renewSubscription } from "../api";
 import { useCookies } from 'react-cookie';
 import { useHistory } from "react-router-dom";
 
@@ -44,7 +44,7 @@ const Payment = () => {
         if (loading) {
             loadData();
         }
-    }, [loadData, loading])
+    }, [loadData, loading]);
 
     if (loading) {
         return <Spinner />
@@ -66,13 +66,6 @@ const Payment = () => {
                 </Box>
             </Elements>
         );
-    } else if (paymentData.state === "subscription_expired") {
-        return (
-            <Box>
-                <Paragraph>Your subscription ended on {DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}.</Paragraph>
-                <Button label="Renew for $6.99"/>
-            </Box>
-        );
     } else if (["paused", "active", "subscription_expired"].includes(paymentData.state)) {
         return (
                 <Box margin="large">
@@ -81,9 +74,13 @@ const Payment = () => {
                         <>
                             <Paragraph alignSelf="center">Your subscription expired on {DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}</Paragraph>
                             {paymentData.payment_method ? (
-                                <Button label="Renew for $6.99"/>
+                                <Button label="Renew for $6.99" onClick={async () => {
+                                    console.log("attempting to renew subscription");
+                                    await renewSubscription();
+                                    setLoading(true);
+                                }}/>
                             ) : (
-                                <StripeCardEntry afterSubmitAction={loadData} clientSecret={paymentData.client_secret} payOnSubmit={true}/>
+                                <Paragraph>Enter payment data for renewal</Paragraph>
                             )}
                         </>
                     ) : paymentData.payment_method ? (
@@ -127,14 +124,19 @@ const Payment = () => {
                     }
                     <Box direction="row" justify="between">
                         <Button label="Go back" margin={{vertical: "small"}} onClick={() => {history.push("/")}}/>
-                        <Button label={paymentData.payment_method ? "Cancel subscription" : "Stop free trial"} margin={{vertical: "small"}}/>
+                        <Button
+                            label={paymentData.payment_method ? "Cancel subscription" : "Stop free trial"}
+                            margin={{vertical: "small"}}
+                            onClick={async () => {
+                                await cancelSubscription();
+                                setLoading(true);
+                            }}
+                        />
                     </Box>
                 </Box>
 
         );
-    } else if (paymentData.state === "subscription_expired") {
-        return <Paragraph>subscription expired</Paragraph>
-    }
+    };
 }
 
 export default Payment;

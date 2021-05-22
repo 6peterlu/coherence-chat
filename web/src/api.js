@@ -113,3 +113,14 @@ export const submitPaymentInfo = async () => {
   const response = await post("user/submitPaymentInfo", {});
   return response;
 }
+
+export const cancelSubscription = async () => {
+  console.log("attempting to cancel sub");
+  const response = await post("user/cancelSubscription", {});
+  return response;
+}
+
+export const renewSubscription = async () => {
+  const response = await post("user/renewSubscription", {});
+  return response;
+}

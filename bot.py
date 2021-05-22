@@ -1039,30 +1039,64 @@ def get_stripe_data(user):
     return customer, secret_key
 
 
-# @app.route("/user/cancelSubscription", methods=["POST"])
-# @auth.login_required
-# def user_cancel_subscription():
-#     if g.user.stripe_customer_id is None:
-#         return jsonify(), 400
-#     customer = stripe.Customer.retrieve(g.user.stripe_customer_id, expand=["subscriptions"])
-#     if len(customer.subscriptions.data) == 0:
-#         return jsonify(), 200
-#     stripe.Subscription.delete(customer.subscriptions.data[0].id)
-#     return jsonify(), 200
+@app.route("/user/cancelSubscription", methods=["POST"])
+@auth.login_required
+def user_cancel_subscription():
+    print("hit endpoint")
+    if g.user.stripe_customer_id is None:
+        return jsonify(), 400
+    customer = stripe.Customer.retrieve(g.user.stripe_customer_id, expand=["subscriptions"])
+    if len(customer.subscriptions.data) == 0:
+        print("no subscriptions found")
+        return jsonify(), 200
+    for subscription in customer.subscriptions.data:
+        print(subscription)
+        print(subscription.status)
+        if subscription.status in ["active", "trialing"]:
+            stripe.Subscription.delete(subscription.id)
+    g.user.end_of_service = get_time_now()  # subscription time ends now
+    db.session.commit()
+    return jsonify(), 200
+
+
+# TODO: use confirmCardPayment on FE if possible.
+@app.route("/user/renewSubscription", methods=["POST"])
+@auth.login_required
+def user_renew_subscription():
+    customer = stripe.Customer.retrieve(
+        g.user.stripe_customer_id,
+        expand=["subscriptions", "invoice_settings.default_payment_method"]
+    )
+    if customer is None:
+        return jsonify(), 400
+    if customer.invoice_settings.default_payment_method is None:
+        return jsonify(), 400
+    for subscription in customer.subscriptions.data:
+        if subscription.status in ["active", "trialing"]:
+            return jsonify(), 400  # you already have an active subscription
+    subscription = stripe.Subscription.create(
+        customer=customer.id,
+        items=[{
+            'price': "price_1IrxibEInVrsQDJoNPvvYYkl",  # from stripe dashboard
+        }],
+        payment_behavior='default_incomplete',
+        expand=['latest_invoice.payment_intent']
+    )
+    return jsonify(), 200
 
 
 # TODO: error handling
 @app.route("/user/getPaymentData", methods=["GET"])
 @auth.login_required
 def user_get_payment_info():
+    customer, secret_key = get_stripe_data(g.user)
     return_dict = {
         "state": g.user.state.value,
-        "secondary_state": g.user.secondary_state.value if g.user.secondary_state is not None else None
+        "secondary_state": g.user.secondary_state.value if g.user.secondary_state is not None else None,
+        "client_secret": secret_key,
+        "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"]
     }
     if g.user.state in [UserState.PAUSED, UserState.ACTIVE, UserState.PAYMENT_METHOD_REQUESTED]:
-        customer, secret_key = get_stripe_data(g.user)
-        return_dict["client_secret"] = secret_key
-        return_dict["publishable_key"] = os.environ["STRIPE_PUBLISHABLE_KEY"]
         g.user.stripe_customer_id = customer.id
         db.session.commit()
         if g.user.state in [UserState.PAUSED, UserState.ACTIVE]:  # subscription is currently active, retrive addl data
@@ -1075,6 +1109,9 @@ def user_get_payment_info():
     elif g.user.state == UserState.SUBSCRIPTION_EXPIRED:
         return_dict["subscription_end_date"] = convert_naive_to_local_machine_time(g.user.end_of_service)
         return_dict["subscription_expired"] = True
+        if g.user.stripe_customer_id is not None:
+            default_payment_method = customer.invoice_settings.default_payment_method
+            return_dict["payment_method"] = None if default_payment_method is None else {"brand": default_payment_method.card.brand, "last4": default_payment_method.card.last4 }
     return jsonify(return_dict)
 
 
@@ -1109,7 +1146,7 @@ def stripe_webhook():
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
         if related_user is None:
             return jsonify(), 401
-        if related_user.state == UserState.PAYMENT_METHOD_REQUESTED:
+        if related_user.state in [UserState.PAYMENT_METHOD_REQUESTED, UserState.SUBSCRIPTION_EXPIRED]:
             # the user is officially on a "free trial" until 1 month + 1 day, but they already paid at the start
             subscription_end_day = get_start_of_day(related_user.timezone, days_delta=1, months_delta=1)
             # give them till start of tomorrow for free
@@ -1120,18 +1157,20 @@ def stripe_webhook():
             )
             related_user.end_of_service = subscription_end_day
             print(related_user.state)
+            if related_user.state == UserState.PAYMENT_METHOD_REQUESTED:
+                if "NOALERTS" not in os.environ:
+                    client.messages.create(
+                        body=ONBOARDING_COMPLETE,
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                        to=f"+1{related_user.phone_number}"
+                    )
+                    client.messages.create(
+                        body=USER_SUBSCRIBED_NOTIF.substitute(phone_number=related_user.phone_number),
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                        to=f"+1{ADMIN_PHONE_NUMBER}"
+                    )
+            # TODO: add copy for renewing
             related_user.state = UserState.PAUSED
-            if "NOALERTS" not in os.environ:
-                client.messages.create(
-                    body=ONBOARDING_COMPLETE,
-                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                    to=f"+1{related_user.phone_number}"
-                )
-                client.messages.create(
-                    body=USER_SUBSCRIBED_NOTIF.substitute(phone_number=related_user.phone_number),
-                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                    to=f"+1{ADMIN_PHONE_NUMBER}"
-                )
     elif event.type == "payment_intent.payment_failed" or event.type == "charge.failed" or event.type == "invoice.payment_failed":
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
         if related_user is None:
