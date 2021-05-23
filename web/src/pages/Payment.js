@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Button, Heading, Layer, Paragraph, Spinner } from "grommet";
-import { cancelSubscription, pullPatientPaymentData, renewSubscription } from "../api";
+import { cancelSubscription, pullPatientPaymentData, renewSubscription, submitPaymentInfo } from "../api";
 import { useCookies } from 'react-cookie';
 import { useHistory } from "react-router-dom";
 
@@ -11,10 +11,12 @@ import {loadStripe} from '@stripe/stripe-js';
 
 import StripeCardEntry from "../components/StripeCardEntry";
 import { Close } from "grommet-icons";
+import AnimatingButton from "../components/AnimatingButton";
 
 const Payment = () => {
       // Initialize an instance of stripe.
     const [loading, setLoading] = React.useState(true);
+    const [animating, setAnimating] = React.useState(false);
     const [paymentData, setPaymentData] = React.useState(null);
     const [addCardModalVisible, setAddCardModalVisible] = React.useState(false);
     console.log("card modal visible");
@@ -34,6 +36,7 @@ const Payment = () => {
         }
         setPaymentData(loadedData);
         setLoading(false);
+        setAnimating(false);
     }, [history, removeCookie]);
 
     const stripePromise = React.useMemo(() => {
@@ -74,11 +77,17 @@ const Payment = () => {
                         <>
                             <Paragraph alignSelf="center">Your subscription expired on {DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}</Paragraph>
                             {paymentData.payment_method ? (
-                                <Button label="Renew for $6.99" onClick={async () => {
-                                    console.log("attempting to renew subscription");
-                                    await renewSubscription();
-                                    setLoading(true);
-                                }}/>
+                                <AnimatingButton
+                                    label="Renew for $6.99"
+                                    onClick={async () => {
+                                        setAnimating(true);
+                                        console.log("attempting to renew subscription");
+                                        await submitPaymentInfo();
+                                        await renewSubscription();
+                                        setLoading(true);
+                                    }}
+                                    animating={animating}
+                                />
                             ) : (
                                 <Paragraph>Enter payment data for renewal</Paragraph>
                             )}
@@ -124,14 +133,16 @@ const Payment = () => {
                     }
                     <Box direction="row" justify="between">
                         <Button label="Go back" margin={{vertical: "small"}} onClick={() => {history.push("/")}}/>
-                        <Button
-                            label={paymentData.payment_method ? "Cancel subscription" : "Stop free trial"}
-                            margin={{vertical: "small"}}
-                            onClick={async () => {
-                                await cancelSubscription();
-                                setLoading(true);
-                            }}
-                        />
+                        {
+                            <Button
+                                label={paymentData.payment_method ? "Cancel subscription" : "Stop free trial"}
+                                margin={{vertical: "small"}}
+                                onClick={async () => {
+                                    await cancelSubscription();
+                                    setLoading(true);
+                                }}
+                            />
+                        }
                     </Box>
                 </Box>
 

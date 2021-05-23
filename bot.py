@@ -1059,7 +1059,6 @@ def user_cancel_subscription():
     return jsonify(), 200
 
 
-# TODO: use confirmCardPayment on FE if possible.
 @app.route("/user/renewSubscription", methods=["POST"])
 @auth.login_required
 def user_renew_subscription():
@@ -1081,6 +1080,10 @@ def user_renew_subscription():
         }],
         payment_behavior='default_incomplete',
         expand=['latest_invoice.payment_intent']
+    )
+    stripe.PaymentIntent.confirm(
+        subscription.latest_invoice.payment_intent.id,
+        payment_method=customer.invoice_settings.default_payment_method
     )
     return jsonify(), 200
 
@@ -1155,7 +1158,7 @@ def stripe_webhook():
                 trial_end=int(subscription_end_day.timestamp()),
                 proration_behavior="none"
             )
-            related_user.end_of_service = subscription_end_day
+            related_user.end_of_service = subscription_end_day + timedelta(days=1)  # one extra day for a service termination grace period.
             print(related_user.state)
             if related_user.state == UserState.PAYMENT_METHOD_REQUESTED:
                 if "NOALERTS" not in os.environ:
@@ -1171,6 +1174,15 @@ def stripe_webhook():
                     )
             # TODO: add copy for renewing
             related_user.state = UserState.PAUSED
+            db.session.commit()
+        if related_user.state in [UserState.ACTIVE, UserState.PAUSED]:  # subscription auto-renewal
+            related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
+            customer = stripe.Customer.retrieve(related_user.stripe_customer_id).one_or_none()
+            for subscription in customer.subscriptions:
+                if subscription.status == "active":
+                    related_user.end_of_service = datetime.fromtimestamp(subscription.current_period_end)
+                    db.session.commit()
+                    break
     elif event.type == "payment_intent.payment_failed" or event.type == "charge.failed" or event.type == "invoice.payment_failed":
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
         if related_user is None:
