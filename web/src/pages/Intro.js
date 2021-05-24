@@ -19,7 +19,7 @@ const Intro = () => {
             setAuthError(true);
         } else {
             if (response.status === "success") {
-                console.log("setting cookie");
+                console.log(`setting cookie to ${response.token}`);
                 setCookie("token", response.token, {secure: true});
                 if (response.state === "payment_method_requested") {
                     return <Redirect to="/payment"/>
