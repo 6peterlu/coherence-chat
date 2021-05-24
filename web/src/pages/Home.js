@@ -76,7 +76,9 @@ const Home = () => {
     }, [calendarMonth, impersonating, removeCookie, setCookie])
 
     const shouldRerender = React.useMemo(() => {
+        console.log(cookies);
         if (!cookies.token) {
+            console.log("not loading because token is empty.");
             return false;
         }
         if (patientData === null) {
