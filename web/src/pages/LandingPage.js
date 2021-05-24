@@ -109,6 +109,7 @@ const LandingPage = ({size}) => {
                         <Box direction="row" width="90%" margin={{bottom: "medium"}}>
                             <Image
                                 width="100%"
+                                height="100%"
                                 src="https://uploads-ssl.webflow.com/6033f4ad7e2c0743cd74dfb1/6058b37cab7185d821f3d2df_Coherence%20reminder%20flow-p-800.png"
                             />
                         </Box>
