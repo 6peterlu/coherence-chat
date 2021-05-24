@@ -49,6 +49,7 @@ const Home = () => {
     const dateRange = [DateTime.local(2021, 4, 1), DateTime.local(2021, 5, 31)]
 
     const loadData = React.useCallback(async () => {
+        console.log("data load");
         let loadedData = null;
         if (impersonating) {
             loadedData = await pullPatientDataForNumber(impersonating.value, calendarMonth);
@@ -56,6 +57,7 @@ const Home = () => {
             loadedData = await pullPatientData(calendarMonth);
         };
         if (loadedData === null) {
+            console.log("removing token");
             removeCookie("token");
             return;
         }

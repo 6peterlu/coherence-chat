@@ -34,7 +34,7 @@ const Intro = () => {
             setComponentToDisplay(response.status);
             setAuthError(false);
         }
-    }, [password, phoneNumber, secretCode, setCookie])
+    }, [history, password, phoneNumber, secretCode, setCookie])
     const getInputField = React.useCallback(() => {
         if (componentToDisplay === "phoneNumber") {
             return <>
