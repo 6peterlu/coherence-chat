@@ -1,11 +1,12 @@
 import React from "react";
 import { login } from "../api";
 import { useCookies } from 'react-cookie';
-import { Redirect } from 'react-router-dom';
+import { Redirect, useHistory } from 'react-router-dom';
 import { Box, Paragraph, Heading, Button, TextInput } from "grommet";
 import { Phone, Login, Fireball, Lock } from "grommet-icons";
 
 const Intro = () => {
+    const history = useHistory();
     const [phoneNumber, setPhoneNumber] = React.useState("");
     const [secretCode, setSecretCode] = React.useState("");
     const [password, setPassword] = React.useState("");
@@ -22,10 +23,10 @@ const Intro = () => {
                 console.log(`setting cookie to ${response.token}`);
                 setCookie("token", response.token, {secure: true});
                 if (response.state === "payment_method_requested") {
-                    return <Redirect to="/payment"/>
+                    history.push("/payment");
                 } else {
-                    console.log("redirect to home");
-                    return <Redirect to="/"/>;
+                    console.log("redirecting to home");
+                    history.push("/");
                 }
             }
             console.log(response);
