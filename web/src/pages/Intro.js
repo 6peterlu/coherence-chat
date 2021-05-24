@@ -25,6 +25,8 @@ const Intro = () => {
                     return <Redirect to="/payment"/>
                 }
             }
+            console.log(response);
+            console.log(response.status);
             setComponentToDisplay(response.status);
             setAuthError(false);
         }

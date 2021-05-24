@@ -153,17 +153,20 @@ const LandingPage = ({size}) => {
                     <Paragraph textAlign="center">Coherence is available now for $6.99 / month. Sign up below for more information!</Paragraph>
                     <Box width="large">
                         <Paragraph>Name</Paragraph>
-                        <TextInput placeholder="John" value={name} onChange={(e) => {setName(e.target.value)}}/>
+                        <TextInput placeholder="Kari" value={name} onChange={(e) => {setName(e.target.value)}}/>
                         <Paragraph>Email address</Paragraph>
-                        <TextInput placeholder="john@gmail.com" value={email} onChange={(e) => {setEmail(e.target.value)}}/>
+                        <TextInput placeholder="kari@gmail.com" value={email} onChange={(e) => {setEmail(e.target.value)}}/>
                         <Paragraph>Phone number</Paragraph>
-                        <TextInput placeholder="(123)456-7890" value={phoneNumber} onChange={(e) => {setPhoneNumber(e.target.value)}}/>
+                        <TextInput placeholder="(123) 456-7890" value={phoneNumber} onChange={(e) => {setPhoneNumber(e.target.value)}}/>
                         <Paragraph>Free trial code (optional)</Paragraph>
                         <TextInput value={freeTrialCode} onChange={(e) => {setFreeTrialCode(e.target.value)}}/>
                         <Box width="small" alignSelf="center" margin={{vertical: "large"}}>
                             <Button label="sign up" primary={true}/>
                         </Box>
                     </Box>
+                </Box>
+                <Box direction="row">
+                    <Heading>coherence</Heading>
                 </Box>
             </Box>
         );
