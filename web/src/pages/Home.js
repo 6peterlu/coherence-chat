@@ -76,6 +76,7 @@ const Home = () => {
     }, [calendarMonth, impersonating, removeCookie, setCookie])
 
     const shouldRerender = React.useMemo(() => {
+        console.log("should rerender");
         console.log(cookies);
         if (!cookies.token) {
             console.log("not loading because token is empty.");
@@ -94,10 +95,11 @@ const Home = () => {
             return true;
         }
         return false;
-    }, [calendarMonth, cookies.token, impersonating, patientData]);
+    }, [calendarMonth, cookies, impersonating, patientData]);
 
     React.useEffect(() => {
-        console.log("rerendering")
+        console.log("rerendering");
+        console.log(shouldRerender);
         if (shouldRerender) {
             loadData();
         }
