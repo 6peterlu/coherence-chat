@@ -106,7 +106,7 @@ const LandingPage = ({size}) => {
                                 <Button label="Try it out!" primary={true} href="#signup"/>
                             </Box>
                         </Box>
-                        <Box direction="row">
+                        <Box direction="row" width="90%" margin={{bottom: "medium"}}>
                             <Image
                                 fit="contain"
                                 src="https://uploads-ssl.webflow.com/6033f4ad7e2c0743cd74dfb1/6058b37cab7185d821f3d2df_Coherence%20reminder%20flow-p-800.png"
@@ -114,18 +114,21 @@ const LandingPage = ({size}) => {
                         </Box>
                     </Box>
                 </Box>
-                <Box background="brand" direction="column">
-                    <Box direction="column" align="center" margin="large">
-                        <Favorite size="large"/>
-                        <Paragraph textAlign="center">Collaborative</Paragraph>
-                    </Box>
-                    <Box direction="column" align="center" margin="large">
-                        <Clear size="large"/>
-                        <Paragraph textAlign="center">No apps needed</Paragraph>
-                    </Box>
-                    <Box direction="column" align="center" margin="large">
-                        <Info size="large"/>
-                        <Paragraph textAlign="center">Personalized</Paragraph>
+                <Box background="brand">
+                    <Heading size="medium" textAlign="center">Here's what makes us different.</Heading>
+                    <Box direction="row">
+                        <Box direction="column" align="center" margin="large">
+                            <Favorite size="large"/>
+                            <Paragraph textAlign="center" size="small">Collaborative</Paragraph>
+                        </Box>
+                        <Box direction="column" align="center" margin="large">
+                            <Clear size="large"/>
+                            <Paragraph textAlign="center" size="small">No apps needed</Paragraph>
+                        </Box>
+                        <Box direction="column" align="center" margin="large">
+                            <Info size="large"/>
+                            <Paragraph textAlign="center" size="small">Personalized</Paragraph>
+                        </Box>
                     </Box>
                 </Box>
                 <Box align="center" margin={{horizontal: "small"}}>
@@ -134,7 +137,9 @@ const LandingPage = ({size}) => {
                 <Box align="center">
                     <Box width="xlarge">
                         <Image
-                            src="https://uploads-ssl.webflow.com/6033f4ad7e2c0743cd74dfb1/607c583233628e615b1d9b38_website%20image.png"
+                        alignSelf="center"
+                            width="90%"
+                            src="https://i.ibb.co/G0Q0KK0/Slice-3-3.png"
                         />
                     </Box>
                 </Box>
