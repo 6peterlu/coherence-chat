@@ -13,6 +13,7 @@ import random
 from itertools import groupby
 from werkzeug.middleware.proxy_fix import ProxyFix
 from models import (
+    LandingPageSignup,
     Online,
     # new data models
     User,
@@ -384,6 +385,19 @@ def get_time_of_day(dose_window_obj):
     elif local_start_date.hour >= 12 and local_start_date.hour < 18:
         return "afternoon"
     return "evening"
+
+
+@app.route("/user/landingPageSignup", methods=["POST"])
+def landing_page_signup():
+    new_signup = LandingPageSignup(
+        name=request.json["name"],
+        email=request.json["email"],
+        phone_number=request.json["phoneNumber"],
+        trial_code=request.json["trialCode"]
+    )
+    db.session.add(new_signup)
+    db.session.commit()
+    return jsonify()
 
 
 @app.route("/patientData/new", methods=["GET"])

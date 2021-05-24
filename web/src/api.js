@@ -124,3 +124,10 @@ export const renewSubscription = async () => {
   const response = await post("user/renewSubscription", {});
   return response;
 }
+
+export const landingPageSignup = async (name, email, phoneNumber, trialCode) => {
+  const response = await post("user/landingPageSignup", {
+    name, email, phoneNumber, trialCode
+  });
+  return response;
+}

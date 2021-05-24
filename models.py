@@ -470,6 +470,16 @@ class Online(db.Model):
         return f"<Online {id}>"
 
 
+class LandingPageSignup(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String)
+    phone_number = db.Column(db.String)
+    email = db.Column(db.String)
+    trial_code = db.Column(db.String)
+    def __repr__(self):
+        return f"<LandingPageSignup {id}>"
+
+
 # marshmallow schemas
 class UserSchema(Schema):
     id = fields.Integer()
