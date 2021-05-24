@@ -23,6 +23,9 @@ const Intro = () => {
                 setCookie("token", response.token, {secure: true});
                 if (response.state === "payment_method_requested") {
                     return <Redirect to="/payment"/>
+                } else {
+                    console.log("redirect to home");
+                    return <Redirect to="/"/>;
                 }
             }
             console.log(response);
