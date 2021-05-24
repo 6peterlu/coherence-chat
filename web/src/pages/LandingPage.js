@@ -108,7 +108,7 @@ const LandingPage = ({size}) => {
                         </Box>
                         <Box direction="row" width="90%" margin={{bottom: "medium"}}>
                             <Image
-                                fit="contain"
+                                width="100%"
                                 src="https://uploads-ssl.webflow.com/6033f4ad7e2c0743cd74dfb1/6058b37cab7185d821f3d2df_Coherence%20reminder%20flow-p-800.png"
                             />
                         </Box>
@@ -137,7 +137,7 @@ const LandingPage = ({size}) => {
                 <Box align="center">
                     <Box width="xlarge">
                         <Image
-                        alignSelf="center"
+                            alignSelf="center"
                             width="90%"
                             src="https://i.ibb.co/G0Q0KK0/Slice-3-3.png"
                         />
