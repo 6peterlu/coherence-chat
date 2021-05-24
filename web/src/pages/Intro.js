@@ -12,7 +12,7 @@ const Intro = () => {
     const [password, setPassword] = React.useState("");
     const [passwordConfirm, setPasswordConfirm] = React.useState("");
     const [componentToDisplay, setComponentToDisplay] = React.useState("phoneNumber");
-    const [cookies, setCookie] = useCookies(["token"]);
+    const [cookies, setCookie, removeCookie] = useCookies(["token"]);
     const [authError, setAuthError] = React.useState(false);
     const submitAll = React.useCallback(async () => {
         const response = await login(phoneNumber, secretCode, password);
