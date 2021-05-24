@@ -13,7 +13,24 @@ const grommetTheme = {
       text: {light: "#002864"},
       paragraph: {light: "#002864"},
       background: "#FFF"
-    }
+    },
+    breakpoints: {
+      xsmall: {
+        value: 375,
+      },
+      small: {
+        value: 400,
+      },
+      medium: {
+        value: 768,
+      },
+      large: {
+        value: 1024,
+      },
+      xlarge: {
+        value: 1366,
+      },
+    },
   },
   spinner: {
     container: {
