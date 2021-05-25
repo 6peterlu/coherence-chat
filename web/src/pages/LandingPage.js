@@ -1,5 +1,5 @@
 import { Anchor, Box, Button, Heading, Image, Paragraph, TextInput } from "grommet";
-import { Clear, Favorite, FormNextLink, Info } from "grommet-icons";
+import { Clear, Favorite, Info } from "grommet-icons";
 import React from "react";
 import { landingPageSignup } from "../api";
 import AnimatingButton from "../components/AnimatingButton";
@@ -7,12 +7,15 @@ import { useHistory } from "react-router-dom"
 
 const heading_copy_1 = "Peace of mind with your medication.";
 const heading_copy_2 = "Your personal medication companion is here at last. No more struggling with annoying alarms. No more wondering whether you've taken a dose or not.";
-const heading_copy_3 = "Try it out!";
+const heading_copy_3 = "Sign up today!";
 
 const differentiator_copy_1 = "Here's what makes us different.";
 const differentiator_copy_2 = "Collaborative";
 const differentiator_copy_3 = "No apps needed";
 const differentiator_copy_4 = "Personalized";
+const differentiator_copy_5 = "Coherence works with you to remind you when it's most convenient for you.";
+const differentiator_copy_6 = "Coherence will text you at your phone number, no downloads needed.";
+const differentiator_copy_7 = "Coherence learns about your habits over time and tailors its texting frequency and style around your preferences.";
 
 const feature_copy_1 = "More than just a reminder.";
 
@@ -34,7 +37,7 @@ const LandingPage = ({size}) => {
     if (size === "large" || size === "xlarge") {
         return (
             <Box>
-                <Box margin={{horizontal: "small"}} direction="row" justify="between">
+                <Box pad={{horizontal: "large"}} direction="row" justify="between" background="brand">
                     <Heading size="small">💊 coherence</Heading>
                     <Box direction="row" align="center">
                         <Paragraph margin={{right: "medium"}}>Already have an account?</Paragraph>
@@ -44,39 +47,42 @@ const LandingPage = ({size}) => {
                 <Box align="center">
                     <Box direction="row" justify="evenly" align="center" fill="horizontal">
                         <Box direction="column" width="medium" margin="small">
-                            <Heading size="small">{heading_copy_1}</Heading>
+                            <Heading size="small" color="status-warning">{heading_copy_1}</Heading>
                             <Paragraph>{heading_copy_2}</Paragraph>
                             <Box align="center">
-                                <Button label={heading_copy_3} primary={true} href="#signup"/>
+                                <Button label={heading_copy_3} primary={true} href="#signup" color="status-warning"/>
                             </Box>
                         </Box>
-                        <Box width="medium" direction="row" margin="small">
+                        <Box width="medium" direction="row" margin="small" pad="large">
                             <Image
                                 fit="contain"
-                                src="https://uploads-ssl.webflow.com/6033f4ad7e2c0743cd74dfb1/6058b37cab7185d821f3d2df_Coherence%20reminder%20flow-p-800.png"
+                                src="https://i.ibb.co/pytvBPR/Frame-4-1.png"
                             />
                         </Box>
                     </Box>
                 </Box>
-                <Box background="brand" margin={{top: "large"}} align="center">
-                    <Heading size="small" textAlign="center">{differentiator_copy_1}</Heading>
+                <Box background="brand" margin={{top: "large", bottom: "none"}} align="center">
+                    <Heading size="small" textAlign="center" color="status-warning">{differentiator_copy_1}</Heading>
                     <Box direction="row" fill="horizontal" justify="around">
-                        <Box direction="column" align="center" margin="large">
+                        <Box direction="column" align="center" margin={{horizontal: "large", vertical: "small"}}>
                             <Favorite size="large"/>
-                            <Paragraph textAlign="center">{differentiator_copy_2}</Paragraph>
+                            <Paragraph textAlign="center" size="large">{differentiator_copy_2}</Paragraph>
+                            <Paragraph size="small" textAlign="center">{differentiator_copy_5}</Paragraph>
                         </Box>
-                        <Box direction="column" align="center" margin="large">
+                        <Box direction="column" align="center" margin={{horizontal: "large", vertical: "small"}}>
                             <Clear size="large"/>
-                            <Paragraph textAlign="center">{differentiator_copy_3}</Paragraph>
+                            <Paragraph textAlign="center" size="large">{differentiator_copy_3}</Paragraph>
+                            <Paragraph size="small" textAlign="center">{differentiator_copy_6}</Paragraph>
                         </Box>
-                        <Box direction="column" align="center" margin="large">
+                        <Box direction="column" align="center" margin={{horizontal: "large", vertical: "small"}}>
                             <Info size="large"/>
-                            <Paragraph textAlign="center">{differentiator_copy_4}</Paragraph>
+                            <Paragraph textAlign="center" size="large">{differentiator_copy_4}</Paragraph>
+                            <Paragraph size="small" textAlign="center">{differentiator_copy_7}</Paragraph>
                         </Box>
                     </Box>
                 </Box>
-                <Box align="center">
-                    <Heading size="small">{feature_copy_1}</Heading>
+                <Box align="center" margin={{bottom: "medium"}}>
+                    <Heading size="small" color="status-warning">{feature_copy_1}</Heading>
                 </Box>
                 <Box align="center">
                     <Box width="xlarge">
@@ -88,7 +94,7 @@ const LandingPage = ({size}) => {
                     </Box>
                 </Box>
                 <Box background="brand" id="signup" align="center" pad="large">
-                    <Heading size="small" textAlign="center">{cta_copy_1}</Heading>
+                    <Heading size="small" textAlign="center" color="status-warning">{cta_copy_1}</Heading>
                     <Paragraph textAlign="center">{cta_copy_2}</Paragraph>
                     <Box width="large">
                         <Paragraph>Name</Paragraph>
@@ -122,7 +128,7 @@ const LandingPage = ({size}) => {
     if (size === "medium") {
         return (
             <Box>
-                <Box margin={{horizontal: "small"}} direction="row" justify="between">
+                <Box pad={{horizontal: "medium"}} direction="row" justify="between" background="brand">
                     <Heading size="small">💊 coherence</Heading>
                     <Box direction="row" align="center">
                         <Button label="login" onClick={() => {history.push("/login")}}/>
@@ -131,7 +137,7 @@ const LandingPage = ({size}) => {
                 <Box align="center">
                     <Box direction="row" justify="evenly" align="center" fill="horizontal">
                         <Box direction="column" width="medium" margin="small">
-                            <Heading size="small">{heading_copy_1}</Heading>
+                            <Heading size="small" color="status-warning">{heading_copy_1}</Heading>
                             <Paragraph>{heading_copy_2}</Paragraph>
                             <Box align="center">
                                 <Button label={heading_copy_3} primary={true} href="#signup"/>
@@ -140,30 +146,33 @@ const LandingPage = ({size}) => {
                         <Box width="medium" direction="row" margin="small">
                             <Image
                                 fit="contain"
-                                src="https://uploads-ssl.webflow.com/6033f4ad7e2c0743cd74dfb1/6058b37cab7185d821f3d2df_Coherence%20reminder%20flow-p-800.png"
+                                src="https://i.ibb.co/pytvBPR/Frame-4-1.png"
                             />
                         </Box>
                     </Box>
                 </Box>
                 <Box background="brand" margin={{top: "large"}} align="center">
-                    <Heading size="small" textAlign="center">{differentiator_copy_1}</Heading>
+                    <Heading size="small" textAlign="center" color="status-warning">{differentiator_copy_1}</Heading>
                     <Box direction="row" fill="horizontal" justify="around">
                         <Box direction="column" align="center" margin="large">
                             <Favorite size="large"/>
                             <Paragraph textAlign="center">{differentiator_copy_2}</Paragraph>
+                            <Paragraph size="small" textAlign="center">{differentiator_copy_5}</Paragraph>
                         </Box>
                         <Box direction="column" align="center" margin="large">
                             <Clear size="large"/>
                             <Paragraph textAlign="center">{differentiator_copy_3}</Paragraph>
+                            <Paragraph size="small" textAlign="center">{differentiator_copy_6}</Paragraph>
                         </Box>
                         <Box direction="column" align="center" margin="large">
                             <Info size="large"/>
                             <Paragraph textAlign="center">{differentiator_copy_4}</Paragraph>
+                            <Paragraph size="small" textAlign="center">{differentiator_copy_7}</Paragraph>
                         </Box>
                     </Box>
                 </Box>
                 <Box align="center">
-                    <Heading size="small">{feature_copy_1}</Heading>
+                    <Heading size="small" color="status-warning">{feature_copy_1}</Heading>
                 </Box>
                 <Box align="center">
                     <Box width="xlarge">
@@ -175,7 +184,7 @@ const LandingPage = ({size}) => {
                     </Box>
                 </Box>
                 <Box background="brand" id="signup" align="center" pad="large">
-                    <Heading size="small" textAlign="center">{cta_copy_1}</Heading>
+                    <Heading size="small" textAlign="center" color="status-warning">{cta_copy_1}</Heading>
                     <Paragraph textAlign="center">{cta_copy_2}</Paragraph>
                     <Box width="large">
                         <Paragraph>Name</Paragraph>
@@ -209,7 +218,7 @@ const LandingPage = ({size}) => {
     if (size === "small" || size === "xsmall") {
         return (
             <Box>
-                <Box margin={{horizontal: "large"}} direction="row" justify="between">
+                <Box pad={{horizontal: "large"}} direction="row" justify="between" background="brand">
                     <Heading size="small">💊 coherence</Heading>
                     <Box direction="row" align="center">
                         <Button label="login" onClick={() => {history.push("/login")}}/>
@@ -218,23 +227,23 @@ const LandingPage = ({size}) => {
                 <Box align="center">
                     <Box direction="column" align="center" fill="horizontal">
                         <Box direction="column" margin="large">
-                            <Heading>{heading_copy_1}</Heading>
+                            <Heading color="status-warning">{heading_copy_1}</Heading>
                             <Paragraph>{heading_copy_2}</Paragraph>
                             <Box align="center">
                                 <Button label={heading_copy_3} primary={true} href="#signup"/>
                             </Box>
                         </Box>
-                        <Box direction="row" width="90%" margin={{bottom: "medium"}}>
+                        <Box direction="row" width="70%" margin={{bottom: "medium"}}>
                             <Image
                                 width="100%"
                                 height="100%"
-                                src="https://uploads-ssl.webflow.com/6033f4ad7e2c0743cd74dfb1/6058b37cab7185d821f3d2df_Coherence%20reminder%20flow-p-800.png"
+                                src="https://i.ibb.co/pytvBPR/Frame-4-1.png"
                             />
                         </Box>
                     </Box>
                 </Box>
                 <Box background="brand">
-                    <Heading size="medium" textAlign="center">{differentiator_copy_1}</Heading>
+                    <Heading size="medium" textAlign="center" color="status-warning">{differentiator_copy_1}</Heading>
                     <Box direction="row">
                         <Box direction="column" align="center" margin="large">
                             <Favorite size="large"/>
@@ -251,7 +260,7 @@ const LandingPage = ({size}) => {
                     </Box>
                 </Box>
                 <Box align="center" margin={{horizontal: "small"}}>
-                    <Heading textAlign="center">{feature_copy_1}</Heading>
+                    <Heading textAlign="center" color="status-warning">{feature_copy_1}</Heading>
                 </Box>
                 <Box align="center">
                     <Box width="xlarge">
@@ -264,7 +273,7 @@ const LandingPage = ({size}) => {
                 </Box>
                 <Box background="brand" id="signup">
                     <Box align="center" margin="small">
-                        <Heading size="small" textAlign="center">{cta_copy_1}</Heading>
+                        <Heading size="small" textAlign="center" color="status-warning">{cta_copy_1}</Heading>
                         <Paragraph textAlign="center">{cta_copy_2}</Paragraph>
                         {submittedForm ?
                             <Box width="large" background="white" round={true} pad="large">

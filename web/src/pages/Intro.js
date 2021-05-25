@@ -3,7 +3,7 @@ import { login } from "../api";
 import { useCookies } from 'react-cookie';
 import { Redirect, useHistory } from 'react-router-dom';
 import { Box, Paragraph, Heading, Button, TextInput, Anchor } from "grommet";
-import { Phone, Login, Fireball, Lock } from "grommet-icons";
+import { Phone, Login, Fireball, Lock, FormPreviousLink } from "grommet-icons";
 
 const Intro = () => {
     const history = useHistory();
@@ -101,8 +101,11 @@ const Intro = () => {
     }
     return (
         <Box height="100vh" flex="grow" background={{"position":"center","dark":false,"opacity":"strong"}}>
+            <Box align="start" margin="small">
+                <Button label="back to homepage" icon={<FormPreviousLink />} size="small" href="/welcome"/>
+            </Box>
             <Box height="40vh" align="center" justify="center" pad="large">
-                <Paragraph>welcome to</Paragraph>
+                <Paragraph>login to</Paragraph>
                 <Heading>coherence</Heading>
             </Box>
             <Box height="60vh" align="center" justify="between" background={{color: "brand", dark: true}} pad="large">
