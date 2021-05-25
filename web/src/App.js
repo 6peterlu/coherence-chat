@@ -18,7 +18,7 @@ const App = () => {
             <Route exact path={'/login'} render={() => <Intro />}/>
             <Route exact path={'/payment'} render={() => <Payment />}/>
             <Route exact path={'/finishOnboarding'} render={() => <FinishOnboarding />}/>
-            <Route exact path={'/landing'} render={() => (
+            <Route exact path={'/welcome'} render={() => (
               <ResponsiveContext.Consumer>
                 {(size) => {
                   return <LandingPage size={size}/>

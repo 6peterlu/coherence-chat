@@ -28,7 +28,7 @@ const Payment = () => {
         let loadedData = await pullPatientPaymentData();
         if (loadedData === null) {
             removeCookie("token");
-            history.push("/login");
+            history.push("/welcome");
         }
         console.log(loadedData.state);
         if (["intro", "dose_windows_requested", "dose_window_times_requested", "timezone_requested"].includes(loadedData.state)) {
