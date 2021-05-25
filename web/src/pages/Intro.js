@@ -24,9 +24,6 @@ const Intro = () => {
                 setCookie("token", response.token);
                 if (response.state === "payment_method_requested") {
                     history.push("/payment");
-                } else {
-                    console.log("redirecting to home");
-                    history.push("/");
                 }
             }
             console.log(response);
