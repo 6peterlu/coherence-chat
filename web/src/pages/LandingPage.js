@@ -147,6 +147,7 @@ const LandingPage = ({size}) => {
                             <Image
                                 fit="contain"
                                 src="https://i.ibb.co/pytvBPR/Frame-4-1.png"
+                                height="100%"
                             />
                         </Box>
                     </Box>
