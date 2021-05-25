@@ -37,7 +37,7 @@ FUTURE_MESSAGE_SUFFIXES = [
     Template("""I'll text again at $time about your dose.""")
 ]
 
-PAUSE_MESSAGE = "You've paused me, so I won't text you about your medications until I am resumed. You can resume me at https://coherence-chat.herokuapp.com/ at any time. You can still let me know when you've taken or skipped a dose, and I will still record it for you."
+PAUSE_MESSAGE = "You've paused me, so I won't text you about your medications until I am resumed. You can resume me at https://hellocoherence.com at any time. You can still let me know when you've taken or skipped a dose, and I will still record it for you."
 
 INITIAL_SUFFIXES = [
     Template("""Here’s your $time reminder.\n"""),
@@ -144,9 +144,9 @@ THANKS_MESSAGES = [
 
 ALREADY_RECORDED = "We already have a record of this dose. If this is incorrect, feel free to report this error by texting 'x'."
 
-REQUEST_WEBSITE = "You can access your medication take history and much more at https://coherence-chat.herokuapp.com. Also, you can text us at our customer service number (650) 667-1146‬, and we'll back to you within 1 business day."
+REQUEST_WEBSITE = "You can access your medication take history and much more at https://hellocoherence.com. Also, you can text us at our customer service number (650) 667-1146‬, and we'll back to you within 1 business day."
 
-SUGGEST_DOSE_WINDOW_CHANGE = "It looks like you took this medication outside your dose window. If you'd like to update your dose window, you can do so at any time at https://coherence-chat.herokuapp.com."
+SUGGEST_DOSE_WINDOW_CHANGE = "It looks like you took this medication outside your dose window. If you'd like to update your dose window, you can do so at any time at https://hellocoherence.com."
 
 REQUEST_DOSE_WINDOW_COUNT = "Glad to hear it. How many dose windows would you like to set up?"
 
@@ -160,9 +160,9 @@ REQUEST_DOSE_WINDOW_START_TIME = Template("What time would you like dose window 
 
 REQUEST_DOSE_WINDOW_END_TIME = Template("What time would you like dose window $count to end?")
 
-REQUEST_PAYMENT_METHOD = "I don't have a free trial code on record for you. You can either enter it now, or go to https://coherence-chat.herokuapp.com to create an account and fill in your payment information. Coherence is $6.99 / month with no long term commitment."
+REQUEST_PAYMENT_METHOD = "I don't have a free trial code on record for you. You can either enter it now, or go to https://hellocoherence.com to create an account and fill in your payment information. Coherence is $6.99 / month with no long term commitment."
 
-INCORRECT_FREE_TRIAL_CODE = "Sorry, that wasn't a valid code. Feel free to text our customer service line at (650) 667-1146‬ with any questions, or sign up for a paid account at https://coherence-chat.herokuapp.com."
+INCORRECT_FREE_TRIAL_CODE = "Sorry, that wasn't a valid code. Feel free to text our customer service line at (650) 667-1146‬ with any questions, or sign up for a paid account at https://hellocoherence.com."
 
 ONBOARDING_COMPLETE = "Great, you'll get your first Coherence reminders starting tomorrow. If you have any questions or concerns, text my customer service line at (650) 667-1146‬ ."
 
@@ -176,7 +176,7 @@ BLOOD_PRESSURE_MESSAGE = Template("🕒 $time\nBlood pressure recorded: $blood_p
 
 SERVER_ERROR_ALERT = Template("Server has error. ($code, $name, $description)")
 
-PAYMENT_METHOD_FAILURE = "I wasn't able to charge your payment method. Please try visiting https://coherence-chat.herokuapp.com to re-enter your information, or contact (650) 667-1146 if you need additional help. Thank you!"
+PAYMENT_METHOD_FAILURE = "I wasn't able to charge your payment method. Please try visiting https://hellocoherence.com to re-enter your information, or contact (650) 667-1146 if you need additional help. Thank you!"
 
 USER_SUBSCRIBED_NOTIF = Template("User with phone number $phone_number subscribed.")
 
