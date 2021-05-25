@@ -17,6 +17,9 @@ from models import (
     User,
     # schemas
     UserSchema,
+    # enums
+    UserState,
+    UserSecondaryState
 )
 
 @pytest.fixture
@@ -852,7 +855,7 @@ def test_intro_text_not_sent_if_already_recorded(
 def test_admin_pause(mock_send_pause_message, user_record, dose_window_record, medication_record, scheduler, client):
     client.post("/admin/pauseUser", json={
         "userId": user_record.id
-    }, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), None)})
+    }, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")})
     assert not mock_send_pause_message.called
 
 @mock.patch("bot.send_upcoming_dose_message")
@@ -863,7 +866,7 @@ def test_admin_resume(
 ):
     client.post("/admin/resumeUser", json={
         "userId": user_record.id
-    }, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), None)})
+    }, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")})
     assert not mock_send_intro_text.called
     assert not mock_send_upcoming_dose_message.called
 
@@ -872,21 +875,21 @@ def test_admin_create_user(client, db_session, user_record):
     client.post("/admin/createUser", json={
         "phoneNumber": "3604508656",
         "name": "Peter"
-    }, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), None)})
+    }, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")})
     users = db_session.query(User).all()
     assert len(users) == 2
 
 def test_admin_create_dose_window(client, db_session, user_record):
     client.post("/admin/createDoseWindow", json={
         "userId": user_record.id
-    }, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), None)})
+    }, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")})
     assert len(user_record.dose_windows) == 1
     assert len(user_record.doses) == 1
 
 def test_admin_deactivate_dose_window(client, db_session, user_record, medication_record, dose_window_record):
     client.post("/admin/deactivateDoseWindow", json={
         "doseWindowId": dose_window_record.id
-    }, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), None)})
+    }, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")})
     assert len(user_record.active_dose_windows) == 0
     assert len(user_record.dose_windows) == 1
 
@@ -894,7 +897,7 @@ def test_admin_deactivate_dose_window(client, db_session, user_record, medicatio
 def test_admin_manual_takeover(client, db_session, user_record):
     # print(online_record)
     # print(online_record.id)
-    client.post("/admin/manualTakeover", json={"userId": user_record.id}, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), None)})
+    client.post("/admin/manualTakeover", json={"userId": user_record.id}, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")})
     online_obj = Online.query.first()
     # assert False
     assert online_obj.online is True
@@ -902,7 +905,7 @@ def test_admin_manual_takeover(client, db_session, user_record):
 
 
 def test_announcement(client, db_session, user_record):
-    client.post("/admin/setPendingAnnouncement", json={"announcement": "announce!"}, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), None)})
+    client.post("/admin/setPendingAnnouncement", json={"announcement": "announce!"}, headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")})
     announcement_events = db_session.query(EventLog).filter(EventLog.event_type == "feature_announcement", EventLog.user_id == user_record.id).all()
     assert len(announcement_events) == 0
     assert user_record.pending_announcement == "announce!"
@@ -914,8 +917,115 @@ def test_announcement(client, db_session, user_record):
 def test_user_create_dose_window(client, db_session, user_record):
     client.post(
         "/doseWindow/update/new",
-        headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), None)},
+        headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")},
         json={"updatedDoseWindow": {"start_hour": 0, "start_minute":0, "end_hour": 0, "end_minute": 0}}
     )
     assert len(db_session.query(DoseWindow).all()) == 1
     assert len(db_session.query(Medication).all()) == 1
+
+
+@freeze_time("2012-01-01 17:00:00")
+def test_user_subscription_expire_bot_endpoint(client, db_session, user_record):
+    user_record.end_of_service = datetime(2011, 1, 1)
+    db_session.add(user_record)  # add needed only for mock db_session
+    db_session.commit()
+    assert user_record.state == UserState.ACTIVE
+    client.post("/bot", query_string={"From": "+13604508655"})
+    assert user_record.state == UserState.SUBSCRIPTION_EXPIRED
+
+
+@freeze_time("2012-01-01 17:00:00")
+def test_user_subscription_expire_other_endpoint(client, db_session, user_record):
+    user_record.end_of_service = datetime(2011, 1, 1)
+    db_session.add(user_record)  # add needed only for mock db_session
+    db_session.commit()
+    assert user_record.state == UserState.ACTIVE
+    client.get(
+        "/patientData/new",
+        query_string={"calendarMonth": "5"},
+        headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")}
+    )
+    assert user_record.state == UserState.SUBSCRIPTION_EXPIRED
+
+@mock.patch("stripe.Subscription.modify")
+def test_stripe_webhook_payment_succeeded(mock_subscription_modify, client, db_session, user_record):
+    user_record.stripe_customer_id = "test"
+    user_record.state = UserState.PAYMENT_METHOD_REQUESTED
+    user_record.secondary_state = UserSecondaryState.PAYMENT_VERIFICATION_PENDING
+    db_session.add(user_record)
+    db_session.commit()
+    client.post("/webhook/stripe", json={
+        'id':'evt_1IszINEInVrsQDJovXQvGKYh',
+        'object':'event',
+        'api_version':'2020-08-27',
+        'created':1621468762,
+        'data':{
+            'object':{
+                'id':'in_1IszIDEInVrsQDJopu5m7WwQ',
+                'object':'invoice',
+                'customer':'test',
+                'subscription':'sub_JW1KsvWg7fF0dq'
+            },
+        },
+        'type':'invoice.payment_succeeded'
+    })
+    assert mock_subscription_modify.called
+    assert user_record.state == UserState.PAUSED
+    assert user_record.secondary_state is None
+
+
+def test_stripe_webhook_payment_failed(client, db_session, user_record):
+    user_record.stripe_customer_id = "test"
+    user_record.state = UserState.PAYMENT_METHOD_REQUESTED
+    user_record.secondary_state = UserSecondaryState.PAYMENT_VERIFICATION_PENDING
+    db_session.add(user_record)
+    db_session.commit()
+    client.post("/webhook/stripe", json={
+        'id':'evt_1IszINEInVrsQDJovXQvGKYh',
+        'object':'event',
+        'api_version':'2020-08-27',
+        'created':1621468762,
+        'data':{
+            'object':{
+                'id':'in_1IszIDEInVrsQDJopu5m7WwQ',
+                'object':'invoice',
+                'customer':'test',
+                'subscription':'sub_JW1KsvWg7fF0dq'
+            },
+        },
+        'type':'payment_intent.payment_failed'
+    })
+    assert user_record.state == UserState.PAYMENT_METHOD_REQUESTED
+    assert user_record.secondary_state is None
+
+
+# just give people an early adopter flag.
+# def test_early_adopter_payment_endpoint_side_effects(client, user_record):
+#     client.get("/user/getPaymentData", headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")})
+#     assert user_record.stripe_customer_id is None
+
+@mock.patch("stripe.Customer.create")
+@mock.patch("stripe.Subscription.create")
+def test_onboarding_flow_payment_endpoint_side_effects(mock_sub_create, mock_stripe_create, client, db_session, user_record):
+    mock_stripe_create.return_value.id = "cus_test"
+    mock_sub_create.return_value.latest_invoice.payment_intent.client_secret = "secret"
+    user_record.state = UserState.PAYMENT_METHOD_REQUESTED
+    db_session.add(user_record)
+    db_session.commit()
+    client.get("/user/getPaymentData", headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")})
+    assert user_record.stripe_customer_id == "cus_test"
+
+
+@freeze_time("2012-01-01 17:00:00")
+@mock.patch("stripe.Customer.create")
+@mock.patch("stripe.Subscription.create")
+def test_trial_user_payment_endpoint_side_effects(mock_sub_create, mock_stripe_create, client, db_session, user_record):
+    mock_stripe_create.return_value.id = "cus_test"
+    mock_stripe_create.return_value.invoice_settings.default_payment_method = None
+    mock_sub_create.return_value.latest_invoice.payment_intent.client_secret = "secret"
+    user_record.end_of_service = datetime(2012,1,15)
+    db_session.add(user_record)
+    db_session.commit()
+    client.get("/user/getPaymentData", headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")})
+    assert user_record.stripe_customer_id == "cus_test"
+

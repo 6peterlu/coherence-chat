@@ -55,6 +55,8 @@ class UserState(enum.Enum):
     PAUSED = 'paused'
     ACTIVE = 'active'
     SUBSCRIPTION_EXPIRED = 'subscription_expired'
+    PAYMENT_VERIFICATION_PENDING = 'payment_verification_pending'  # TODO: deprecate this
+class UserSecondaryState(enum.Enum):
     PAYMENT_VERIFICATION_PENDING = 'payment_verification_pending'
 
 class User(db.Model):
@@ -76,8 +78,12 @@ class User(db.Model):
         db.Enum(UserState, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False
     )
+    secondary_state = db.Column(
+        db.Enum(UserSecondaryState, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=True
+    )
     stripe_customer_id = db.Column(db.String)  # cross reference for stripe customer object. This indicates whether the user has previously added payment info
-
+    early_adopter = db.Column(db.Boolean)  # just some special treats for our early users!
 
     def __init__(
         self,
@@ -102,6 +108,7 @@ class User(db.Model):
         self.onboarding_type = onboarding_type
         self.end_of_service = end_of_service
         self.state = state
+        self.early_adopter = False  # all new created users are False
 
     # TODO: determine bounds from dose window settings. for now, it's hardcoded to 4AM (which is not gonna work).
     @property
@@ -461,6 +468,16 @@ class Online(db.Model):
     online = db.Column(db.Boolean)
     def __repr__(self):
         return f"<Online {id}>"
+
+
+class LandingPageSignup(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String)
+    phone_number = db.Column(db.String)
+    email = db.Column(db.String)
+    trial_code = db.Column(db.String)
+    def __repr__(self):
+        return f"<LandingPageSignup {id}>"
 
 
 # marshmallow schemas

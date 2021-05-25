@@ -1,11 +1,12 @@
 import React from "react";
 import { login } from "../api";
 import { useCookies } from 'react-cookie';
-import { Redirect } from 'react-router-dom';
+import { Redirect, useHistory } from 'react-router-dom';
 import { Box, Paragraph, Heading, Button, TextInput } from "grommet";
 import { Phone, Login, Fireball, Lock } from "grommet-icons";
 
 const Intro = () => {
+    const history = useHistory();
     const [phoneNumber, setPhoneNumber] = React.useState("");
     const [secretCode, setSecretCode] = React.useState("");
     const [password, setPassword] = React.useState("");
@@ -19,16 +20,21 @@ const Intro = () => {
             setAuthError(true);
         } else {
             if (response.status === "success") {
-                console.log("setting cookie");
+                console.log(`setting cookie to ${response.token}`);
                 setCookie("token", response.token, {secure: true});
                 if (response.state === "payment_method_requested") {
-                    return <Redirect to="/payment"/>
+                    history.push("/payment");
+                } else {
+                    console.log("redirecting to home");
+                    history.push("/");
                 }
             }
+            console.log(response);
+            console.log(response.status);
             setComponentToDisplay(response.status);
             setAuthError(false);
         }
-    }, [password, phoneNumber, secretCode, setCookie])
+    }, [history, password, phoneNumber, secretCode, setCookie])
     const getInputField = React.useCallback(() => {
         if (componentToDisplay === "phoneNumber") {
             return <>

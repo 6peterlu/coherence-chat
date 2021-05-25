@@ -5,6 +5,8 @@ import Payment from './pages/Payment';
 import FinishOnboarding from './pages/FinishOnboarding';
 
 import { Route, Switch, BrowserRouter } from 'react-router-dom';
+import { ResponsiveContext } from "grommet";
+import LandingPage from './pages/LandingPage';
 
 
 const App = () => {
@@ -15,6 +17,13 @@ const App = () => {
             <Route exact path={'/login'} render={() => <Intro />}/>
             <Route exact path={'/payment'} render={() => <Payment />}/>
             <Route exact path={'/finishOnboarding'} render={() => <FinishOnboarding />}/>
+            <Route exact path={'/landing'} render={() => (
+              <ResponsiveContext.Consumer>
+                {(size) => {
+                  return <LandingPage size={size}/>
+                }}
+              </ResponsiveContext.Consumer>
+            )}/>
         </Switch>
     </BrowserRouter>
   );

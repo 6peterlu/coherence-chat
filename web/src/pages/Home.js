@@ -25,7 +25,7 @@ import {
 } from '../analytics';
 import { Scatter } from 'react-chartjs-2';
 import { Box, Button, CheckBoxGroup, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select } from "grommet";
-import { Add, Checkmark, CircleInformation, Clear, Close, FormNextLink} from "grommet-icons";
+import { Add, Checkmark, CircleInformation, Clear, Close, Fireball, FormNextLink} from "grommet-icons";
 import { DateTime } from 'luxon';
 import 'chartjs-adapter-luxon';
 import TimeInput from "../components/TimeInput";
@@ -49,6 +49,7 @@ const Home = () => {
     const dateRange = [DateTime.local(2021, 4, 1), DateTime.local(2021, 5, 31)]
 
     const loadData = React.useCallback(async () => {
+        console.log("data load");
         let loadedData = null;
         if (impersonating) {
             loadedData = await pullPatientDataForNumber(impersonating.value, calendarMonth);
@@ -56,6 +57,7 @@ const Home = () => {
             loadedData = await pullPatientData(calendarMonth);
         };
         if (loadedData === null) {
+            console.log("removing token");
             removeCookie("token");
             return;
         }
@@ -74,7 +76,10 @@ const Home = () => {
     }, [calendarMonth, impersonating, removeCookie, setCookie])
 
     const shouldRerender = React.useMemo(() => {
+        console.log("should rerender");
+        console.log(cookies);
         if (!cookies.token) {
+            console.log("not loading because token is empty.");
             return false;
         }
         if (patientData === null) {
@@ -90,10 +95,11 @@ const Home = () => {
             return true;
         }
         return false;
-    }, [calendarMonth, cookies.token, impersonating, patientData]);
+    }, [calendarMonth, cookies, impersonating, patientData]);
 
     React.useEffect(() => {
-        console.log("rerendering")
+        console.log("rerendering");
+        console.log(shouldRerender);
         if (shouldRerender) {
             loadData();
         }
@@ -360,7 +366,7 @@ const Home = () => {
     if (!cookies.token) {
         return <Redirect to="/login"/>;
     }
-    if (patientData !== null && ["payment_method_requested", "subscription_expired"].includes(patientData.state)) {
+    if (patientData !== null && ["payment_method_requested"].includes(patientData.state)) {
         return <Redirect to="/payment"/>
     }
     if (patientData !== null && ["intro", "dose_windows_requested", "dose_window_times_requested", "timezone_requested"].includes(patientData.state)) {
@@ -392,9 +398,31 @@ const Home = () => {
                         }}
                     />
                 </Box> : null}
+            {patientData && patientData.earlyAdopterStatus ? (
+                <Box align="center" background="brand" justify="evenly">
+                    <Box direction="row" justify="center" align="center">
+                        <Paragraph size="small" margin={{right: "small"}}>COHERENCE EARLY ADOPTER</Paragraph>
+                        <Fireball/>
+                    </Box>
+                </Box>) : null
+            }
             <Box align="center">
                 <Heading size="small">Good {currentTimeOfDay}{patientData ? `, ${patientData.patientName}` : ""}.</Heading>
             </Box>
+            { patientData && patientData.state === "subscription_expired" ?
+                <Box
+                    align="center"
+                    background={{"color":"status-error", "dark": true}}
+                    round="medium"
+                    margin={{horizontal: "large", bottom: "medium"}}
+                    pad="medium"
+                >
+                    <Paragraph textAlign="center" margin={{vertical: "none"}}>Your subscription expired on {DateTime.fromHTTP(patientData.subscriptionEndDate).toLocaleString(DateTime.DATE_MED)}.</Paragraph>
+                    <Button label="Renew subscription" onClick={() => { history.push("/payment") }} margin={{top: "small"}}/>
+                </Box>
+                :
+                null
+            }
             <Box>
                 {patientData && patientData.takeNow ?
                     <Box
@@ -695,7 +723,9 @@ const Home = () => {
                                 }
                             }
                             loadData();
-                        }} label={`${patientData.pausedService ? "Resume" : "Pause"} Coherence`} />
+                        }} label={`${patientData.pausedService ? "Resume" : "Pause"} Coherence`}
+                        disabled={patientData.state === "subscription_expired"}
+                    />
                     {patientData.pausedService ? <Paragraph size="small" color="status-warning" textAlign="center">While Coherence is paused, we can't respond to any texts you send us, or remind you about your medications.</Paragraph> : null}
                 </> : null}
             </Box>
@@ -703,8 +733,8 @@ const Home = () => {
                 <Paragraph textAlign="center" margin={{vertical: "none"}}>Need help with anything?</Paragraph>
                 <Paragraph size="small" color="dark-3">Our customer service is just a text away at (650) 667-1146. Reach out any time and we'll get back to you in a few hours!</Paragraph>
             </Box>
-            <Box align="center" pad={{vertical: "medium"}} margin={{horizontal: "xlarge"}} border="top" direction="row" justify={impersonateOptions ? "between" : "center"}>
-                {impersonateOptions ? <Button onClick={() => {history.push("/payment")}} label="Manage subscription" size="small"/> : null}
+            <Box align="center" pad={{vertical: "medium"}} margin={{horizontal: "xlarge"}} border="top" direction="row" justify={patientData && patientData.earlyAdopterStatus ? "center" : "between"}>
+                {patientData && !patientData.earlyAdopterStatus ? <Button onClick={() => {history.push("/payment")}} label="Manage subscription" size="small"/> : null}
                 <Button onClick={logout} label="Log out" size="small"/>
             </Box>
         </Box>
