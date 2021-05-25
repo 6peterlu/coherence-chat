@@ -47,7 +47,7 @@ const LandingPage = ({size}) => {
                 <Box align="center">
                     <Box direction="row" justify="evenly" align="center" fill="horizontal">
                         <Box direction="column" width="medium" margin="small">
-                            <Heading size="small" color="status-warning">{heading_copy_1}</Heading>
+                            <Heading size="medium" color="status-warning">{heading_copy_1}</Heading>
                             <Paragraph>{heading_copy_2}</Paragraph>
                             <Box align="center">
                                 <Button label={heading_copy_3} primary={true} href="#signup" color="status-warning"/>
@@ -140,7 +140,7 @@ const LandingPage = ({size}) => {
                             <Heading size="small" color="status-warning">{heading_copy_1}</Heading>
                             <Paragraph>{heading_copy_2}</Paragraph>
                             <Box align="center">
-                                <Button label={heading_copy_3} primary={true} href="#signup"/>
+                                <Button label={heading_copy_3} primary={true} href="#signup" color="status-warning"/>
                             </Box>
                         </Box>
                         <Box width="medium" direction="row" margin="small">
@@ -230,7 +230,7 @@ const LandingPage = ({size}) => {
                             <Heading color="status-warning">{heading_copy_1}</Heading>
                             <Paragraph>{heading_copy_2}</Paragraph>
                             <Box align="center">
-                                <Button label={heading_copy_3} primary={true} href="#signup"/>
+                                <Button label={heading_copy_3} primary={true} href="#signup" color="status-warning"/>
                             </Box>
                         </Box>
                         <Box direction="row" width="70%" margin={{bottom: "medium"}}>
