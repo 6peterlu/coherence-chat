@@ -66,7 +66,7 @@ const Home = () => {
         if (loadedData.impersonateList === null) { // only track non impersonating data
             trackPatientPortalLoad(loadedData.patientId);
         }
-        setCookie('token', loadedData.token, {secure: true});  // refresh login token
+        setCookie('token', loadedData.token);  // refresh login token
         if (loadedData.impersonateList) {
             setImpersonateOptions(
                 loadedData.impersonateList.map((tuple_data) => { return { label: tuple_data[0], value: tuple_data[1]}})
