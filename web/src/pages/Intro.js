@@ -2,8 +2,8 @@ import React from "react";
 import { login } from "../api";
 import { useCookies } from 'react-cookie';
 import { Redirect, useHistory } from 'react-router-dom';
-import { Box, Paragraph, Heading, Button, TextInput } from "grommet";
-import { Phone, Login, Fireball, Lock } from "grommet-icons";
+import { Box, Paragraph, Heading, Button, TextInput, Anchor } from "grommet";
+import { Phone, Login, Fireball, Lock, FormPreviousLink } from "grommet-icons";
 
 const Intro = () => {
     const history = useHistory();
@@ -101,17 +101,22 @@ const Intro = () => {
     }
     return (
         <Box height="100vh" flex="grow" background={{"position":"center","dark":false,"opacity":"strong"}}>
+            <Box align="start" margin="small">
+                <Button label="back to homepage" icon={<FormPreviousLink />} size="small" href="/welcome"/>
+            </Box>
             <Box height="40vh" align="center" justify="center" pad="large">
-                <Paragraph>welcome to</Paragraph>
+                <Paragraph>login to</Paragraph>
                 <Heading>coherence</Heading>
             </Box>
             <Box height="60vh" align="center" justify="between" background={{color: "brand", dark: true}} pad="large">
                 <Paragraph color="white" textAlign="center">Peace of mind with your medications is just around the corner.</Paragraph>
-                <Box>
+                <Box align="center">
                     <Box width="200px" margin={{bottom: "medium", top: "xsmall"}}>
                         {getInputField()}
                     </Box>
                     <Button label="submit" icon={<Login/>} onClick={submitAll} disabled={password !== passwordConfirm}/>
+                    <Paragraph size="small" margin={{bottom: "none", top: "medium"}}>Don't have an account yet?</Paragraph>
+                    <Anchor label="Sign up" href="/welcome#signup"/>
                 </Box>
             </Box>
         </Box>

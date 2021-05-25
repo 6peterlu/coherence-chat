@@ -364,7 +364,7 @@ const Home = () => {
     }, [animating, editingDoseWindow, impersonateOptions, loadData, patientData, validDoseWindows]);
 
     if (!cookies.token) {
-        return <Redirect to="/login"/>;
+        return <Redirect to="/welcome"/>;
     }
     if (patientData !== null && ["payment_method_requested"].includes(patientData.state)) {
         return <Redirect to="/payment"/>
