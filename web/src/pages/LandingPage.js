@@ -236,14 +236,13 @@ const LandingPage = ({size}) => {
                         <Box direction="row" width="70%" margin={{bottom: "medium"}}>
                             <Image
                                 width="100%"
-                                height="100%"
                                 src="https://i.ibb.co/pytvBPR/Frame-4-1.png"
                             />
                         </Box>
                     </Box>
                 </Box>
                 <Box background="brand">
-                    <Heading size="medium" textAlign="center" color="status-warning">{differentiator_copy_1}</Heading>
+                    <Heading size="small" textAlign="center" color="status-warning">{differentiator_copy_1}</Heading>
                     <Box direction="row">
                         <Box direction="column" align="center" margin="large">
                             <Favorite size="large"/>
@@ -260,7 +259,7 @@ const LandingPage = ({size}) => {
                     </Box>
                 </Box>
                 <Box align="center" margin={{horizontal: "small"}}>
-                    <Heading textAlign="center" color="status-warning">{feature_copy_1}</Heading>
+                    <Heading textAlign="center" color="status-warning" size="small">{feature_copy_1}</Heading>
                 </Box>
                 <Box align="center">
                     <Box width="xlarge">
