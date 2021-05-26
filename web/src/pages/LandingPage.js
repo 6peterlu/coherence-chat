@@ -143,7 +143,7 @@ const LandingPage = ({size}) => {
                                 <Button label={heading_copy_3} primary={true} href="#signup" color="status-warning"/>
                             </Box>
                         </Box>
-                        <Box width="medium" direction="row" margin="small" height="100%" pad={{horizontal: "large"}}>
+                        <Box width="medium" direction="row" margin="small" height="100vh" pad={{horizontal: "large"}}>
                             <Image
                                 fit="contain"
                                 src="https://i.ibb.co/pytvBPR/Frame-4-1.png"
@@ -152,7 +152,7 @@ const LandingPage = ({size}) => {
                         </Box>
                     </Box>
                 </Box>
-                <Box background="brand" margin={{top: "large"}} align="center">
+                <Box background="brand" margin={{top: "small"}} align="center">
                     <Heading size="small" textAlign="center" color="status-warning">{differentiator_copy_1}</Heading>
                     <Box direction="row" fill="horizontal" justify="around">
                         <Box direction="column" align="center" margin="large">
