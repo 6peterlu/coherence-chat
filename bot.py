@@ -686,9 +686,11 @@ def convert_to_user_local_time(user_obj, dt):
 def get_all_admin_data():
     if g.user.phone_number != ADMIN_PHONE_NUMBER:
         return jsonify(), 401
-    all_users_in_system = User.query.order_by(User.name).all()
+    phone_number = request.args.get("phoneNumber")
+    matching_users = User.query.filter(User.phone_number == phone_number).all()
+    all_users_in_system = User.query.with_entities(User.name, User.phone_number, User.state).order_by(User.name).all()
     return_dict = {"users": []}
-    for user in all_users_in_system:
+    for user in matching_users:  # always len 1
         user_dict = {
             "user": UserSchema().dump(user),
             "dose_windows": [],
@@ -701,9 +703,15 @@ def get_all_admin_data():
         for medication in user.doses:
             user_dict["medications"].append(MedicationSchema().dump(medication))
         return_dict["users"].append(user_dict)
+    state_dict = {}
+    for user_tuple in all_users_in_system:
+        if user_tuple[2].value not in state_dict:
+            state_dict[user_tuple[2].value] = []
+        state_dict[user_tuple[2].value].append({"name": user_tuple[0], "phone_number": user_tuple[1]})
     global_event_stream = EventLog.query.order_by(EventLog.event_time.desc()).limit(100).all()
     return_dict["events"] = [EventLogSchema().dump(event) for event in global_event_stream]
     return_dict["online"] = get_online_status()
+    return_dict["user_list_by_state"] = state_dict
     return jsonify(return_dict)
 
 

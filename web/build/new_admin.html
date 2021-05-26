@@ -17,6 +17,7 @@
             <div id="eventListDiv" style="flex:1; max-height:400px; overflow-y: scroll;"></div>
         </div>
     </div>
+    <div id="userListByState"></div>
     <div>
         <input id="newUserPhoneNumber" type="number" placeholder="3604508655"/>
         <input id="newUserName" placeholder="name"/>
@@ -25,6 +26,10 @@
             <option value="free trial">30-day free trial</option>
         </select>
         <button id="createNewUserButton" onclick="createNewUser()">Create new user</button>
+    </div>
+    <div>
+        <input id="userNumberSearch" type="number" placeholder="3604508655"/>
+        <button id="searchForUser" onclick="refreshData()">Search for user by phone number</button>
     </div>
     <div id="userDetailedData"></div>
     <script defer>
@@ -227,6 +232,19 @@
             `;
             return htmlOut;
         }
+        const renderUserStateList = (stateDict) => {
+            let compiledHTML = "";
+            for (const state in stateDict) {
+                let stateSection = `<div><h3>${state}</h3><ol>`;
+                for (const userData of stateDict[state]) {
+                    stateSection += `<li>${userData.name} / ${userData.phone_number}</li>`
+                }
+                stateSection += "</ol></div>";
+                compiledHTML += stateSection;
+            }
+            const userStateDiv = document.getElementById("userListByState");
+            userStateDiv.innerHTML = compiledHTML;
+        }
         const createNewUser = () => {
             const phoneNumber = document.getElementById("newUserPhoneNumber").value;
             const name = document.getElementById("newUserName").value;
@@ -281,7 +299,9 @@
             });
         }
         const refreshData = () => {
-            get("admin/everything", {}).then(response => {console.log(response); return response.json()}).then(result => {
+            const phoneNumber = document.getElementById("userNumberSearch").value;
+            get("admin/everything", { phoneNumber }).then(response => {return response.json()}).then(result => {
+                console.log(result);
                 const userDetailedDataDiv = document.getElementById("userDetailedData");
                 const portedUsers = [];
                 userDetailedDataDiv.innerHTML = '';
@@ -307,6 +327,7 @@
                 const createUserButton = document.getElementById("createNewUserButton");
                 createUserButton.disabled = false;
                 createUserButton.innerHTML = "Create new user";
+                renderUserStateList(result.user_list_by_state);
             });
             get("scheduler/jobs", {}).then(response => response.json()).then(result => {
                 renderJobs(result);
