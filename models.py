@@ -158,6 +158,7 @@ class User(db.Model):
             db.session.commit()
 
     def pause(self, scheduler, send_pause_message, silent=False):
+        print("pause")
         if self.state == UserState.ACTIVE:
             self.state = UserState.PAUSED
             for dose_window in self.dose_windows:
