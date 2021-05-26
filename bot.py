@@ -14,6 +14,7 @@ from itertools import groupby
 from werkzeug.middleware.proxy_fix import ProxyFix
 from models import (
     LandingPageSignup,
+    LandingPageSignupSchema,
     Online,
     # new data models
     User,
@@ -390,10 +391,10 @@ def get_time_of_day(dose_window_obj):
 @app.route("/user/landingPageSignup", methods=["POST"])
 def landing_page_signup():
     new_signup = LandingPageSignup(
-        name=request.json["name"],
-        email=request.json["email"],
-        phone_number=request.json["phoneNumber"],
-        trial_code=request.json["trialCode"]
+        request.json["name"],
+        request.json["phoneNumber"],
+        request.json["email"],
+        request.json["trialCode"]
     )
     db.session.add(new_signup)
     db.session.commit()
@@ -704,16 +705,28 @@ def get_all_admin_data():
             user_dict["medications"].append(MedicationSchema().dump(medication))
         return_dict["users"].append(user_dict)
     state_dict = {}
+    phone_number_set = set()
     for user_tuple in all_users_in_system:
         if user_tuple[2].value not in state_dict:
             state_dict[user_tuple[2].value] = []
         state_dict[user_tuple[2].value].append({"name": user_tuple[0], "phone_number": user_tuple[1]})
+        phone_number_set.add(user_tuple[1])
     global_event_stream = EventLog.query.order_by(EventLog.event_time.desc()).limit(100).all()
     return_dict["events"] = [EventLogSchema().dump(event) for event in global_event_stream]
     return_dict["online"] = get_online_status()
     return_dict["user_list_by_state"] = state_dict
+    return_dict["signups"] = [LandingPageSignupSchema().dump(signup) for signup in list(filter(lambda s: s.phone_number not in phone_number_set, LandingPageSignup.query.order_by(LandingPageSignup.signup_time).all()))]
     return jsonify(return_dict)
 
+@app.route("/admin/deleteSignupRecord", methods=["POST"])
+@auth.login_required
+def delete_signup_record():
+    if g.user.phone_number != ADMIN_PHONE_NUMBER:
+        return jsonify(), 401
+    signup_record = LandingPageSignup.query.get(request.json.get("signupId"))
+    db.session.delete(signup_record)
+    db.session.commit()
+    return jsonify()
 
 @app.route("/admin/manualTakeover", methods=["POST"])
 @auth.login_required

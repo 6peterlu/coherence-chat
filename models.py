@@ -133,7 +133,6 @@ class User(db.Model):
         start_of_day, _ = self.current_day_bounds
         return (input_time - start_of_day).days
 
-
     def resume(self, scheduler, send_intro_text_new, send_upcoming_dose_message, silent=False):
         print("resume")
         print(self.state)
@@ -482,6 +481,13 @@ class LandingPageSignup(db.Model):
     phone_number = db.Column(db.String)
     email = db.Column(db.String)
     trial_code = db.Column(db.String)
+    signup_time = db.Column(db.DateTime)
+    def __init__(self, name, phone_number, email, trial_code):
+        self.name = name
+        self.phone_number = phone_number
+        self.email = email
+        self.trial_code = trial_code
+        self.signup_time = get_time_now()
     def __repr__(self):
         return f"<LandingPageSignup {id}>"
 
@@ -534,3 +540,19 @@ class EventLogSchema(Schema):
     user = fields.Nested(UserSchema(exclude=("dose_windows", "doses")))
     medication = fields.Nested(MedicationSchema(exclude=("dose_windows", "user")))
     dose_window = fields.Nested(DoseWindowSchema(exclude=("user", "medications")))
+
+# class LandingPageSignup(db.Model):
+#     id = db.Column(db.Integer, primary_key=True)
+#     name = db.Column(db.String)
+#     phone_number = db.Column(db.String)
+#     email = db.Column(db.String)
+#     trial_code = db.Column(db.String)
+#     def __repr__(self):
+#         return f"<LandingPageSignup {id}>"
+class LandingPageSignupSchema(Schema):
+    id = fields.Integer()
+    name = fields.String()
+    phone_number = fields.String()
+    email = fields.String()
+    trial_code = fields.String()
+    signup_time = fields.DateTime(format='%Y-%m-%dT%H:%M:%S+00:00')

@@ -17,7 +17,10 @@
             <div id="eventListDiv" style="flex:1; max-height:400px; overflow-y: scroll;"></div>
         </div>
     </div>
-    <div id="userListByState"></div>
+    <div style="flex-direction:row;display: flex;">
+        <div id="userListByState"></div>
+        <div id="websiteSignups"></div>
+    </div>
     <div>
         <input id="newUserPhoneNumber" type="number" placeholder="3604508655"/>
         <input id="newUserName" placeholder="name"/>
@@ -49,6 +52,7 @@
             mode: "cors"
         };
         const apiURL = "https://www.hellocoherence.com";
+        // const apiURL = "http://localhost:5000";
         // HTTP helpers
         const get = async (route, queryArgs) => {
 
@@ -245,6 +249,15 @@
             const userStateDiv = document.getElementById("userListByState");
             userStateDiv.innerHTML = compiledHTML;
         }
+        const renderWebsiteSignups = (signups) => {
+            let compiledHTML = "<h3>Unresolved signups</h3><ol>";
+            for (const signup of signups) {
+                compiledHTML += `<li>${signup.name}/${signup.phone_number}/${signup.trial_code}/${signup.signup_time}<button onclick="deleteSignupRecord(\'${signup.id}\')">Delete signup record</button></li>`
+            }
+            compiledHTML += "</ol>";
+            const websiteSignupDiv = document.getElementById("websiteSignups");
+            websiteSignupDiv.innerHTML = compiledHTML;
+        }
         const createNewUser = () => {
             const phoneNumber = document.getElementById("newUserPhoneNumber").value;
             const name = document.getElementById("newUserName").value;
@@ -328,6 +341,7 @@
                 createUserButton.disabled = false;
                 createUserButton.innerHTML = "Create new user";
                 renderUserStateList(result.user_list_by_state);
+                renderWebsiteSignups(result.signups);
             });
             get("scheduler/jobs", {}).then(response => response.json()).then(result => {
                 renderJobs(result);
@@ -426,6 +440,12 @@
                     refreshData();
                 }
             );
+        }
+        const deleteSignupRecord = (signupId) => {
+            post("admin/deleteSignupRecord", { signupId }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                });
         }
         refreshData();
     </script>

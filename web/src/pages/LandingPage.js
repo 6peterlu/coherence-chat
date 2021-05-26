@@ -96,19 +96,38 @@ const LandingPage = ({size}) => {
                 <Box background="brand" id="signup" align="center" pad="large">
                     <Heading size="small" textAlign="center" color="status-warning">{cta_copy_1}</Heading>
                     <Paragraph textAlign="center">{cta_copy_2}</Paragraph>
-                    <Box width="large">
-                        <Paragraph>Name</Paragraph>
-                        <TextInput placeholder="Kari" value={name} onChange={(e) => {setName(e.target.value)}}/>
-                        <Paragraph>Email address</Paragraph>
-                        <TextInput placeholder="kari@gmail.com" value={email} onChange={(e) => {setEmail(e.target.value)}}/>
-                        <Paragraph>Phone number</Paragraph>
-                        <TextInput placeholder="(123) 456-7890" value={phoneNumber} onChange={(e) => {setPhoneNumber(e.target.value)}}/>
-                        <Paragraph>Free trial code (optional)</Paragraph>
-                        <TextInput value={freeTrialCode} onChange={(e) => {setFreeTrialCode(e.target.value)}}/>
-                        <Box width="small" alignSelf="center" margin={{vertical: "large"}}>
-                            <Button label="sign up" primary={true}/>
+                    {submittedForm ?
+                        <Box width="large" background="white" round={true} pad="large" align="center">
+                            <Paragraph textAlign="center">We've received your submission and will reach out to you shortly to complete signup. We can't wait for you to try Coherence!</Paragraph>
+                        </Box> :
+                        <Box width="large">
+                            <Paragraph>Name</Paragraph>
+                            <TextInput placeholder="Kari" value={name} onChange={(e) => {setName(e.target.value)}}/>
+                            <Paragraph>Email address</Paragraph>
+                            <TextInput placeholder="kari@gmail.com" value={email} onChange={(e) => {setEmail(e.target.value)}}/>
+                            <Paragraph>Phone number</Paragraph>
+                            <TextInput placeholder="(123) 456-7890" value={phoneNumber} onChange={(e) => {setPhoneNumber(e.target.value)}}/>
+                            <Paragraph>Free trial code (optional)</Paragraph>
+                            <TextInput value={freeTrialCode} onChange={(e) => {setFreeTrialCode(e.target.value)}}/>
+                            <Box width="small" alignSelf="center" margin={{vertical: "large"}}>
+                                <AnimatingButton
+                                    label={
+                                        freeTrialCode.toLowerCase() === "vpc30" ? "sign up for 30-day free trial" : freeTrialCode ? "Invalid free trial code" : "sign up"
+                                    }
+                                    primary={true}
+                                    disabled={freeTrialCode !== "" && freeTrialCode.toLowerCase() !== "vpc30"}
+                                    color={freeTrialCode && freeTrialCode.toLowerCase() !== "vpc30" ? "status-error" : "status-ok"}
+                                    animating={loading}
+                                    onClick={async () => {
+                                        setLoading(true);
+                                        await landingPageSignup(name, email, phoneNumber, freeTrialCode);
+                                        setLoading(false);
+                                        setSubmittedForm(true);
+                                    }}
+                                />
+                            </Box>
                         </Box>
-                    </Box>
+                    }
                 </Box>
                 <Box direction="row" margin={{horizontal: "large"}} justify="between">
                     <Box>
@@ -187,19 +206,38 @@ const LandingPage = ({size}) => {
                 <Box background="brand" id="signup" align="center" pad="large">
                     <Heading size="small" textAlign="center" color="status-warning">{cta_copy_1}</Heading>
                     <Paragraph textAlign="center">{cta_copy_2}</Paragraph>
-                    <Box width="large">
-                        <Paragraph>Name</Paragraph>
-                        <TextInput placeholder="Kari" value={name} onChange={(e) => {setName(e.target.value)}}/>
-                        <Paragraph>Email address</Paragraph>
-                        <TextInput placeholder="kari@gmail.com" value={email} onChange={(e) => {setEmail(e.target.value)}}/>
-                        <Paragraph>Phone number</Paragraph>
-                        <TextInput placeholder="(123) 456-7890" value={phoneNumber} onChange={(e) => {setPhoneNumber(e.target.value)}}/>
-                        <Paragraph>Free trial code (optional)</Paragraph>
-                        <TextInput value={freeTrialCode} onChange={(e) => {setFreeTrialCode(e.target.value)}}/>
-                        <Box width="small" alignSelf="center" margin={{vertical: "large"}}>
-                            <Button label="sign up" primary={true}/>
+                    {submittedForm ?
+                        <Box width="large" background="white" round={true} pad="large" align="center">
+                            <Paragraph textAlign="center">We've received your submission and will reach out to you shortly to complete signup. We can't wait for you to try Coherence!</Paragraph>
+                        </Box> :
+                        <Box width="large">
+                            <Paragraph>Name</Paragraph>
+                            <TextInput placeholder="Kari" value={name} onChange={(e) => {setName(e.target.value)}}/>
+                            <Paragraph>Email address</Paragraph>
+                            <TextInput placeholder="kari@gmail.com" value={email} onChange={(e) => {setEmail(e.target.value)}}/>
+                            <Paragraph>Phone number</Paragraph>
+                            <TextInput placeholder="(123) 456-7890" value={phoneNumber} onChange={(e) => {setPhoneNumber(e.target.value)}}/>
+                            <Paragraph>Free trial code (optional)</Paragraph>
+                            <TextInput value={freeTrialCode} onChange={(e) => {setFreeTrialCode(e.target.value)}}/>
+                            <Box width="small" alignSelf="center" margin={{vertical: "large"}}>
+                                <AnimatingButton
+                                    label={
+                                        freeTrialCode.toLowerCase() === "vpc30" ? "sign up for 30-day free trial" : freeTrialCode ? "Invalid free trial code" : "sign up"
+                                    }
+                                    primary={true}
+                                    disabled={freeTrialCode !== "" && freeTrialCode.toLowerCase() !== "vpc30"}
+                                    color={freeTrialCode && freeTrialCode.toLowerCase() !== "vpc30" ? "status-error" : "status-ok"}
+                                    animating={loading}
+                                    onClick={async () => {
+                                        setLoading(true);
+                                        await landingPageSignup(name, email, phoneNumber, freeTrialCode);
+                                        setLoading(false);
+                                        setSubmittedForm(true);
+                                    }}
+                                />
+                            </Box>
                         </Box>
-                    </Box>
+                    }
                 </Box>
                 <Box direction="row" margin={{horizontal: "large"}} justify="between">
                     <Box>
