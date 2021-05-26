@@ -33,6 +33,22 @@ const LandingPage = ({size}) => {
     const [submittedForm, setSubmittedForm] = React.useState(false);
     const history = useHistory();
 
+    const formButtonState = React.useMemo(() => {
+        if (!name) {
+            return {disabled: true, text: "Name field empty."}
+        }
+        if (!email) {
+            return {disabled: true, text: "Email field empty."}
+        }
+        if (!phoneNumber) {
+            return { disabled: true, text: "Phone number field empty." }
+        }
+        if (freeTrialCode && freeTrialCode.toLowerCase() !== "vpc30") {
+            return { disabled: true, text: "Invalid trial code."}
+        }
+        return {disabled: false, text: "Sign up"};
+    }, [email, freeTrialCode, name, phoneNumber])
+
 
     if (size === "large" || size === "xlarge") {
         return (
@@ -111,12 +127,10 @@ const LandingPage = ({size}) => {
                             <TextInput value={freeTrialCode} onChange={(e) => {setFreeTrialCode(e.target.value)}}/>
                             <Box width="small" alignSelf="center" margin={{vertical: "large"}}>
                                 <AnimatingButton
-                                    label={
-                                        freeTrialCode.toLowerCase() === "vpc30" ? "sign up for 30-day free trial" : freeTrialCode ? "Invalid free trial code" : "sign up"
-                                    }
+                                    label={formButtonState.text}
                                     primary={true}
-                                    disabled={freeTrialCode !== "" && freeTrialCode.toLowerCase() !== "vpc30"}
-                                    color={freeTrialCode && freeTrialCode.toLowerCase() !== "vpc30" ? "status-error" : "status-ok"}
+                                    disabled={formButtonState.disabled}
+                                    color={formButtonState.disabled ? "status-error" : "status-ok"}
                                     animating={loading}
                                     onClick={async () => {
                                         setLoading(true);
@@ -221,12 +235,10 @@ const LandingPage = ({size}) => {
                             <TextInput value={freeTrialCode} onChange={(e) => {setFreeTrialCode(e.target.value)}}/>
                             <Box width="small" alignSelf="center" margin={{vertical: "large"}}>
                                 <AnimatingButton
-                                    label={
-                                        freeTrialCode.toLowerCase() === "vpc30" ? "sign up for 30-day free trial" : freeTrialCode ? "Invalid free trial code" : "sign up"
-                                    }
+                                    label={formButtonState.text}
                                     primary={true}
-                                    disabled={freeTrialCode !== "" && freeTrialCode.toLowerCase() !== "vpc30"}
-                                    color={freeTrialCode && freeTrialCode.toLowerCase() !== "vpc30" ? "status-error" : "status-ok"}
+                                    disabled={formButtonState.disabled}
+                                    color={formButtonState.disabled ? "status-error" : "status-ok"}
                                     animating={loading}
                                     onClick={async () => {
                                         setLoading(true);
@@ -329,12 +341,10 @@ const LandingPage = ({size}) => {
                                 <TextInput value={freeTrialCode} onChange={(e) => {setFreeTrialCode(e.target.value)}}/>
                                 <Box width="small" alignSelf="center" margin={{vertical: "large"}}>
                                     <AnimatingButton
-                                        label={
-                                            freeTrialCode.toLowerCase() === "vpc30" ? "sign up for 30-day free trial" : freeTrialCode ? "Invalid free trial code" : "sign up"
-                                        }
+                                        label={formButtonState.text}
                                         primary={true}
-                                        disabled={freeTrialCode !== "" && freeTrialCode.toLowerCase() !== "vpc30"}
-                                        color={freeTrialCode && freeTrialCode.toLowerCase() !== "vpc30" ? "status-error" : "status-ok"}
+                                        disabled={formButtonState.disabled}
+                                        color={formButtonState.disabled ? "status-error" : "status-ok"}
                                         animating={loading}
                                         onClick={async () => {
                                             setLoading(true);
