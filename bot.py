@@ -1030,7 +1030,7 @@ def get_stripe_data(user):
     if customer.invoice_settings.default_payment_method is None:
         print(customer)
         # cancel incomplete subscriptions
-        if customer.subscriptions is not None:  # it's none if we newly made a customer
+        if hasattr(customer, "subscriptions") and customer.subscriptions is not None:  # it's none if we newly made a customer
             for subscription in customer.subscriptions.data:
                 print("\n\n\n\n\n\nsubscription************\n\n\n\n\n\n")
                 print(subscription)
