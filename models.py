@@ -137,6 +137,7 @@ class User(db.Model):
     def resume(self, scheduler, send_intro_text_new, send_upcoming_dose_message, silent=False):
         print("resume")
         print(self.state)
+        text_sent = False
         if self.state == UserState.PAUSED:
             self.state = UserState.ACTIVE
             active_dose_windows = list(filter(lambda dw: dw.active, self.dose_windows))
@@ -145,17 +146,16 @@ class User(db.Model):
             for dw in sorted_dose_windows:
                 print(dw.next_start_date)
             for i, dose_window in enumerate(sorted_dose_windows):
-                if dose_window.active:
-                    print("scheduling initial job")
-                    dose_window.schedule_initial_job(scheduler, send_intro_text_new)
-                    if not silent:
-                        print("not silent")
-                        # send resume messages
-                        if dose_window.within_dosing_period() and not dose_window.is_recorded():
-                            print("sending intro text")
-                            send_intro_text_new(dose_window.id, welcome_back=True)
-                        elif i == 0:  # upcoming dose
-                            send_upcoming_dose_message(self, dose_window)
+                dose_window.schedule_initial_job(scheduler, send_intro_text_new)
+                if not silent:
+                    print("not silent")
+                    # send resume messages
+                    if dose_window.within_dosing_period() and not dose_window.is_recorded():
+                        print("sending intro text")
+                        send_intro_text_new(dose_window.id, welcome_back=True)
+                        text_sent = True
+            if not text_sent and len(sorted_dose_windows) > 0:
+                send_upcoming_dose_message(self, sorted_dose_windows[0])
             db.session.commit()
 
     def pause(self, scheduler, send_pause_message, silent=False):
