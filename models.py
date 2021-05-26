@@ -139,7 +139,7 @@ class User(db.Model):
         print(self.state)
         if self.state == UserState.PAUSED:
             self.state = UserState.ACTIVE
-            active_dose_windows = list(filter(self.dose_windows, lambda dw: dw.active))
+            active_dose_windows = list(filter(lambda dw: dw.active, self.dose_windows))
             sorted_dose_windows = sorted(active_dose_windows, key=lambda dw: dw.next_start_date)
             print(active_dose_windows)
             for dw in sorted_dose_windows:
