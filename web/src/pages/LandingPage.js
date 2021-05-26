@@ -40,11 +40,24 @@ const LandingPage = ({size}) => {
         if (!email) {
             return {disabled: true, text: "Email field empty."}
         }
+        const emailRegex = /.*\@.*\..*/;
+        if (!emailRegex.test(email)) {
+            return { disabled: true, text: "Email format is invalid."}
+        }
         if (!phoneNumber) {
             return { disabled: true, text: "Phone number field empty." }
         }
-        if (freeTrialCode && freeTrialCode.toLowerCase() !== "vpc30") {
-            return { disabled: true, text: "Invalid trial code."}
+        const nonDigitRegex = /\D/g;
+        if (phoneNumber.replace(nonDigitRegex, "").length !== 10) {
+            return { disabled: true, text: "Phone number is not 10 digits."}
+        }
+        if (freeTrialCode) {
+            if (freeTrialCode.toLowerCase() !== "vpc30") {
+                return { disabled: true, text: "Invalid trial code."}
+            } else {
+                return { disabled: false, text: "Get your free 30-day trial!"}
+            }
+
         }
         return {disabled: false, text: "Sign up"};
     }, [email, freeTrialCode, name, phoneNumber])
