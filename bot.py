@@ -569,8 +569,10 @@ def send_upcoming_dose_message(user, dose_window):
 def react_login():
     phone_number = request.json.get("phoneNumber")
     secret_code = request.json.get("secretCode")
-    if secret_code is not None:
+    try:
         secret_code = int(secret_code)
+    except ValueError:
+        pass
     password = request.json.get("password")
     numeric_filter = filter(str.isdigit, phone_number)
     phone_number = "".join(numeric_filter)
