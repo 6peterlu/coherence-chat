@@ -1047,7 +1047,8 @@ def get_stripe_data(user):
             subscription = stripe.Subscription.create(
                 customer=customer.id,
                 items=[{
-                    'price': "price_1IvWVmEInVrsQDJoBEtnprCX" if os.environ["FLASK_ENV"] == "production" else "price_1IrxibEInVrsQDJoNPvvYYkl",  # from stripe dashboard
+                    # 'price': "price_1IvWVmEInVrsQDJoBEtnprCX" if os.environ["FLASK_ENV"] == "production" else "price_1IrxibEInVrsQDJoNPvvYYkl",  # from stripe dashboard
+                    "price": "price_1IrxibEInVrsQDJoNPvvYYkl"
                 }],
                 payment_behavior='default_incomplete',
                 expand=['latest_invoice.payment_intent']
@@ -1067,7 +1068,8 @@ def get_stripe_data(user):
                 new_subscription = stripe.Subscription.create(
                     customer=customer.id,
                     items=[{
-                        'price': "price_1IvWVmEInVrsQDJoBEtnprCX" if os.environ["FLASK_ENV"] == "production" else "price_1IrxibEInVrsQDJoNPvvYYkl",  # from stripe dashboard
+                        # 'price': "price_1IvWVmEInVrsQDJoBEtnprCX" if os.environ["FLASK_ENV"] == "production" else "price_1IrxibEInVrsQDJoNPvvYYkl",  # from stripe dashboard
+                        "price": "price_1IrxibEInVrsQDJoNPvvYYkl"
                     }],
                     payment_behavior='default_incomplete',
                     expand=['pending_setup_intent'],
@@ -1116,7 +1118,8 @@ def user_renew_subscription():
     subscription = stripe.Subscription.create(
         customer=customer.id,
         items=[{
-            'price': "price_1IvWVmEInVrsQDJoBEtnprCX" if os.environ["FLASK_ENV"] == "production" else "price_1IrxibEInVrsQDJoNPvvYYkl",  # from stripe dashboard
+            # 'price': "price_1IvWVmEInVrsQDJoBEtnprCX" if os.environ["FLASK_ENV"] == "production" else "price_1IrxibEInVrsQDJoNPvvYYkl",  # from stripe dashboard
+            "price": "price_1IrxibEInVrsQDJoNPvvYYkl"
         }],
         payment_behavior='default_incomplete',
         expand=['latest_invoice.payment_intent']

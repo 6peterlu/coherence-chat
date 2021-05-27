@@ -115,7 +115,7 @@ const Intro = () => {
                         {getInputField()}
                     </Box>
                     <Button label="submit" icon={<Login/>} onClick={submitAll} disabled={password !== passwordConfirm}/>
-                    <Paragraph size="small" margin={{bottom: "none", top: "medium"}}>Don't have an account yet?</Paragraph>
+                    <Paragraph size="small" margin={{bottom: "none", top: "medium"}}>Haven't gotten a text from us yet?</Paragraph>
                     <Anchor label="Sign up" href="/welcome#signup"/>
                 </Box>
             </Box>
