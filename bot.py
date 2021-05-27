@@ -1184,6 +1184,7 @@ def stripe_webhook():
     if event.type in ["payment_intent.succeeded", "setup_intent.succeeded"]:
         # set submitted card as customer's default payment method for future charging
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
+        customer_object = stripe.Customer.retrieve(event.data.object.customer, )
         stripe.Customer.modify(event.data.object.customer, invoice_settings={"default_payment_method": event.data.object.payment_method})
         print(f"secondary state: {related_user.secondary_state}")
         if related_user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
@@ -1207,7 +1208,8 @@ def stripe_webhook():
             print(related_user.state)
             if related_user.state == UserState.PAYMENT_METHOD_REQUESTED:
                 subscription = stripe.Subscription.retrieve(event.data.object.subscription, expand=["latest_invoice.payment_intent.payment_method"])
-                stripe.Customer.modify(event.data.object.customer, invoice_settings={"default_payment_method": subscription.latest_invoice.payment_intent.payment_method})
+                if subscription.latest_invoice.payment_intent is not None:  # attach payment method, if there was one associated
+                    stripe.Customer.modify(event.data.object.customer, invoice_settings={"default_payment_method": subscription.latest_invoice.payment_intent.payment_method})
                 if "NOALERTS" not in os.environ:
                     client.messages.create(
                         body=ONBOARDING_COMPLETE,
