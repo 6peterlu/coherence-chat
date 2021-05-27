@@ -515,9 +515,10 @@ def timezone_requested_message_handler(
                     to=incoming_phone_number
                 )
         else:
-            new_event = EventLog("num_dose_windows", user.id, None, None, description=timezone_list[tz_index])
+            new_event = EventLog("timezone", user.id, None, None, description=timezone_list[tz_index])
             if user.onboarding_type == "free trial":
                 user.state = UserState.PAUSED
+                user.timezone = timezone_list[tz_index]
                 user.end_of_service = get_start_of_day(user.timezone, days_delta=1, months_delta=1)
                 if "NOALERTS" not in os.environ:
                     client.messages.create(
@@ -562,6 +563,7 @@ def payment_requested_message_handler(
                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                 to="+13604508655"  # admin
             )
+        db.session.commit()
     else:
         if "NOALERTS" not in os.environ:
             client.messages.create(
