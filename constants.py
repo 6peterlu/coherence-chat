@@ -3,19 +3,22 @@ from string import Template
 MORNING_PREFIXES = [
     "Good morning!",
     "Hope your day is off to a great start.",
-    "Looking forward to a great day together."
+    "Looking forward to a great day together.",
+    "Rise and shine!"
 ]
 
 AFTERNOON_PREFIXES = [
     "Hope your day is going well so far.",
     "Hope you had a great lunch.",
-    "Good afternoon!"
+    "Good afternoon!",
+    "Hope the weather is nice out this afternoon!"
 ]
 
 EVENING_PREFIXES = [
     "Good evening!",
     "Hope you got to catch the sunset today!",
-    "Hope you're having a good evening."
+    "Hope you're having a good evening.",
+    "Hope your day has been great."
 ]
 
 TIME_OF_DAY_PREFIX_MAP = {

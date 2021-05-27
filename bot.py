@@ -1233,6 +1233,7 @@ def stripe_webhook():
                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                         to=f"+1{ADMIN_PHONE_NUMBER}"
                     )
+                    related_user.state = UserState.PAUSED
             elif related_user.state == UserState.SUBSCRIPTION_EXPIRED:
                 if "NOALERTS" not in os.environ:
                     client.messages.create(
@@ -1245,8 +1246,7 @@ def stripe_webhook():
                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                         to=f"+1{ADMIN_PHONE_NUMBER}"
                     )
-            # TODO: add copy for renewing
-            related_user.state = UserState.PAUSED
+                related_user.state = UserState.ACTIVE  # autoactive after renewal
             db.session.commit()
         if related_user.state in [UserState.ACTIVE, UserState.PAUSED]:  # subscription auto-renewal
             subscription = stripe.Subscription.retrieve(event.data.object.subscription)

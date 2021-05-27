@@ -40,7 +40,7 @@ const LandingPage = ({size}) => {
         if (!email) {
             return {disabled: true, text: "Email field empty."}
         }
-        const emailRegex = /.*\@.*\..*/;
+        const emailRegex = /.*@.*\..*/;
         if (!emailRegex.test(email)) {
             return { disabled: true, text: "Email format is invalid."}
         }

@@ -25,7 +25,7 @@ import {
 } from '../analytics';
 import { Scatter } from 'react-chartjs-2';
 import { Box, Button, CheckBoxGroup, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select, Anchor } from "grommet";
-import { Add, Checkmark, CircleInformation, CirclePlay, Clear, Close, Fireball, FormNextLink} from "grommet-icons";
+import { Add, Checkmark, CircleInformation, CirclePlay, Clear, Close, Fireball, FormNextLink, Logout, UserSettings} from "grommet-icons";
 import { DateTime } from 'luxon';
 import 'chartjs-adapter-luxon';
 import TimeInput from "../components/TimeInput";
@@ -734,9 +734,10 @@ const Home = () => {
                 <Paragraph textAlign="center" margin={{vertical: "none"}}>Need help with anything?</Paragraph>
                 <Paragraph size="small" color="dark-3">Our customer service is just a text away at (650) 667-1146. Reach out any time and we'll get back to you in a few hours!</Paragraph>
             </Box>
-            <Box align="center" pad={{vertical: "medium"}} margin={{horizontal: "xlarge"}} border="top" direction="row" justify={patientData && patientData.earlyAdopterStatus ? "center" : "between"}>
-                {patientData && !patientData.earlyAdopterStatus ? <Button onClick={() => {history.push("/payment")}} label="Manage subscription" size="small"/> : null}
-                <Button onClick={logout} label="Log out" size="small"/>
+            <Box align="center" alignSelf="center" pad={{vertical: "medium"}} margin={{horizontal: "xlarge"}} border="top" direction="row">
+                {/* {patientData && !patientData.earlyAdopterStatus ? <Button onClick={() => {history.push("/payment")}} label="Manage subscription" size="small"/> : null} */}
+                <Button label="Settings" icon={<UserSettings />} size="small" href="/settings"/>
+                <Button onClick={logout} label="Logout" size="small" icon={<Logout />}/>
             </Box>
         </Box>
     )

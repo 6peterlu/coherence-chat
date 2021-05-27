@@ -154,7 +154,7 @@ class User(db.Model):
                         print("sending intro text")
                         send_intro_text_new(dose_window.id, welcome_back=True)
                         text_sent = True
-            if not text_sent and len(sorted_dose_windows) > 0:
+            if not text_sent and len(sorted_dose_windows) > 0 and not silent:
                 send_upcoming_dose_message(self, sorted_dose_windows[0])
             db.session.commit()
 
