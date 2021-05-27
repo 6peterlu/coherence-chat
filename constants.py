@@ -184,4 +184,8 @@ PAYMENT_METHOD_FAILURE = "I wasn't able to charge your payment method. Please tr
 
 USER_SUBSCRIBED_NOTIF = Template("User with phone number $phone_number subscribed.")
 
+USER_RENEWED_NOTIF = Template("User with phone number $phone_number renewed.")
+
 USER_PAYMENT_METHOD_FAIL_NOTIF = Template("User with phone number $phone_number had payment method validation failure.")
+
+USER_CANCELLED_NOTIF = Template("User with phone number $phone_number cancelled.")

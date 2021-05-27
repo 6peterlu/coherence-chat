@@ -94,6 +94,7 @@ from constants import (
     BLOOD_GLUCOSE_MESSAGE,
     BLOOD_PRESSURE_MESSAGE,
     BOUNDARY_MSG,
+    CANCELLATION_RESPONSE,
     CLINICAL_BOUNDARY_MSG,
     CONFIRMATION_MSG,
     COULDNT_PARSE_DATE,
@@ -109,6 +110,7 @@ from constants import (
     REMINDER_OUT_OF_RANGE_MSG,
     REMINDER_TOO_CLOSE_MSG,
     REMINDER_TOO_LATE_MSG,
+    RENEWAL_COMPLETE,
     REQUEST_DOSE_WINDOW_COUNT,
     REQUEST_DOSE_WINDOW_END_TIME,
     REQUEST_DOSE_WINDOW_START_TIME,
@@ -123,9 +125,11 @@ from constants import (
     TIME_OF_DAY_PREFIX_MAP,
     UNKNOWN_MSG,
     ACTION_MENU,
+    USER_CANCELLED_NOTIF,
     USER_ERROR_REPORT,
     USER_ERROR_RESPONSE,
     USER_PAYMENT_METHOD_FAIL_NOTIF,
+    USER_RENEWED_NOTIF,
     USER_SUBSCRIBED_NOTIF,
     WEIGHT_MESSAGE,
     WELCOME_BACK_MESSAGES
@@ -471,6 +475,12 @@ def auth_patient_data():
     # behavior_learning_scores = generate_behavior_learning_scores_new(user_behavior_events, user)
     dose_to_take_now = False if dose_window is None else not dose_window.is_recorded()
     dose_windows = [DoseWindowSchema().dump(dw) for dw in sorted(user.active_dose_windows, key=lambda dw: dw.bounds_for_current_day[0])]  # sort by start time
+    subscription_end_date = None
+    if user.end_of_service is not None:
+        if user.state == UserState.SUBSCRIPTION_EXPIRED:
+            subscription_end_date = convert_naive_to_local_machine_time(user.end_of_service)
+        else:
+            subscription_end_date = convert_naive_to_local_machine_time(user.charge_date)
     return jsonify({
         "phoneNumber": user.phone_number,
         "eventData": event_data,
@@ -486,7 +496,7 @@ def auth_patient_data():
         "month": calendar_month,
         "impersonating": impersonating,
         "healthMetricData": process_health_metric_event_stream(health_metric_events, user.tracked_health_metrics),
-        "subscriptionEndDate": convert_naive_to_local_machine_time(g.user.charge_date) if g.user.end_of_service is not None else None,
+        "subscriptionEndDate": subscription_end_date,
         "earlyAdopterStatus": bool(user.early_adopter),
         "token": g.user.generate_auth_token().decode('ascii')  # refresh auth token
     })
@@ -1088,6 +1098,17 @@ def user_cancel_subscription():
             stripe.Subscription.delete(subscription.id)
     g.user.end_of_service = get_time_now()  # subscription time ends now
     db.session.commit()
+    if "NOALERTS" not in os.environ:
+        client.messages.create(
+            body=CANCELLATION_RESPONSE,
+            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+            to=f"+1{g.user.phone_number}"
+        )
+        client.messages.create(
+            body=USER_CANCELLED_NOTIF.substitute(phone_number=g.user.phone_number),
+            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+            to=f"+1{ADMIN_PHONE_NUMBER}"
+        )
     return jsonify(), 200
 
 
@@ -1219,6 +1240,17 @@ def stripe_webhook():
             if subscription.status == "active":
                 related_user.end_of_service = datetime.fromtimestamp(subscription.current_period_end) + timedelta(days=1)
                 db.session.commit()
+                if "NOALERTS" not in os.environ:
+                    client.messages.create(
+                        body=RENEWAL_COMPLETE,
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                        to=f"+1{related_user.phone_number}"
+                    )
+                    client.messages.create(
+                        body=USER_RENEWED_NOTIF.substitute(phone_number=related_user.phone_number),
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                        to=f"+1{ADMIN_PHONE_NUMBER}"
+                    )
     elif event.type == "payment_intent.payment_failed" or event.type == "charge.failed" or event.type == "invoice.payment_failed":
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
         if related_user is None:
