@@ -136,3 +136,8 @@ export const getPatientState = async () => {
   const response = await get("patientState",  {});
   return response;
 }
+
+export const getUserProfile = async () => {
+  const response = await get("user/profile", {});
+  return response;
+}

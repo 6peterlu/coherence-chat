@@ -1016,6 +1016,10 @@ def user_edit_dose_window():
         )
     return jsonify()
 
+@app.route("/user/profile", methods=["GET"])
+@auth.login_required
+def get_user_profile():
+    return jsonify(UserSchema().dump(g.user))
 
 def get_stripe_data(user):
     if g.user.stripe_customer_id is None:
