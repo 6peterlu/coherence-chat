@@ -568,7 +568,7 @@ def send_upcoming_dose_message(user, dose_window):
 @app.route("/login/new", methods=["POST"])
 def react_login():
     phone_number = request.json.get("phoneNumber")
-    secret_code = request.json.get("secretCode")
+    secret_code = int(request.json.get("secretCode"))
     password = request.json.get("password")
     numeric_filter = filter(str.isdigit, phone_number)
     phone_number = "".join(numeric_filter)
