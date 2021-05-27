@@ -1212,7 +1212,7 @@ def stripe_webhook():
             db.session.commit()
         if related_user.state in [UserState.ACTIVE, UserState.PAUSED]:  # subscription auto-renewal
             related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
-            customer = stripe.Customer.retrieve(related_user.stripe_customer_id).one_or_none()
+            customer = stripe.Customer.retrieve(related_user.stripe_customer_id)
             for subscription in customer.subscriptions:
                 if subscription.status == "active":
                     related_user.end_of_service = datetime.fromtimestamp(subscription.current_period_end)
