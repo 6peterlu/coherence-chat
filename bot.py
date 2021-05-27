@@ -1216,13 +1216,10 @@ def stripe_webhook():
             related_user.state = UserState.PAUSED
             db.session.commit()
         if related_user.state in [UserState.ACTIVE, UserState.PAUSED]:  # subscription auto-renewal
-            related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
-            customer = stripe.Customer.retrieve(related_user.stripe_customer_id)
-            for subscription in customer.subscriptions:
-                if subscription.status == "active":
-                    related_user.end_of_service = datetime.fromtimestamp(subscription.current_period_end)
-                    db.session.commit()
-                    break
+            subscription = event.data.object.subscription
+            if subscription.status == "active":
+                related_user.end_of_service = datetime.fromtimestamp(subscription.current_period_end)
+                db.session.commit()
     elif event.type == "payment_intent.payment_failed" or event.type == "charge.failed" or event.type == "invoice.payment_failed":
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
         if related_user is None:
