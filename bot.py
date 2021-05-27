@@ -599,6 +599,8 @@ def react_login():
         else:
             return jsonify({"status": "password"})
     print(user.secret_text_code)
+    print(secret_code)
+    print(user.secret_text_code == secret_code)
     secret_code_verified = user.secret_text_code == secret_code
     if not secret_code_verified:
         print("failed here")
