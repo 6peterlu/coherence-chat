@@ -52,7 +52,11 @@ const Payment = () => {
         return <Spinner />
     }
     if (paymentData.secondary_state === "payment_verification_pending") {
-        return <Paragraph>We're verifying your payment information. You'll get a text when you're verified with further instructions. Thanks for your patience!</Paragraph>
+        return (
+            <Box margin="large">
+                <Paragraph textAlign="center">We're verifying your payment information. You'll get a text when you're verified with further instructions. Thanks for your patience!</Paragraph>
+            </Box>
+        )
     } else if (paymentData.state === 'payment_method_requested') {
         return (
             <Elements stripe={stripePromise}>
