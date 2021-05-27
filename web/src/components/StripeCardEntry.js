@@ -14,6 +14,7 @@ const StripeCardEntry = ({ submitText, clientSecret, afterSubmitAction, payOnSub
     const elements = useElements();
     const [validatingCard, setValidatingCard] = React.useState(false);
     const [ready, setReady] = React.useState(false);
+    const [formFilled, setFormFilled] = React.useState(false);
 
     // Use card Element to tokenize payment details
     const submitPayment = React.useCallback(async () => {
@@ -56,7 +57,13 @@ const StripeCardEntry = ({ submitText, clientSecret, afterSubmitAction, payOnSub
 
     return (
         <>
-            <CardElement onReady={() => {setReady(true)}} />
+            <CardElement onReady={() => {setReady(true)}} onChange={(event) => {
+                if (event.complete && !event.error) {
+                    setFormFilled(true);
+                } else {
+                    setFormFilled(false);
+                }
+            }}/>
             <Box margin={{top: "medium"}}>
                 {ready ? <>
                     <AnimatingButton
@@ -68,6 +75,7 @@ const StripeCardEntry = ({ submitText, clientSecret, afterSubmitAction, payOnSub
                         }}
                         animating={validatingCard}
                         primary={true}
+                        disabled={!formFilled}
                     />
                     {validatingCard ? <Paragraph>Submitting your payment information. Please do not close this window.</Paragraph> : null}
                     </> : <Spinner />

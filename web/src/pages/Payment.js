@@ -56,7 +56,7 @@ const Payment = () => {
     } else if (paymentData.state === 'payment_method_requested') {
         return (
             <Elements stripe={stripePromise}>
-                <Box padding="large">
+                <Box margin="large">
                     <Heading size="small">Enter payment information</Heading>
                     <Paragraph>Looking forward to helping you with your medication. If you have any questions before signing up, please reach out to us over text at (650) 667-1146.</Paragraph>
                     <StripeCardEntry

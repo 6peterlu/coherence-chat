@@ -14,6 +14,8 @@ const FinishOnboarding = () => {
                 history.push("/welcome");
             } else if (["active", "paused"].includes(stateData.state)) {
                 history.push("/");
+            } else if (["payment_method_requested", "subscription_expired"].includes(stateData.state)) {
+                history.push("/payment");
             }
         }
         loadState();
