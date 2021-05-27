@@ -526,6 +526,11 @@ def timezone_requested_message_handler(
                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                         to=incoming_phone_number
                     )
+                    client.messages.create(
+                        body=f"Phone number {incoming_phone_number} completed onboarding (free trial).",
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                        to="+13604508655"  # admin
+                    )
             else:
                 if "NOALERTS" not in os.environ:
                     client.messages.create(

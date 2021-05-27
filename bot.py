@@ -1195,8 +1195,9 @@ def stripe_webhook():
     if event.type in ["payment_intent.succeeded", "setup_intent.succeeded"]:
         # set submitted card as customer's default payment method for future charging
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
-        customer_object = stripe.Customer.retrieve(event.data.object.customer, )
         stripe.Customer.modify(event.data.object.customer, invoice_settings={"default_payment_method": event.data.object.payment_method})
+        if related_user is None:
+            return jsonify(), 401
         print(f"secondary state: {related_user.secondary_state}")
         if related_user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
             related_user.secondary_state = None
