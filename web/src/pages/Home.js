@@ -24,8 +24,8 @@ import {
     trackPausedService
 } from '../analytics';
 import { Scatter } from 'react-chartjs-2';
-import { Box, Button, CheckBoxGroup, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select } from "grommet";
-import { Add, Checkmark, CircleInformation, Clear, Close, Fireball, FormNextLink} from "grommet-icons";
+import { Box, Button, CheckBoxGroup, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select, Anchor } from "grommet";
+import { Add, Checkmark, CircleInformation, CirclePlay, Clear, Close, Fireball, FormNextLink} from "grommet-icons";
 import { DateTime } from 'luxon';
 import 'chartjs-adapter-luxon';
 import TimeInput from "../components/TimeInput";
@@ -446,7 +446,8 @@ const Home = () => {
                     icon={<CircleInformation/>}
                     label="How do I use Coherence?"
                     dropContent={
-                        <Box pad={{horizontal: "small"}}>
+                        <Box pad={{horizontal: "small", vertical: "small"}}>
+                            <Anchor label="Video guide" href="https://youtu.be/2kH0-IE1QvU" alignSelf="center" icon={<CirclePlay />}/>
                             <Paragraph textAlign="center">Texting commands</Paragraph>
                             <Grid columns={["xsmall", "small"]} align="center" justifyContent="center" gap={{column: "small"}}>
                                 <Paragraph size="small">T, taken</Paragraph>
