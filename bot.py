@@ -144,26 +144,6 @@ CLINICAL_BOUNDARY_PHONE_NUMBERS = ["8587761377"]
 
 ADMIN_PHONE_NUMBER = "3604508655"
 
-SECRET_CODES = {
-    "+113604508655": 123456,
-    "+113606064445": 110971,
-    "+113609042210": 902157,
-    "+113609049085": 311373,
-    "+114152142478": 332274,
-    "+116502690598": 320533,
-    "+118587761377": 548544,
-    "+113607738908": 577505,
-    "+115038871884": 474580,
-    "+113605214193": 402913,
-    "+113605131225": 846939,
-    "+113609010956": 299543,
-    "+113609045470": 697892,
-    "+113609071578": 573240,
-    "+113609779451": 588404,
-    "+115097747287": 199146,
-    "+113606668268": 848330
-}
-
 ACTIVITY_BUCKET_SIZE_MINUTES = 10
 
 logging.basicConfig()
@@ -604,18 +584,21 @@ def react_login():
     if user.password_hash and password:
         return jsonify(), 401
     phone_number_formatted = f"+11{phone_number}"
-    secret_code_verified = str(SECRET_CODES.get(phone_number_formatted, 923748)) == secret_code
     if not secret_code:
         if not user.password_hash:
+            secret_code = random.randint(100000, 999999)
             if "NOALERTS" not in os.environ:
                 client.messages.create(
-                    body=SECRET_CODE_MESSAGE.substitute(code=SECRET_CODES.get(phone_number_formatted, 923748)),
+                    body=SECRET_CODE_MESSAGE.substitute(code=secret_code),
                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                     to=phone_number_formatted
                 )
+                user.secret_text_code = secret_code
+                db.session.commit()
             return jsonify({"status": "2fa"})
         else:
             return jsonify({"status": "password"})
+    secret_code_verified = user.secret_text_code == secret_code
     if not secret_code_verified:
         print("failed here")
         return jsonify(), 401

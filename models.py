@@ -84,6 +84,7 @@ class User(db.Model):
     )
     stripe_customer_id = db.Column(db.String)  # cross reference for stripe customer object.
     early_adopter = db.Column(db.Boolean)  # just some special treats for our early users!
+    secret_text_code = db.Column(db.Integer)  # 2FA codes
 
     def __init__(
         self,
@@ -170,6 +171,7 @@ class User(db.Model):
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
+        self.secret_text_code = None
         db.session.commit()
 
     def verify_password(self, password):

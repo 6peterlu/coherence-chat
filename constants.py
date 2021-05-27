@@ -166,6 +166,10 @@ INCORRECT_FREE_TRIAL_CODE = "Sorry, that wasn't a valid code. Feel free to text 
 
 ONBOARDING_COMPLETE = "Great, you'll get your first Coherence reminders starting tomorrow. If you have any questions or concerns, text my customer service line at (650) 667-1146‬."
 
+RENEWAL_COMPLETE = "Your Coherence renewal has been received. Looking forward to another great month together. If you have any questions or concerns, text my customer service line at (650) 667-1146‬."
+
+CANCELLATION_RESPONSE = "Your Coherence subscription has been successfully cancelled. Thanks for trying me out! You can renew your subscription at any time at https://www.hellocoherence.com/payment."
+
 TIMEZONE_REQUEST = "Thanks for letting me know your dose windows. What timezone are you in? This will help us send you reminders at the right times. Please respond with a number.\n[1] Pacific\n[2] Mountain\n[3] Central\n[4] Eastern"
 
 BLOOD_GLUCOSE_MESSAGE = Template("🕒 $time\nBlood glucose recorded: $blood_glucose mg/dl.\n📝📝📝📝")
@@ -176,7 +180,7 @@ BLOOD_PRESSURE_MESSAGE = Template("🕒 $time\nBlood pressure recorded: $blood_p
 
 SERVER_ERROR_ALERT = Template("Server has error. ($code, $name, $description)")
 
-PAYMENT_METHOD_FAILURE = "I wasn't able to charge your payment method. Please try visiting https://www.hellocoherence.com to re-enter your information, or contact (650) 667-1146 if you need additional help. Thank you!"
+PAYMENT_METHOD_FAILURE = "I wasn't able to charge your payment method. Please try visiting https://www.hellocoherence.com/payment to re-enter your information, or contact (650) 667-1146 if you need additional help. Thank you!"
 
 USER_SUBSCRIBED_NOTIF = Template("User with phone number $phone_number subscribed.")
 
