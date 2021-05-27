@@ -604,12 +604,12 @@ def react_login():
     if user.password_hash and password:
         return jsonify(), 401
     phone_number_formatted = f"+11{phone_number}"
-    secret_code_verified = str(SECRET_CODES[phone_number_formatted]) == secret_code
+    secret_code_verified = str(SECRET_CODES.get(phone_number_formatted, 923748)) == secret_code
     if not secret_code:
         if not user.password_hash:
             if "NOALERTS" not in os.environ:
                 client.messages.create(
-                    body=SECRET_CODE_MESSAGE.substitute(code=SECRET_CODES[phone_number_formatted]),
+                    body=SECRET_CODE_MESSAGE.substitute(code=SECRET_CODES.get(phone_number_formatted, 923748)),
                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                     to=phone_number_formatted
                 )
@@ -1203,6 +1203,8 @@ def stripe_webhook():
             related_user.end_of_service = subscription_end_day + timedelta(days=1)  # one extra day for a service termination grace period.
             print(related_user.state)
             if related_user.state == UserState.PAYMENT_METHOD_REQUESTED:
+                subscription = stripe.Subscription.retrieve(event.data.object.subscription, expand=["latest_invoice.payment_intent.payment_method"])
+                stripe.Customer.modify(event.data.object.customer, invoice_settings={"default_payment_method": subscription.latest_invoice.payment_intent.payment_method})
                 if "NOALERTS" not in os.environ:
                     client.messages.create(
                         body=ONBOARDING_COMPLETE,
