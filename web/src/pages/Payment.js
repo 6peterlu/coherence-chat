@@ -75,7 +75,7 @@ const Payment = () => {
                     <Heading size="small">Manage your subscription</Heading>
                     {paymentData.state === "subscription_expired" ? (
                         <>
-                            <Paragraph alignSelf="center">Your subscription expired on {DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}</Paragraph>
+                            <Paragraph alignSelf="center">Your subscription expired on {DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}.</Paragraph>
                             {paymentData.payment_method ? (
                                 <AnimatingButton
                                     label="Renew for $6.99"
@@ -87,6 +87,7 @@ const Payment = () => {
                                         setLoading(true);
                                     }}
                                     animating={animating}
+                                    primary={true}
                                 />
                             ) : (
                                 <Paragraph>Enter payment data for renewal</Paragraph>
@@ -134,13 +135,16 @@ const Payment = () => {
                     <Box direction="row" justify="between">
                         <Button label="Go back" margin={{vertical: "small"}} onClick={() => {history.push("/")}}/>
                         {
-                            <Button
+                            <AnimatingButton
                                 label={paymentData.payment_method ? "Cancel subscription" : "Stop free trial"}
                                 margin={{vertical: "small"}}
                                 onClick={async () => {
+                                    setAnimating(true);
                                     await cancelSubscription();
                                     setLoading(true);
                                 }}
+                                animating={animating}
+                                disabled={paymentData.state === "subscription_expired"}
                             />
                         }
                     </Box>
