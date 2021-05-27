@@ -506,7 +506,7 @@ def auth_patient_data():
         "month": calendar_month,
         "impersonating": impersonating,
         "healthMetricData": process_health_metric_event_stream(health_metric_events, user.tracked_health_metrics),
-        "subscriptionEndDate": convert_naive_to_local_machine_time(g.user.end_of_service) if g.user.end_of_service is not None else None,
+        "subscriptionEndDate": convert_naive_to_local_machine_time(g.user.charge_date) if g.user.end_of_service is not None else None,
         "earlyAdopterStatus": bool(user.early_adopter),
         "token": g.user.generate_auth_token().decode('ascii')  # refresh auth token
     })
@@ -1073,7 +1073,7 @@ def get_stripe_data(user):
                     }],
                     payment_behavior='default_incomplete',
                     expand=['pending_setup_intent'],
-                    trial_end=int(convert_naive_to_local_machine_time(g.user.end_of_service).timestamp())
+                    trial_end=int(convert_naive_to_local_machine_time(g.user.charge_date).timestamp())
                 )
                 secret_key = new_subscription.pending_setup_intent.client_secret
             else:
@@ -1146,7 +1146,7 @@ def user_get_payment_info():
         g.user.stripe_customer_id = customer.id
         db.session.commit()
         if g.user.state in [UserState.PAUSED, UserState.ACTIVE]:  # subscription is currently active, retrive addl data
-            return_dict["subscription_end_date"] = convert_naive_to_local_machine_time(g.user.end_of_service) if g.user.end_of_service is not None else None
+            return_dict["subscription_end_date"] = convert_naive_to_local_machine_time(g.user.charge_date) if g.user.end_of_service is not None else None
             if g.user.stripe_customer_id is not None:
                 default_payment_method = customer.invoice_settings.default_payment_method
                 return_dict["payment_method"] = None if default_payment_method is None else {"brand": default_payment_method.card.brand, "last4": default_payment_method.card.last4 }
@@ -1227,7 +1227,7 @@ def stripe_webhook():
         if related_user.state in [UserState.ACTIVE, UserState.PAUSED]:  # subscription auto-renewal
             subscription = stripe.Subscription.retrieve(event.data.object.subscription)
             if subscription.status == "active":
-                related_user.end_of_service = datetime.fromtimestamp(subscription.current_period_end)
+                related_user.end_of_service = datetime.fromtimestamp(subscription.current_period_end) + timedelta(days=1)
                 db.session.commit()
     elif event.type == "payment_intent.payment_failed" or event.type == "charge.failed" or event.type == "invoice.payment_failed":
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()

@@ -82,7 +82,7 @@ class User(db.Model):
         db.Enum(UserSecondaryState, values_callable=lambda obj: [e.value for e in obj]),
         nullable=True
     )
-    stripe_customer_id = db.Column(db.String)  # cross reference for stripe customer object. This indicates whether the user has previously added payment info
+    stripe_customer_id = db.Column(db.String)  # cross reference for stripe customer object.
     early_adopter = db.Column(db.Boolean)  # just some special treats for our early users!
 
     def __init__(
@@ -203,6 +203,12 @@ class User(db.Model):
             EventLog.user == self
         ).count()  # count is no more efficient than actually querying; this can be optimized: https://stackoverflow.com/questions/14754994/why-is-sqlalchemy-count-much-slower-than-the-raw-query
         return num_intro_events_today > 0
+
+    @property
+    def charge_date(self):
+        if self.end_of_service is None:
+            return None
+        return self.end_of_service - timedelta(days=1)
 
 class DoseWindow(db.Model):
     __tablename__ = 'dose_window'
