@@ -1092,7 +1092,7 @@ def user_cancel_subscription():
     for subscription in customer.subscriptions.data:
         print(subscription)
         print(subscription.status)
-        if subscription.status in ["active", "trialing"]:
+        if subscription.status in ["active", "trialing", "incomplete"]:
             stripe.Subscription.delete(subscription.id)
     g.user.end_of_service = get_time_now()  # subscription time ends now
     db.session.commit()

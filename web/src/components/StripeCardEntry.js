@@ -66,6 +66,7 @@ const StripeCardEntry = ({ submitText, clientSecret, afterSubmitAction, payOnSub
                         afterSubmitAction();  // any reloading that needs to be done after submitting payment info
                     }}
                     animating={validatingCard}
+                    primary={true}
                 />
                 {validatingCard ? <Paragraph>Submitting your payment information. Please do not close this window.</Paragraph> : null}
                 </> : <Spinner />

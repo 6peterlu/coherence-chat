@@ -19,8 +19,7 @@ const Payment = () => {
     const [animating, setAnimating] = React.useState(false);
     const [paymentData, setPaymentData] = React.useState(null);
     const [addCardModalVisible, setAddCardModalVisible] = React.useState(false);
-    console.log("card modal visible");
-    console.log(addCardModalVisible);
+    const [payWithCardModalVisible, setPayWithCardModalVisible] = React.useState(false);
     const [_, __, removeCookie] = useCookies(['token']);
     const history = useHistory();
     const loadData = React.useCallback(async () => {
@@ -90,7 +89,37 @@ const Payment = () => {
                                     primary={true}
                                 />
                             ) : (
-                                <Paragraph>Enter payment data for renewal</Paragraph>
+                                <>
+                                    <Button
+                                        label="Renew for $6.99"
+                                        onClick={() => {setPayWithCardModalVisible(true)}}
+                                        primary={true}
+                                    />
+                                    {payWithCardModalVisible ? (
+                                        <Layer
+                                            responsive={false}
+                                            onEsc={() => setPayWithCardModalVisible(false)}
+                                            onClickOutside={() => setPayWithCardModalVisible(false)}
+                                            animation={false}
+                                        >
+                                            <Box width="90vw" pad="large">
+                                                <Box direction="row" justify="between">
+                                                    <Paragraph size="large">Enter credit card information</Paragraph>
+                                                    <Button icon={<Close />} onClick={() => setPayWithCardModalVisible(false)}/>
+                                                </Box>
+                                                    <Elements stripe={stripePromise}>
+                                                        <StripeCardEntry
+                                                            submitText="Start Coherence subscription ($6.99)"
+                                                            clientSecret={paymentData.client_secret}
+                                                            afterSubmitAction={loadData}
+                                                            payOnSubmit={true}
+                                                        />
+                                                    </Elements>
+                                                    {/* <Paragraph>stripe element</Paragraph> */}
+                                            </Box>
+                                        </Layer>
+                                    ) : null}
+                                </>
                             )}
                         </>
                     ) : paymentData.payment_method ? (
