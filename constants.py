@@ -162,7 +162,7 @@ REQUEST_DOSE_WINDOW_END_TIME = Template("What time would you like dose window $c
 
 REQUEST_PAYMENT_METHOD = "I don't have a free trial code on record for you. You can either enter it now, or login with your phone number at https://www.hellocoherence.com/login to create an account and fill in your payment information. Coherence is $6.99 / month with no long term commitment."
 
-INCORRECT_FREE_TRIAL_CODE = "Sorry, that wasn't a valid code. Feel free to text our customer service line at (650) 667-1146‬ with any questions, or sign up for a paid account at https://www.hellocoherence.com."
+INCORRECT_FREE_TRIAL_CODE = "Sorry, that wasn't a valid code. Feel free to text our customer service line at (650) 667-1146‬ with any questions, or login with your phone number at https://www.hellocoherence.com/login to create an account and fill in your payment information."
 
 ONBOARDING_COMPLETE = "Great, you'll get your first Coherence reminders starting tomorrow. If you have any questions or concerns, text my customer service line at (650) 667-1146‬."
 
