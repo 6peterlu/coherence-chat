@@ -400,6 +400,10 @@ def landing_page_signup():
     db.session.commit()
     return jsonify()
 
+@app.route("/patientState", methods=["GET"])
+@auth.login_required
+def get_patient_state():
+    return jsonify({"state": g.user.state.value})
 
 @app.route("/patientData/new", methods=["GET"])
 @auth.login_required

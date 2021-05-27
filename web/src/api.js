@@ -131,3 +131,8 @@ export const landingPageSignup = async (name, email, phoneNumber, trialCode) => 
   });
   return response;
 }
+
+export const getPatientState = async () => {
+  const response = await get("patientState",  {});
+  return response;
+}

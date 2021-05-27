@@ -164,7 +164,7 @@ REQUEST_PAYMENT_METHOD = "I don't have a free trial code on record for you. You 
 
 INCORRECT_FREE_TRIAL_CODE = "Sorry, that wasn't a valid code. Feel free to text our customer service line at (650) 667-1146‬ with any questions, or sign up for a paid account at https://www.hellocoherence.com."
 
-ONBOARDING_COMPLETE = "Great, you'll get your first Coherence reminders starting tomorrow. If you have any questions or concerns, text my customer service line at (650) 667-1146‬ ."
+ONBOARDING_COMPLETE = "Great, you'll get your first Coherence reminders starting tomorrow. If you have any questions or concerns, text my customer service line at (650) 667-1146‬."
 
 TIMEZONE_REQUEST = "Thanks for letting me know your dose windows. What timezone are you in? This will help us send you reminders at the right times. Please respond with a number.\n[1] Pacific\n[2] Mountain\n[3] Central\n[4] Eastern"
 
