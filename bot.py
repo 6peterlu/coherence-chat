@@ -1057,11 +1057,12 @@ def get_stripe_data(user):
         # criteria for case 2: user is active or paused and has end_of_service
         elif g.user.state in [UserState.ACTIVE, UserState.PAUSED] and g.user.end_of_service is not None:
             active_subscription = None
-            for subscription in customer.subscriptions.data:
-                subscription = stripe.Subscription.retrieve(subscription.id, expand=["latest_invoice.payment_intent"])
-                if subscription.status == "active":
-                    active_subscription = subscription
-                    break
+            if hasattr(customer, "subscriptions"):
+                for subscription in customer.subscriptions.data:
+                    subscription = stripe.Subscription.retrieve(subscription.id, expand=["latest_invoice.payment_intent"])
+                    if subscription.status == "active":
+                        active_subscription = subscription
+                        break
             if active_subscription is None:
                 new_subscription = stripe.Subscription.create(
                     customer=customer.id,
