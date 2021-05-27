@@ -9,8 +9,10 @@ const FinishOnboarding = () => {
     const history = useHistory();
     React.useEffect(() => {
         const loadState = async () => {
-            const { state } = await getPatientState();
-            if (["active", "paused"].includes(state)) {
+            const stateData = await getPatientState();
+            if (stateData === null) {
+                history.push("/welcome");
+            } else if (["active", "paused"].includes(stateData.state)) {
                 history.push("/");
             }
         }
