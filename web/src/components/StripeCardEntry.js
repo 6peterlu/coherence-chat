@@ -5,7 +5,7 @@ import {
     useElements,
   } from '@stripe/react-stripe-js';
 import AnimatingButton from "../components/AnimatingButton";
-import { Paragraph, Spinner } from "grommet";
+import { Box, Paragraph, Spinner } from "grommet";
 import { submitPaymentInfo } from "../api";
 
 const StripeCardEntry = ({ submitText, clientSecret, afterSubmitAction, payOnSubmit }) => {
@@ -57,20 +57,22 @@ const StripeCardEntry = ({ submitText, clientSecret, afterSubmitAction, payOnSub
     return (
         <>
             <CardElement onReady={() => {setReady(true)}} />
-            {ready ? <>
-                <AnimatingButton
-                    label={submitText ? submitText : "Save payment information"}
-                    onClick={async () => {
-                        await submitPaymentInfo(); // submits to our backend
-                        await submitPayment();  // submits to stripe
-                        afterSubmitAction();  // any reloading that needs to be done after submitting payment info
-                    }}
-                    animating={validatingCard}
-                    primary={true}
-                />
-                {validatingCard ? <Paragraph>Submitting your payment information. Please do not close this window.</Paragraph> : null}
-                </> : <Spinner />
-            }
+            <Box margin={{top: "medium"}}>
+                {ready ? <>
+                    <AnimatingButton
+                        label={submitText ? submitText : "Save payment information"}
+                        onClick={async () => {
+                            await submitPaymentInfo(); // submits to our backend
+                            await submitPayment();  // submits to stripe
+                            afterSubmitAction();  // any reloading that needs to be done after submitting payment info
+                        }}
+                        animating={validatingCard}
+                        primary={true}
+                    />
+                    {validatingCard ? <Paragraph>Submitting your payment information. Please do not close this window.</Paragraph> : null}
+                    </> : <Spinner />
+                }
+            </Box>
         </>
     )
 }
