@@ -19,8 +19,7 @@ const Payment = () => {
     const [animating, setAnimating] = React.useState(false);
     const [paymentData, setPaymentData] = React.useState(null);
     const [addCardModalVisible, setAddCardModalVisible] = React.useState(false);
-    console.log("card modal visible");
-    console.log(addCardModalVisible);
+    const [payWithCardModalVisible, setPayWithCardModalVisible] = React.useState(false);
     const [_, __, removeCookie] = useCookies(['token']);
     const history = useHistory();
     const loadData = React.useCallback(async () => {
@@ -53,11 +52,15 @@ const Payment = () => {
         return <Spinner />
     }
     if (paymentData.secondary_state === "payment_verification_pending") {
-        return <Paragraph>We're verifying your payment information. You'll get a text when you're verified with further instructions. Thanks for your patience!</Paragraph>
+        return (
+            <Box margin="large">
+                <Paragraph textAlign="center">We're verifying your payment information. You'll get a text when you're verified with further instructions. Thanks for your patience!</Paragraph>
+            </Box>
+        )
     } else if (paymentData.state === 'payment_method_requested') {
         return (
             <Elements stripe={stripePromise}>
-                <Box padding="large">
+                <Box margin="large">
                     <Heading size="small">Enter payment information</Heading>
                     <Paragraph>Looking forward to helping you with your medication. If you have any questions before signing up, please reach out to us over text at (650) 667-1146.</Paragraph>
                     <StripeCardEntry
@@ -75,7 +78,7 @@ const Payment = () => {
                     <Heading size="small">Manage your subscription</Heading>
                     {paymentData.state === "subscription_expired" ? (
                         <>
-                            <Paragraph alignSelf="center">Your subscription expired on {DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}</Paragraph>
+                            <Paragraph alignSelf="center">Your subscription expired on {DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}.</Paragraph>
                             {paymentData.payment_method ? (
                                 <AnimatingButton
                                     label="Renew for $6.99"
@@ -87,9 +90,40 @@ const Payment = () => {
                                         setLoading(true);
                                     }}
                                     animating={animating}
+                                    primary={true}
                                 />
                             ) : (
-                                <Paragraph>Enter payment data for renewal</Paragraph>
+                                <>
+                                    <Button
+                                        label="Renew for $6.99"
+                                        onClick={() => {setPayWithCardModalVisible(true)}}
+                                        primary={true}
+                                    />
+                                    {payWithCardModalVisible ? (
+                                        <Layer
+                                            responsive={false}
+                                            onEsc={() => setPayWithCardModalVisible(false)}
+                                            onClickOutside={() => setPayWithCardModalVisible(false)}
+                                            animation={false}
+                                        >
+                                            <Box width="90vw" pad="large">
+                                                <Box direction="row" justify="between">
+                                                    <Paragraph size="large">Enter credit card information</Paragraph>
+                                                    <Button icon={<Close />} onClick={() => setPayWithCardModalVisible(false)}/>
+                                                </Box>
+                                                    <Elements stripe={stripePromise}>
+                                                        <StripeCardEntry
+                                                            submitText="Start Coherence subscription ($6.99)"
+                                                            clientSecret={paymentData.client_secret}
+                                                            afterSubmitAction={loadData}
+                                                            payOnSubmit={true}
+                                                        />
+                                                    </Elements>
+                                                    {/* <Paragraph>stripe element</Paragraph> */}
+                                            </Box>
+                                        </Layer>
+                                    ) : null}
+                                </>
                             )}
                         </>
                     ) : paymentData.payment_method ? (
@@ -134,13 +168,16 @@ const Payment = () => {
                     <Box direction="row" justify="between">
                         <Button label="Go back" margin={{vertical: "small"}} onClick={() => {history.push("/")}}/>
                         {
-                            <Button
+                            <AnimatingButton
                                 label={paymentData.payment_method ? "Cancel subscription" : "Stop free trial"}
                                 margin={{vertical: "small"}}
                                 onClick={async () => {
+                                    setAnimating(true);
                                     await cancelSubscription();
                                     setLoading(true);
                                 }}
+                                animating={animating}
+                                disabled={paymentData.state === "subscription_expired"}
                             />
                         }
                     </Box>

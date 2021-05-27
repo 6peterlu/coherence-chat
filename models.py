@@ -82,8 +82,9 @@ class User(db.Model):
         db.Enum(UserSecondaryState, values_callable=lambda obj: [e.value for e in obj]),
         nullable=True
     )
-    stripe_customer_id = db.Column(db.String)  # cross reference for stripe customer object. This indicates whether the user has previously added payment info
+    stripe_customer_id = db.Column(db.String)  # cross reference for stripe customer object.
     early_adopter = db.Column(db.Boolean)  # just some special treats for our early users!
+    secret_text_code = db.Column(db.Integer)  # 2FA codes
 
     def __init__(
         self,
@@ -133,27 +134,32 @@ class User(db.Model):
         start_of_day, _ = self.current_day_bounds
         return (input_time - start_of_day).days
 
-
     def resume(self, scheduler, send_intro_text_new, send_upcoming_dose_message, silent=False):
+        print("resume")
         print(self.state)
+        text_sent = False
         if self.state == UserState.PAUSED:
             self.state = UserState.ACTIVE
-            sorted_dose_windows = sorted(self.dose_windows, key=lambda dw: dw.next_start_date)
+            active_dose_windows = list(filter(lambda dw: dw.active, self.dose_windows))
+            sorted_dose_windows = sorted(active_dose_windows, key=lambda dw: dw.next_start_date)
+            print(active_dose_windows)
+            for dw in sorted_dose_windows:
+                print(dw.next_start_date)
             for i, dose_window in enumerate(sorted_dose_windows):
-                if dose_window.active:
-                    print("scheduling initial job")
-                    dose_window.schedule_initial_job(scheduler, send_intro_text_new)
-                    if not silent:
-                        print("not silent")
-                        # send resume messages
-                        if dose_window.within_dosing_period() and not dose_window.is_recorded():
-                            print("sending intro text")
-                            send_intro_text_new(dose_window.id, welcome_back=True)
-                        elif i == 0:  # upcoming dose
-                            send_upcoming_dose_message(self, dose_window)
+                dose_window.schedule_initial_job(scheduler, send_intro_text_new)
+                if not silent:
+                    print("not silent")
+                    # send resume messages
+                    if dose_window.within_dosing_period() and not dose_window.is_recorded():
+                        print("sending intro text")
+                        send_intro_text_new(dose_window.id, welcome_back=True)
+                        text_sent = True
+            if not text_sent and len(sorted_dose_windows) > 0:
+                send_upcoming_dose_message(self, sorted_dose_windows[0])
             db.session.commit()
 
     def pause(self, scheduler, send_pause_message, silent=False):
+        print("pause")
         if self.state == UserState.ACTIVE:
             self.state = UserState.PAUSED
             for dose_window in self.dose_windows:
@@ -165,6 +171,7 @@ class User(db.Model):
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
+        self.secret_text_code = None
         db.session.commit()
 
     def verify_password(self, password):
@@ -198,6 +205,12 @@ class User(db.Model):
             EventLog.user == self
         ).count()  # count is no more efficient than actually querying; this can be optimized: https://stackoverflow.com/questions/14754994/why-is-sqlalchemy-count-much-slower-than-the-raw-query
         return num_intro_events_today > 0
+
+    @property
+    def charge_date(self):
+        if self.end_of_service is None:
+            return None
+        return self.end_of_service - timedelta(days=1)
 
 class DoseWindow(db.Model):
     __tablename__ = 'dose_window'
@@ -476,6 +489,13 @@ class LandingPageSignup(db.Model):
     phone_number = db.Column(db.String)
     email = db.Column(db.String)
     trial_code = db.Column(db.String)
+    signup_time = db.Column(db.DateTime)
+    def __init__(self, name, phone_number, email, trial_code):
+        self.name = name
+        self.phone_number = phone_number
+        self.email = email
+        self.trial_code = trial_code
+        self.signup_time = get_time_now()
     def __repr__(self):
         return f"<LandingPageSignup {id}>"
 
@@ -528,3 +548,19 @@ class EventLogSchema(Schema):
     user = fields.Nested(UserSchema(exclude=("dose_windows", "doses")))
     medication = fields.Nested(MedicationSchema(exclude=("dose_windows", "user")))
     dose_window = fields.Nested(DoseWindowSchema(exclude=("user", "medications")))
+
+# class LandingPageSignup(db.Model):
+#     id = db.Column(db.Integer, primary_key=True)
+#     name = db.Column(db.String)
+#     phone_number = db.Column(db.String)
+#     email = db.Column(db.String)
+#     trial_code = db.Column(db.String)
+#     def __repr__(self):
+#         return f"<LandingPageSignup {id}>"
+class LandingPageSignupSchema(Schema):
+    id = fields.Integer()
+    name = fields.String()
+    phone_number = fields.String()
+    email = fields.String()
+    trial_code = fields.String()
+    signup_time = fields.DateTime(format='%Y-%m-%dT%H:%M:%S+00:00')

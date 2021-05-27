@@ -17,6 +17,10 @@
             <div id="eventListDiv" style="flex:1; max-height:400px; overflow-y: scroll;"></div>
         </div>
     </div>
+    <div style="flex-direction:row;display: flex;">
+        <div id="userListByState"></div>
+        <div id="websiteSignups"></div>
+    </div>
     <div>
         <input id="newUserPhoneNumber" type="number" placeholder="3604508655"/>
         <input id="newUserName" placeholder="name"/>
@@ -25,6 +29,10 @@
             <option value="free trial">30-day free trial</option>
         </select>
         <button id="createNewUserButton" onclick="createNewUser()">Create new user</button>
+    </div>
+    <div>
+        <input id="userNumberSearch" type="number" placeholder="3604508655"/>
+        <button id="searchForUser" onclick="refreshData()">Search for user by phone number</button>
     </div>
     <div id="userDetailedData"></div>
     <script defer>
@@ -43,7 +51,8 @@
             },
             mode: "cors"
         };
-        const apiURL = "https://coherence-chat.herokuapp.com";
+        const apiURL = "https://www.hellocoherence.com";
+        // const apiURL = "http://localhost:5000";
         // HTTP helpers
         const get = async (route, queryArgs) => {
 
@@ -227,6 +236,28 @@
             `;
             return htmlOut;
         }
+        const renderUserStateList = (stateDict) => {
+            let compiledHTML = "";
+            for (const state in stateDict) {
+                let stateSection = `<div><h3>${state}</h3><ol>`;
+                for (const userData of stateDict[state]) {
+                    stateSection += `<li>${userData.name} / ${userData.phone_number}</li>`
+                }
+                stateSection += "</ol></div>";
+                compiledHTML += stateSection;
+            }
+            const userStateDiv = document.getElementById("userListByState");
+            userStateDiv.innerHTML = compiledHTML;
+        }
+        const renderWebsiteSignups = (signups) => {
+            let compiledHTML = "<h3>Unresolved signups</h3><ol>";
+            for (const signup of signups) {
+                compiledHTML += `<li>${signup.name}/${signup.phone_number}/${signup.trial_code}/${signup.signup_time}<button onclick="deleteSignupRecord(\'${signup.id}\')">Delete signup record</button></li>`
+            }
+            compiledHTML += "</ol>";
+            const websiteSignupDiv = document.getElementById("websiteSignups");
+            websiteSignupDiv.innerHTML = compiledHTML;
+        }
         const createNewUser = () => {
             const phoneNumber = document.getElementById("newUserPhoneNumber").value;
             const name = document.getElementById("newUserName").value;
@@ -281,7 +312,9 @@
             });
         }
         const refreshData = () => {
-            get("admin/everything", {}).then(response => {console.log(response); return response.json()}).then(result => {
+            const phoneNumber = document.getElementById("userNumberSearch").value;
+            get("admin/everything", { phoneNumber }).then(response => {return response.json()}).then(result => {
+                console.log(result);
                 const userDetailedDataDiv = document.getElementById("userDetailedData");
                 const portedUsers = [];
                 userDetailedDataDiv.innerHTML = '';
@@ -307,6 +340,8 @@
                 const createUserButton = document.getElementById("createNewUserButton");
                 createUserButton.disabled = false;
                 createUserButton.innerHTML = "Create new user";
+                renderUserStateList(result.user_list_by_state);
+                renderWebsiteSignups(result.signups);
             });
             get("scheduler/jobs", {}).then(response => response.json()).then(result => {
                 renderJobs(result);
@@ -405,6 +440,12 @@
                     refreshData();
                 }
             );
+        }
+        const deleteSignupRecord = (signupId) => {
+            post("admin/deleteSignupRecord", { signupId }).then(
+                response => response.json()).then(result => {
+                    refreshData();
+                });
         }
         refreshData();
     </script>
