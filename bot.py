@@ -1232,14 +1232,7 @@ def stripe_webhook():
                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                         to=f"+1{ADMIN_PHONE_NUMBER}"
                     )
-            # TODO: add copy for renewing
-            related_user.state = UserState.PAUSED
-            db.session.commit()
-        if related_user.state in [UserState.ACTIVE, UserState.PAUSED]:  # subscription auto-renewal
-            subscription = stripe.Subscription.retrieve(event.data.object.subscription)
-            if subscription.status == "active":
-                related_user.end_of_service = datetime.fromtimestamp(subscription.current_period_end) + timedelta(days=1)
-                db.session.commit()
+            elif related_user.state == UserState.SUBSCRIPTION_EXPIRED:
                 if "NOALERTS" not in os.environ:
                     client.messages.create(
                         body=RENEWAL_COMPLETE,
@@ -1251,6 +1244,15 @@ def stripe_webhook():
                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                         to=f"+1{ADMIN_PHONE_NUMBER}"
                     )
+            # TODO: add copy for renewing
+            related_user.state = UserState.PAUSED
+            db.session.commit()
+        if related_user.state in [UserState.ACTIVE, UserState.PAUSED]:  # subscription auto-renewal
+            subscription = stripe.Subscription.retrieve(event.data.object.subscription)
+            if subscription.status == "active":
+                related_user.end_of_service = datetime.fromtimestamp(subscription.current_period_end) + timedelta(days=1)
+                db.session.commit()
+
     elif event.type == "payment_intent.payment_failed" or event.type == "charge.failed" or event.type == "invoice.payment_failed":
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
         if related_user is None:
