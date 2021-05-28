@@ -10,7 +10,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import {loadStripe} from '@stripe/stripe-js';
 
 import StripeCardEntry from "../components/StripeCardEntry";
-import { Close } from "grommet-icons";
+import { Close, FormPreviousLink } from "grommet-icons";
 import AnimatingButton from "../components/AnimatingButton";
 
 const Payment = () => {
@@ -20,6 +20,7 @@ const Payment = () => {
     const [paymentData, setPaymentData] = React.useState(null);
     const [addCardModalVisible, setAddCardModalVisible] = React.useState(false);
     const [payWithCardModalVisible, setPayWithCardModalVisible] = React.useState(false);
+    const [cancelModalVisible, setCancelModalVisible] = React.useState(false);
     const [_, __, removeCookie] = useCookies(['token']);
     const history = useHistory();
     const loadData = React.useCallback(async () => {
@@ -75,7 +76,6 @@ const Payment = () => {
     } else if (["paused", "active", "subscription_expired"].includes(paymentData.state)) {
         return (
                 <Box margin="large">
-                    <Heading size="small">Manage your subscription</Heading>
                     {paymentData.state === "subscription_expired" ? (
                         <>
                             <Paragraph alignSelf="center">Your subscription expired on {DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}.</Paragraph>
@@ -165,22 +165,57 @@ const Payment = () => {
                         </>
                     )
                     }
-                    <Box direction="row" justify="between">
-                        <Button label="Go back" margin={{vertical: "small"}} onClick={() => {history.push("/")}}/>
+                    <Box align="center">
                         {
                             <AnimatingButton
                                 label={paymentData.payment_method ? "Cancel subscription" : "Stop free trial"}
                                 margin={{vertical: "small"}}
-                                onClick={async () => {
-                                    setAnimating(true);
-                                    await cancelSubscription();
-                                    setLoading(true);
-                                }}
+                                onClick={() => {setCancelModalVisible(true)}}
                                 animating={animating}
                                 disabled={paymentData.state === "subscription_expired"}
+                                color="status-error"
                             />
                         }
                     </Box>
+                    {cancelModalVisible ? (
+                        <Layer
+                            responsive={false}
+                            onEsc={() => setCancelModalVisible(false)}
+                            onClickOutside={() => setCancelModalVisible(false)}
+                            animation={false}
+                        >
+                            <Box width="90vw" pad="large">
+                                <Box direction="row" justify="between">
+                                    <Paragraph size="large">Subscription cancellation</Paragraph>
+                                    <Button icon={<Close />} onClick={() => setCancelModalVisible(false)}/>
+                                </Box>
+                                <Box>
+                                    <Paragraph>Are you sure you want to cancel your subscription?</Paragraph>
+                                    <Box justify="between" direction="row">
+                                        <Button
+                                            label="Go back"
+                                            onClick={() => setCancelModalVisible(false)}
+                                            icon={<FormPreviousLink />}
+                                            size="small"
+                                        />
+                                        <AnimatingButton
+                                            label="Cancel"
+                                            onClick={async () => {
+                                                setAnimating(true);
+                                                await cancelSubscription();
+                                                setLoading(true);
+                                            }}
+                                            color="status-error"
+                                            icon={<Close/>}
+                                            size="small"
+                                            animating={animating}
+                                        />
+                                    </Box>
+                                </Box>
+                                    {/* <Paragraph>stripe element</Paragraph> */}
+                            </Box>
+                        </Layer>
+                    ) : null}
                 </Box>
 
         );

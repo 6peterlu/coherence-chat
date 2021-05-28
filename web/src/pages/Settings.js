@@ -1,9 +1,10 @@
 import { Box, Button, Heading, Layer, Paragraph, Select, Spinner, Tab, Tabs } from "grommet";
-import { Calendar, ContactInfo, Close } from "grommet-icons";
+import { Calendar, ContactInfo, Close, Home, FormPreviousLink } from "grommet-icons";
 import React from "react";
 
 import { getUserProfile } from "../api";
 import { useHistory } from "react-router-dom";
+import Payment from "./Payment";
 
 const Settings = () => {
     const history = useHistory();
@@ -27,7 +28,17 @@ const Settings = () => {
     }, [userProfileData]);
     return (
         <Box margin="large">
+            <Box align="start">
+                <Button
+                    icon={<Box direction="row"><FormPreviousLink/><Home/></Box>}
+                    label=" "
+                    size="small"
+                    onClick={() => {history.push("/")}}
+                />
+            </Box>
+
             <Heading size="small">Settings</Heading>
+
             <Tabs alignSelf="stretch">
                 <Tab title="Profile" icon={<ContactInfo />}>
                     {userProfileData !== null ?
@@ -62,7 +73,7 @@ const Settings = () => {
                     }
                 </Tab>
                 <Tab title="Subscription" icon={<Calendar/>}>
-                    <Paragraph>credit cards</Paragraph>
+                    <Payment />
                 </Tab>
             </Tabs>
         </Box>
