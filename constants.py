@@ -194,3 +194,5 @@ USER_RENEWED_NOTIF = Template("User with phone number $phone_number renewed.")
 USER_PAYMENT_METHOD_FAIL_NOTIF = Template("User with phone number $phone_number had payment method validation failure.")
 
 USER_CANCELLED_NOTIF = Template("User with phone number $phone_number cancelled.")
+
+USER_SIGNUP_NOTIF = Template("User with name $name signed up on landing page.")

@@ -131,6 +131,7 @@ from constants import (
     USER_ERROR_RESPONSE,
     USER_PAYMENT_METHOD_FAIL_NOTIF,
     USER_RENEWED_NOTIF,
+    USER_SIGNUP_NOTIF,
     USER_SUBSCRIBED_NOTIF,
     WEIGHT_MESSAGE,
     WELCOME_BACK_MESSAGES
@@ -383,6 +384,12 @@ def landing_page_signup():
     )
     db.session.add(new_signup)
     db.session.commit()
+    if "NOALERTS" not in os.environ:
+        client.messages.create(
+            body=USER_SIGNUP_NOTIF.substitute(name=request.json["name"]),
+            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+            to=f"+1{request.json['name']}"
+        )
     return jsonify()
 
 @app.route("/patientState", methods=["GET"])
