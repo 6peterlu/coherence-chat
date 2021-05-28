@@ -1031,9 +1031,14 @@ def test_onboarding_flow_payment_endpoint_side_effects(mock_sub_create, mock_str
 @mock.patch("stripe.Customer.create")
 @mock.patch("stripe.Subscription.create")
 def test_trial_user_payment_endpoint_side_effects(mock_sub_create, mock_stripe_create, client, db_session, user_record):
-    mock_stripe_create.return_value.id = "cus_test"
-    mock_stripe_create.return_value.invoice_settings.default_payment_method = None
-    mock_sub_create.return_value.latest_invoice.payment_intent.client_secret = "secret"
+    mock_customer = mock.MagicMock()
+    mock_customer.invoice_settings.default_payment_method = None
+    mock_customer.id = "cus_test"
+    mock_customer.subscriptions.data = []
+    mock_stripe_create.return_value = mock_customer
+    mock_subscription = mock.MagicMock()
+    mock_subscription.pending_setup_intent.client_secret = "secret"
+    mock_sub_create.return_value = mock_subscription
     user_record.end_of_service = datetime(2012,1,15)
     db_session.add(user_record)
     db_session.commit()

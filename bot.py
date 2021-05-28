@@ -1191,7 +1191,6 @@ def user_get_payment_info():
             if g.user.stripe_customer_id is not None:
                 default_payment_method = customer.invoice_settings.default_payment_method
                 return_dict["payment_method"] = None if default_payment_method is None else {"brand": default_payment_method.card.brand, "last4": default_payment_method.card.last4 }
-        print(return_dict)
         # get stripe payment method data
     elif g.user.state == UserState.SUBSCRIPTION_EXPIRED:
         return_dict["subscription_end_date"] = convert_naive_to_local_machine_time(g.user.end_of_service)
