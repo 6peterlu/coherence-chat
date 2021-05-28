@@ -77,6 +77,7 @@ const Payment = () => {
                 <Box margin="large">
                     <Heading size="small">Enter payment information</Heading>
                     <Paragraph>Looking forward to helping you with your medication. If you have any questions before signing up, please reach out to us over text at (650) 667-1146.</Paragraph>
+                    <Paragraph size="small">Please enter your credit card information below to continue. If you are asked for a CVC code, it is usually a 3 digit number on the back of your credit card.</Paragraph>
                     <StripeCardEntry
                         submitText="Start Coherence subscription ($6.99)"
                         clientSecret={paymentData.client_secret}
@@ -124,15 +125,15 @@ const Payment = () => {
                                                     <Paragraph size="large">Enter credit card information</Paragraph>
                                                     <Button icon={<Close />} onClick={() => setPayWithCardModalVisible(false)}/>
                                                 </Box>
-                                                    <Elements stripe={stripePromise}>
-                                                        <StripeCardEntry
-                                                            submitText="Start Coherence subscription ($6.99)"
-                                                            clientSecret={paymentData.client_secret}
-                                                            afterSubmitAction={loadData}
-                                                            payOnSubmit={true}
-                                                        />
-                                                    </Elements>
-                                                    {/* <Paragraph>stripe element</Paragraph> */}
+                                                <Paragraph size="small">Please enter your credit card information below to continue. If you are asked for a CVC code, it is usually a 3 digit number on the back of your credit card.</Paragraph>
+                                                <Elements stripe={stripePromise}>
+                                                    <StripeCardEntry
+                                                        submitText="Start Coherence subscription ($6.99)"
+                                                        clientSecret={paymentData.client_secret}
+                                                        afterSubmitAction={loadData}
+                                                        payOnSubmit={true}
+                                                    />
+                                                </Elements>
                                             </Box>
                                         </Layer>
                                     ) : null}
@@ -160,18 +161,18 @@ const Payment = () => {
                                             <Paragraph size="large">Enter credit card information</Paragraph>
                                             <Button icon={<Close />} onClick={() => setAddCardModalVisible(false)}/>
                                         </Box>
-                                            <Elements stripe={stripePromise}>
-                                                <StripeCardEntry
-                                                    submitText={`Add card (will be charged on ${DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}.)`}
-                                                    clientSecret={paymentData.client_secret}
-                                                    afterSubmitAction={async () => {
-                                                        await loadData();
-                                                        setAddCardModalVisible(false);
-                                                    }}
-                                                    payOnSubmit={false}
-                                                />
-                                            </Elements>
-                                            {/* <Paragraph>stripe element</Paragraph> */}
+                                        <Paragraph size="small">Please enter your credit card information below to continue. If you are asked for a CVC code, it is usually a 3 digit number on the back of your credit card.</Paragraph>
+                                        <Elements stripe={stripePromise}>
+                                            <StripeCardEntry
+                                                submitText={`Add card (will be charged on ${DateTime.fromHTTP(paymentData.subscription_end_date).toLocaleString(DateTime.DATE_MED)}.)`}
+                                                clientSecret={paymentData.client_secret}
+                                                afterSubmitAction={async () => {
+                                                    await loadData();
+                                                    setAddCardModalVisible(false);
+                                                }}
+                                                payOnSubmit={false}
+                                            />
+                                        </Elements>
                                     </Box>
                                 </Layer>
                             ) : null}

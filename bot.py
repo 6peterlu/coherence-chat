@@ -105,6 +105,7 @@ from constants import (
     INITIAL_SUFFIXES,
     MANUAL_TEXT_NEEDED_MSG,
     ONBOARDING_COMPLETE,
+    PASSWORD_UPDATED_MESSAGE,
     PAUSE_MESSAGE,
     PAYMENT_METHOD_FAILURE,
     REMINDER_OUT_OF_RANGE_MSG,
@@ -1028,8 +1029,22 @@ def update_user_profile():
     g.user.timezone = request.json["timezone"]
     db.session.commit()
     # HACK: nuclear option for handling timezones
+    # this also disallows us from using this endpoint as currently constituted for any other profile updates.
     g.user.pause(scheduler, send_pause_message, silent=True)
     g.user.resume(scheduler, send_intro_text_new, send_upcoming_dose_message, silent=True)
+    return jsonify()
+
+@app.route("/user/password", methods=["POST"])
+@auth.login_required
+def update_user_password():
+    g.user.set_password(request.json["password"])
+    if "NOALERTS" not in os.environ:
+        client.messages.create(
+            body=PASSWORD_UPDATED_MESSAGE,
+            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+            to=f"+1{g.user.phone_number}"
+        )
+    db.session.commit()
     return jsonify()
 
 def get_stripe_data(user):

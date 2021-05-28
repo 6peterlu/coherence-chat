@@ -1,8 +1,8 @@
-import { Box, Button, Heading, Layer, Paragraph, Select, Spinner, Tab, Tabs } from "grommet";
+import { Box, Button, Heading, Layer, Paragraph, Select, Spinner, Tab, Tabs, TextInput } from "grommet";
 import { Calendar, ContactInfo, Close, Home, FormPreviousLink } from "grommet-icons";
 import React from "react";
 
-import { getUserProfile, updateUserProfile } from "../api";
+import { getUserProfile, updateUserPassword, updateUserProfile } from "../api";
 import { useHistory } from "react-router-dom";
 import Payment from "./Payment";
 import AnimatingButton from "../components/AnimatingButton";
@@ -12,6 +12,8 @@ const Settings = () => {
     const [userProfileData, setUserProfileData] = React.useState(null);
     const [editingField, setEditingField] = React.useState(null);
     const [animating, setAnimating] = React.useState(false);
+    const [newPassword1, setNewPassword1] = React.useState("");
+    const [newPassword2, setNewPassword2] = React.useState("");
     const closeEditingWindow = React.useCallback(() => {
         setUserProfileData({...userProfileData, updated: userProfileData.original});
         setEditingField(null);
@@ -43,10 +45,17 @@ const Settings = () => {
             <Tabs alignSelf="stretch">
                 <Tab title="Profile" icon={<ContactInfo />}>
                     {userProfileData !== null ?
-                        <Box direction="row" align="center" justify="between">
-                            <Paragraph>Timezone: {userProfileData.original.timezone}</Paragraph>
-                            <Button label="edit" size="small" onClick={() => {setEditingField("timezone")}}/>
-                        </Box> : <Spinner />
+                        <Box>
+                            <Box direction="row" align="center" justify="between">
+                                <Paragraph>Timezone: {userProfileData.original.timezone}</Paragraph>
+                                <Button label="edit" size="small" onClick={() => {setEditingField("timezone")}}/>
+                            </Box>
+                            <Box direction="row" align="center" justify="between">
+                                <Paragraph>Password: ••••••••</Paragraph>
+                                <Button label="edit" size="small" onClick={() => {setEditingField("password")}}/>
+                            </Box>
+                        </Box>
+                        : <Spinner />
                     }
                     {editingField === "timezone" ? (
                         <Layer
@@ -86,8 +95,42 @@ const Settings = () => {
                         </Layer>
                     ) : null
                     }
+                    {editingField === "password" ? (
+                        <Layer
+                            onEsc={closeEditingWindow}
+                            onClickOutside={closeEditingWindow}
+                            responsive={false}
+                        >
+                            <Box width="90vw" pad="large">
+                                <Box direction="row" justify="between">
+                                    <Paragraph size="large">Update password</Paragraph>
+                                    <Button icon={<Close />} onClick={closeEditingWindow} />
+                                </Box>
+                                <Paragraph>Enter new password twice for validation.</Paragraph>
+                                <Box align="center">
+                                    <TextInput type="password" placeholder="••••••••" value={newPassword1} onChange={(event) => {setNewPassword1(event.target.value)}}/>
+                                    <TextInput type="password" placeholder="••••••••" value={newPassword2} onChange={(event) => {setNewPassword2(event.target.value)}}/>
+                                    <Box margin={{vertical: "medium"}}>
+                                        <AnimatingButton
+                                            animating={animating}
+                                            label="Update password"
+                                            onClick={async () => {
+                                                setAnimating(true);
+                                                await updateUserPassword(newPassword1);
+                                                await pullUserProfileData();
+                                            }}
+                                            disabled={ !newPassword1 || newPassword1 !== newPassword2 }
+                                        />
+                                    </Box>
+                                </Box>
+                            </Box>
+                        </Layer>
+                    ) : null
+                    }
                 </Tab>
-                {userProfileData && !userProfileData.original.early_adopter ? (<Tab title="Subscription" icon={<Calendar/>}>
+                {userProfileData &&
+                !userProfileData.original.early_adopter &&
+                userProfileData.original.onboarding_type === "standard" ? (<Tab title="Subscription" icon={<Calendar/>}>
                     <Payment />
                 </Tab>) : null}
             </Tabs>

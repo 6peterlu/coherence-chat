@@ -175,6 +175,8 @@ CANCELLATION_RESPONSE = "Your Coherence subscription has been successfully cance
 
 TIMEZONE_REQUEST = "Thanks for letting me know your dose windows. What timezone are you in? This will help us send you reminders at the right times. Please respond with a number.\n[1] Pacific\n[2] Mountain\n[3] Central\n[4] Eastern"
 
+PASSWORD_UPDATED_MESSAGE = "Your password was updated successfully. If you didn't update your password, please text (650) 667-1146 and request a password reset. Thank you!"
+
 BLOOD_GLUCOSE_MESSAGE = Template("🕒 $time\nBlood glucose recorded: $blood_glucose mg/dl.\n📝📝📝📝")
 
 WEIGHT_MESSAGE = Template("🕒 $time\nWeight recorded: $weight lbs.\n📝📝📝📝")
