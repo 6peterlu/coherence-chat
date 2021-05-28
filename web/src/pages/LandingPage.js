@@ -22,10 +22,11 @@ const feature_copy_1 = "More than just a reminder.";
 const reviews_copy_1 = "See what others are saying.";
 const reviews_copy_2 = "Cheryl";
 const reviews_copy_3 = "\"I love it, I love it, I love it. I was previously using my phone calendar to remind me and that was not helping at all. I've remembered all of my doses on Coherence.\"";
-const reviews_copy_4 = "Jeanette";
-const reviews_copy_5 = "\"I find Coherence very uplifting, and it makes it so easy for me to stick to my critical medications.\"";
-const reviews_copy_6 = "Haddi";
-const reviews_copy_7 = "insert review here";
+const reviews_copy_4 = "Andie";
+const reviews_copy_5 = "Coherence has helped me track my medicine for months now — I am indebted to its texting function for keeping myself more accountable. The kind messaging and gentle reminders are incredibly sweet; I don’t feel like I’m talking to a sterile robot but someone who is genuinely invested in my health.";
+const reviews_copy_6 = "Jeanette";
+const reviews_copy_7 = "\"I find Coherence very uplifting, and it makes it so easy for me to stick to my critical medications.\"";
+
 
 
 const cta_copy_1 = "We can't wait to be a part of your medication journey.";
