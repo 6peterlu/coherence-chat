@@ -39,6 +39,12 @@ const grommetTheme = {
         dark: "FFF"
       }
     }
+  },
+  tab: {
+    active: {
+      background: "brand"
+    },
+    pad: "small"
   }
 }
 

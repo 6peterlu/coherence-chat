@@ -94,7 +94,8 @@ def test_user_schema(user_record, dose_window_record, medication_record, medicat
         "timezone": "US/Pacific",
         "pending_announcement": None,
         'onboarding_type': 'standard',
-        'state': 'active'
+        'state': 'active',
+        'early_adopter': False
     }
 
 def test_dose_window_schema(dose_window_record, medication_record, medication_record_2, user_record):
@@ -122,6 +123,7 @@ def test_dose_window_schema(dose_window_record, medication_record, medication_re
         'user': {
             'name': 'Peter',
             'manual_takeover': False,
+            'early_adopter': False,
             'phone_number': '3604508655',
             'id': user_record.id,
             'timezone': 'US/Pacific',
@@ -277,6 +279,7 @@ def test_medication_schema(dose_window_record, medication_record, user_record):
         'instructions': None,
         'user': {
             'phone_number': '3604508655',
+            'early_adopter': False,
             'name': 'Peter',
             'manual_takeover': False,
             'id': user_record.id,

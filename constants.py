@@ -3,19 +3,22 @@ from string import Template
 MORNING_PREFIXES = [
     "Good morning!",
     "Hope your day is off to a great start.",
-    "Looking forward to a great day together."
+    "Looking forward to a great day together.",
+    "Rise and shine!"
 ]
 
 AFTERNOON_PREFIXES = [
     "Hope your day is going well so far.",
     "Hope you had a great lunch.",
-    "Good afternoon!"
+    "Good afternoon!",
+    "Hope the weather is nice out this afternoon!"
 ]
 
 EVENING_PREFIXES = [
     "Good evening!",
     "Hope you got to catch the sunset today!",
-    "Hope you're having a good evening."
+    "Hope you're having a good evening.",
+    "Hope your day has been great."
 ]
 
 TIME_OF_DAY_PREFIX_MAP = {
@@ -172,6 +175,8 @@ CANCELLATION_RESPONSE = "Your Coherence subscription has been successfully cance
 
 TIMEZONE_REQUEST = "Thanks for letting me know your dose windows. What timezone are you in? This will help us send you reminders at the right times. Please respond with a number.\n[1] Pacific\n[2] Mountain\n[3] Central\n[4] Eastern"
 
+PASSWORD_UPDATED_MESSAGE = "Your password was updated successfully. If you didn't update your password, please text (650) 667-1146 and request a password reset. Thank you!"
+
 BLOOD_GLUCOSE_MESSAGE = Template("🕒 $time\nBlood glucose recorded: $blood_glucose mg/dl.\n📝📝📝📝")
 
 WEIGHT_MESSAGE = Template("🕒 $time\nWeight recorded: $weight lbs.\n📝📝📝📝")
@@ -189,3 +194,5 @@ USER_RENEWED_NOTIF = Template("User with phone number $phone_number renewed.")
 USER_PAYMENT_METHOD_FAIL_NOTIF = Template("User with phone number $phone_number had payment method validation failure.")
 
 USER_CANCELLED_NOTIF = Template("User with phone number $phone_number cancelled.")
+
+USER_SIGNUP_NOTIF = Template("User with name $name signed up on landing page.")

@@ -136,3 +136,18 @@ export const getPatientState = async () => {
   const response = await get("patientState",  {});
   return response;
 }
+
+export const getUserProfile = async () => {
+  const response = await get("user/profile", {});
+  return response;
+}
+
+export const updateUserProfile = async (userData) => {
+  const response = await post("user/profile", userData);
+  return response;
+}
+
+export const updateUserPassword = async (password) => {
+  const response = await post("user/password", { password });
+  return response;
+}

@@ -1,5 +1,5 @@
 import { Anchor, Box, Button, Heading, Image, Paragraph, TextInput } from "grommet";
-import { Clear, Favorite, Info } from "grommet-icons";
+import { Clear, Favorite, Info, Star } from "grommet-icons";
 import React from "react";
 import { landingPageSignup } from "../api";
 import AnimatingButton from "../components/AnimatingButton";
@@ -18,6 +18,16 @@ const differentiator_copy_6 = "Coherence will text you at your phone number, no 
 const differentiator_copy_7 = "Coherence learns about your habits over time and tailors its texting frequency and style around your preferences.";
 
 const feature_copy_1 = "More than just a reminder.";
+
+const reviews_copy_1 = "See what others are saying.";
+const reviews_copy_2 = "Cheryl";
+const reviews_copy_3 = "\"I love it, I love it, I love it. I was previously using my phone calendar to remind me and that was not helping at all. I've remembered all of my doses on Coherence.\"";
+const reviews_copy_4 = "Andie";
+const reviews_copy_5 = "\"Coherence has helped me track my medicine for months now — I am indebted to its texting function for keeping myself more accountable. The kind messaging and gentle reminders are incredibly sweet; I don’t feel like I’m talking to a sterile robot but someone who is genuinely invested in my health.\"";
+const reviews_copy_6 = "Jeanette";
+const reviews_copy_7 = "\"I find Coherence very uplifting, and it makes it so easy for me to stick to my critical medications.\"";
+
+
 
 const cta_copy_1 = "We can't wait to be a part of your medication journey.";
 const cta_copy_2 = "Coherence is available now for $6.99 / month. Sign up below for free information!";
@@ -40,7 +50,7 @@ const LandingPage = ({size}) => {
         if (!email) {
             return {disabled: true, text: "Email field empty."}
         }
-        const emailRegex = /.*\@.*\..*/;
+        const emailRegex = /.*@.*\..*/;
         if (!emailRegex.test(email)) {
             return { disabled: true, text: "Email format is invalid."}
         }
@@ -122,14 +132,58 @@ const LandingPage = ({size}) => {
                         />
                     </Box>
                 </Box>
-                <Box background="brand" id="signup" align="center" pad="large">
+                <Box background="brand" align="center">
+                    <Heading size="small" textAlign="center" color="status-warning">{reviews_copy_1}</Heading>
+                    <Box justify="between" direction="row" gap="large" margin={{ horizontal: "large" }}>
+                        <Box width="33%" align="center">
+                            <Box direction="row" align="center">
+                                <Paragraph size="large">{reviews_copy_2}</Paragraph>
+                                <Box direction="row" margin={{left: "small"}} wrap={true}>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                </Box>
+                            </Box>
+                            <Paragraph textAlign="center">{reviews_copy_3}</Paragraph>
+                        </Box>
+                        <Box width="33%" align="center">
+                            <Box direction="row" align="center">
+                                <Paragraph size="large">{reviews_copy_4}</Paragraph>
+                                <Box direction="row" margin={{left: "small"}} wrap={true}>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                </Box>
+                            </Box>
+                            <Paragraph textAlign="center">{reviews_copy_5}</Paragraph>
+                        </Box>
+                        <Box width="33%" align="center">
+                            <Box direction="row" align="center">
+                                <Paragraph size="large">{reviews_copy_6}</Paragraph>
+                                <Box direction="row" margin={{left: "small"}} wrap={true}>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                </Box>
+                            </Box>
+                            <Paragraph textAlign="center">{reviews_copy_7}</Paragraph>
+                        </Box>
+                    </Box>
+                </Box>
+                <Box id="signup" align="center" pad="large">
                     <Heading size="small" textAlign="center" color="status-warning">{cta_copy_1}</Heading>
                     <Paragraph textAlign="center">{cta_copy_2}</Paragraph>
                     {submittedForm ?
                         <Box width="large" background="white" round={true} pad="large" align="center">
                             <Paragraph textAlign="center">We've received your submission and will reach out to you shortly to complete signup. We can't wait for you to try Coherence!</Paragraph>
                         </Box> :
-                        <Box width="large">
+                        <Box width="medium">
                             <Paragraph>Name</Paragraph>
                             <TextInput placeholder="Kari" value={name} onChange={(e) => {setName(e.target.value)}}/>
                             <Paragraph>Email address</Paragraph>
@@ -156,7 +210,7 @@ const LandingPage = ({size}) => {
                         </Box>
                     }
                 </Box>
-                <Box direction="row" margin={{horizontal: "large"}} justify="between">
+                <Box direction="row" pad={{horizontal: "large"}} justify="between" background="brand">
                     <Box>
                         <Paragraph margin={{bottom: "small"}} size="large">Coherence</Paragraph>
                         <Paragraph size="small" margin={{vertical: "none"}}>60 Rausch St #203, San Francisco, CA 94103</Paragraph>
@@ -230,7 +284,51 @@ const LandingPage = ({size}) => {
                         />
                     </Box>
                 </Box>
-                <Box background="brand" id="signup" align="center" pad="large">
+                <Box background="brand" align="center">
+                    <Heading size="small" textAlign="center" color="status-warning">{reviews_copy_1}</Heading>
+                    <Box justify="between" direction="row" gap="large" margin={{ horizontal: "large" }}>
+                        <Box width="33%" align="center">
+                            <Box align="center">
+                                <Paragraph size="large">{reviews_copy_2}</Paragraph>
+                                <Box direction="row" margin={{left: "small"}} wrap={true}>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                </Box>
+                            </Box>
+                            <Paragraph textAlign="center">{reviews_copy_3}</Paragraph>
+                        </Box>
+                        <Box width="33%" align="center">
+                            <Box align="center">
+                                <Paragraph size="large">{reviews_copy_4}</Paragraph>
+                                <Box direction="row" margin={{left: "small"}} wrap={true}>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                </Box>
+                            </Box>
+                            <Paragraph textAlign="center">{reviews_copy_5}</Paragraph>
+                        </Box>
+                        <Box width="33%" align="center">
+                            <Box align="center">
+                                <Paragraph size="large">{reviews_copy_6}</Paragraph>
+                                <Box direction="row" margin={{left: "small"}} wrap={true}>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                </Box>
+                            </Box>
+                            <Paragraph textAlign="center">{reviews_copy_7}</Paragraph>
+                        </Box>
+                    </Box>
+                </Box>
+                <Box id="signup" align="center" pad="large">
                     <Heading size="small" textAlign="center" color="status-warning">{cta_copy_1}</Heading>
                     <Paragraph textAlign="center">{cta_copy_2}</Paragraph>
                     {submittedForm ?
@@ -264,7 +362,7 @@ const LandingPage = ({size}) => {
                         </Box>
                     }
                 </Box>
-                <Box direction="row" margin={{horizontal: "large"}} justify="between">
+                <Box background="brand" direction="row" pad={{horizontal: "large"}} justify="between">
                     <Box>
                         <Paragraph margin={{bottom: "small"}} size="large">Coherence</Paragraph>
                         <Paragraph size="small" margin={{vertical: "none"}}>60 Rausch St #203, San Francisco, CA 94103</Paragraph>
@@ -335,7 +433,51 @@ const LandingPage = ({size}) => {
                         />
                     </Box>
                 </Box>
-                <Box background="brand" id="signup">
+                <Box background="brand" align="center">
+                    <Heading size="small" textAlign="center" color="status-warning">{reviews_copy_1}</Heading>
+                    <Box gap="medium" margin={{ horizontal: "medium" }} align="center">
+                        <Box align="center">
+                            <Box align="center">
+                                <Paragraph size="large">{reviews_copy_2}</Paragraph>
+                                <Box direction="row" margin={{left: "small"}} wrap={true}>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                </Box>
+                            </Box>
+                            <Paragraph textAlign="center">{reviews_copy_3}</Paragraph>
+                        </Box>
+                        <Box align="center">
+                            <Box align="center">
+                                <Paragraph size="large">{reviews_copy_4}</Paragraph>
+                                <Box direction="row" margin={{left: "small"}} wrap={true}>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                </Box>
+                            </Box>
+                            <Paragraph textAlign="center">{reviews_copy_5}</Paragraph>
+                        </Box>
+                        <Box align="center">
+                            <Box align="center">
+                                <Paragraph size="large">{reviews_copy_6}</Paragraph>
+                                <Box direction="row" margin={{left: "small"}} wrap={true}>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                    <Star/>
+                                </Box>
+                            </Box>
+                            <Paragraph textAlign="center">{reviews_copy_7}</Paragraph>
+                        </Box>
+                    </Box>
+                </Box>
+                <Box id="signup">
                     <Box align="center" margin="small">
                         <Heading size="small" textAlign="center" color="status-warning">{cta_copy_1}</Heading>
                         <Paragraph textAlign="center">{cta_copy_2}</Paragraph>
@@ -371,7 +513,7 @@ const LandingPage = ({size}) => {
                         }
                     </Box>
                 </Box>
-                <Box direction="row" margin={{horizontal: "large"}} justify="between">
+                <Box background="brand" direction="row" pad={{horizontal: "large"}} justify="between">
                     <Box>
                         <Paragraph margin={{bottom: "small"}} size="large">Coherence</Paragraph>
                         <Paragraph size="small" margin={{vertical: "none"}}>60 Rausch St #203, San Francisco, CA 94103</Paragraph>

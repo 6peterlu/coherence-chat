@@ -104,19 +104,21 @@ const Intro = () => {
             <Box align="start" margin="small">
                 <Button label="back to homepage" icon={<FormPreviousLink />} size="small" href="/welcome"/>
             </Box>
-            <Box height="20vh" align="center" justify="center" pad="large">
+            <Box flex={{grow: 1}} align="center" justify="center" pad="large">
                 <Paragraph>login to</Paragraph>
                 <Heading margin={{vertical: "small"}}>coherence</Heading>
             </Box>
-            <Box height="80vh" align="center" justify="between" background={{color: "brand", dark: true}} pad="large">
+            <Box flex={{grow: 4}} align="center" justify="between" background={{color: "brand", dark: true}} pad="large">
                 <Paragraph color="white" textAlign="center">Peace of mind with your medications is just around the corner.</Paragraph>
                 <Box align="center">
                     <Box width="200px" margin={{bottom: "medium", top: "xsmall"}}>
                         {getInputField()}
                     </Box>
-                    <Button label="submit" icon={<Login/>} onClick={submitAll} disabled={password !== passwordConfirm}/>
-                    <Paragraph size="small" margin={{bottom: "none", top: "medium"}}>Haven't gotten a text from us yet?</Paragraph>
-                    <Anchor label="Sign up" href="/welcome#signup"/>
+                    <Box margin={{vertical: "xsmall"}} align="center">
+                        <Button label="submit" icon={<Login/>} onClick={submitAll} disabled={password !== passwordConfirm}/>
+                        <Paragraph size="small" margin={{bottom: "none", top: "medium"}}>Haven't gotten a text from us yet?</Paragraph>
+                        <Anchor label="Sign up" href="/welcome#signup"/>
+                    </Box>
                 </Box>
             </Box>
         </Box>

@@ -105,6 +105,7 @@ from constants import (
     INITIAL_SUFFIXES,
     MANUAL_TEXT_NEEDED_MSG,
     ONBOARDING_COMPLETE,
+    PASSWORD_UPDATED_MESSAGE,
     PAUSE_MESSAGE,
     PAYMENT_METHOD_FAILURE,
     REMINDER_OUT_OF_RANGE_MSG,
@@ -130,6 +131,7 @@ from constants import (
     USER_ERROR_RESPONSE,
     USER_PAYMENT_METHOD_FAIL_NOTIF,
     USER_RENEWED_NOTIF,
+    USER_SIGNUP_NOTIF,
     USER_SUBSCRIBED_NOTIF,
     WEIGHT_MESSAGE,
     WELCOME_BACK_MESSAGES
@@ -382,6 +384,12 @@ def landing_page_signup():
     )
     db.session.add(new_signup)
     db.session.commit()
+    if "NOALERTS" not in os.environ:
+        client.messages.create(
+            body=USER_SIGNUP_NOTIF.substitute(name=request.json["name"]),
+            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+            to=f"+1{request.json['name']}"
+        )
     return jsonify()
 
 @app.route("/patientState", methods=["GET"])
@@ -1016,6 +1024,35 @@ def user_edit_dose_window():
         )
     return jsonify()
 
+@app.route("/user/profile", methods=["GET"])
+@auth.login_required
+def get_user_profile():
+    return jsonify(UserSchema().dump(g.user))
+
+@app.route("/user/profile", methods=["POST"])
+@auth.login_required
+def update_user_profile():
+    # payload has all user data, but we're only grabbing tz
+    g.user.timezone = request.json["timezone"]
+    db.session.commit()
+    # HACK: nuclear option for handling timezones
+    # this also disallows us from using this endpoint as currently constituted for any other profile updates.
+    g.user.pause(scheduler, send_pause_message, silent=True)
+    g.user.resume(scheduler, send_intro_text_new, send_upcoming_dose_message, silent=True)
+    return jsonify()
+
+@app.route("/user/password", methods=["POST"])
+@auth.login_required
+def update_user_password():
+    g.user.set_password(request.json["password"])
+    if "NOALERTS" not in os.environ:
+        client.messages.create(
+            body=PASSWORD_UPDATED_MESSAGE,
+            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+            to=f"+1{g.user.phone_number}"
+        )
+    db.session.commit()
+    return jsonify()
 
 def get_stripe_data(user):
     if g.user.stripe_customer_id is None:
@@ -1161,7 +1198,6 @@ def user_get_payment_info():
             if g.user.stripe_customer_id is not None:
                 default_payment_method = customer.invoice_settings.default_payment_method
                 return_dict["payment_method"] = None if default_payment_method is None else {"brand": default_payment_method.card.brand, "last4": default_payment_method.card.last4 }
-        print(return_dict)
         # get stripe payment method data
     elif g.user.state == UserState.SUBSCRIPTION_EXPIRED:
         return_dict["subscription_end_date"] = convert_naive_to_local_machine_time(g.user.end_of_service)
@@ -1220,6 +1256,8 @@ def stripe_webhook():
             print(related_user.state)
             if related_user.state == UserState.PAYMENT_METHOD_REQUESTED:
                 subscription = stripe.Subscription.retrieve(event.data.object.subscription, expand=["latest_invoice.payment_intent.payment_method"])
+                print(subscription.latest_invoice.payment_intent)
+                print(subscription.blah)
                 if subscription.latest_invoice.payment_intent is not None:  # attach payment method, if there was one associated
                     stripe.Customer.modify(event.data.object.customer, invoice_settings={"default_payment_method": subscription.latest_invoice.payment_intent.payment_method})
                 if "NOALERTS" not in os.environ:
@@ -1233,6 +1271,7 @@ def stripe_webhook():
                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                         to=f"+1{ADMIN_PHONE_NUMBER}"
                     )
+                related_user.state = UserState.PAUSED
             elif related_user.state == UserState.SUBSCRIPTION_EXPIRED:
                 if "NOALERTS" not in os.environ:
                     client.messages.create(
@@ -1245,8 +1284,8 @@ def stripe_webhook():
                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                         to=f"+1{ADMIN_PHONE_NUMBER}"
                     )
-            # TODO: add copy for renewing
-            related_user.state = UserState.PAUSED
+                related_user.state = UserState.ACTIVE  # autoactive after renewal
+            related_user.secondary_state = None  # not sure if this is needed but just in case
             db.session.commit()
         if related_user.state in [UserState.ACTIVE, UserState.PAUSED]:  # subscription auto-renewal
             subscription = stripe.Subscription.retrieve(event.data.object.subscription)

@@ -8,6 +8,7 @@ import { Route, Switch, BrowserRouter } from 'react-router-dom';
 import { ResponsiveContext } from "grommet";
 import LandingPage from './pages/LandingPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import Settings from './pages/Settings';
 
 
 const App = () => {
@@ -26,6 +27,7 @@ const App = () => {
               </ResponsiveContext.Consumer>
             )}/>
             <Route exact path={"/privacy"} render={() => <PrivacyPolicy />}/>
+            <Route exact path={"/settings"} render={() => <Settings />}/>
         </Switch>
     </BrowserRouter>
   );
