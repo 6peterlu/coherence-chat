@@ -141,3 +141,8 @@ export const getUserProfile = async () => {
   const response = await get("user/profile", {});
   return response;
 }
+
+export const updateUserProfile = async (userData) => {
+  const response = await post("user/profile", userData);
+  return response;
+}

@@ -1021,6 +1021,17 @@ def user_edit_dose_window():
 def get_user_profile():
     return jsonify(UserSchema().dump(g.user))
 
+@app.route("/user/profile", methods=["POST"])
+@auth.login_required
+def update_user_profile():
+    # payload has all user data, but we're only grabbing tz
+    g.user.timezone = request.json["timezone"]
+    db.session.commit()
+    # HACK: nuclear option for handling timezones
+    g.user.pause(scheduler, send_pause_message, silent=True)
+    g.user.resume(scheduler, send_intro_text_new, send_upcoming_dose_message, silent=True)
+    return jsonify()
+
 def get_stripe_data(user):
     if g.user.stripe_customer_id is None:
         customer = stripe.Customer.create(name=g.user.name, phone=g.user.phone_number)

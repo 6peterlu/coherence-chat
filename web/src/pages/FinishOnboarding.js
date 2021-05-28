@@ -12,9 +12,9 @@ const FinishOnboarding = () => {
             const stateData = await getPatientState();
             if (stateData === null) {
                 history.push("/welcome");
-            } else if (["active", "paused"].includes(stateData.state)) {
+            } else if (["active", "paused", "subscription_expired"].includes(stateData.state)) {
                 history.push("/");
-            } else if (["payment_method_requested", "subscription_expired"].includes(stateData.state)) {
+            } else if (["payment_method_requested"].includes(stateData.state)) {
                 history.push("/payment");
             }
         }

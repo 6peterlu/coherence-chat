@@ -516,6 +516,8 @@ class UserSchema(Schema):
     pending_announcement = fields.String()
     onboarding_type = fields.String()
     state = EnumField(UserState, by_value=True)
+    early_adopter = fields.Boolean()
+
 
 class DoseWindowSchema(Schema):
     id = fields.Integer()

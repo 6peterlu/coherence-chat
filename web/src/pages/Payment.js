@@ -2,7 +2,7 @@ import React from "react";
 import { Box, Button, Heading, Layer, Paragraph, Spinner } from "grommet";
 import { cancelSubscription, pullPatientPaymentData, renewSubscription, submitPaymentInfo } from "../api";
 import { useCookies } from 'react-cookie';
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 
 import { DateTime } from "luxon";
 import { Elements } from '@stripe/react-stripe-js';
@@ -10,10 +10,11 @@ import { Elements } from '@stripe/react-stripe-js';
 import {loadStripe} from '@stripe/stripe-js';
 
 import StripeCardEntry from "../components/StripeCardEntry";
-import { Close, FormPreviousLink } from "grommet-icons";
+import { Close, Home, FormPreviousLink } from "grommet-icons";
 import AnimatingButton from "../components/AnimatingButton";
 
 const Payment = () => {
+    const location = useLocation();  //  HACK: fix after launch
       // Initialize an instance of stripe.
     const [loading, setLoading] = React.useState(true);
     const [animating, setAnimating] = React.useState(false);
@@ -33,11 +34,13 @@ const Payment = () => {
         console.log(loadedData.state);
         if (["intro", "dose_windows_requested", "dose_window_times_requested", "timezone_requested"].includes(loadedData.state)) {
             history.push("/finishOnboarding");
+        } else if (loadedData.state !== "payment_method_requested" && location.pathname === "/payment") {
+            history.push("/");
         }
         setPaymentData(loadedData);
         setLoading(false);
         setAnimating(false);
-    }, [history, removeCookie]);
+    }, [history, location.pathname, removeCookie]);
 
     const stripePromise = React.useMemo(() => {
         return paymentData !== null ? loadStripe(paymentData.publishable_key) : null;
@@ -55,6 +58,16 @@ const Payment = () => {
     if (paymentData.secondary_state === "payment_verification_pending") {
         return (
             <Box margin="large">
+                {location.pathname === "/payment" ?
+                    <Box align="start">
+                        <Button
+                            icon={<Box direction="row"><FormPreviousLink/><Home/></Box>}
+                            label=" "
+                            size="small"
+                            onClick={() => {history.push("/")}}
+                        />
+                    </Box> : null
+                }
                 <Paragraph textAlign="center">We're verifying your payment information. You'll get a text when you're verified with further instructions. Thanks for your patience!</Paragraph>
             </Box>
         )
