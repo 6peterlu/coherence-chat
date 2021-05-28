@@ -118,6 +118,8 @@ const Settings = () => {
                                                 setAnimating(true);
                                                 await updateUserPassword(newPassword1);
                                                 await pullUserProfileData();
+                                                setNewPassword1("");
+                                                setNewPassword2("");
                                             }}
                                             disabled={ !newPassword1 || newPassword1 !== newPassword2 }
                                         />

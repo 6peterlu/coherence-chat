@@ -947,8 +947,19 @@ def test_user_subscription_expire_other_endpoint(client, db_session, user_record
     )
     assert user_record.state == UserState.SUBSCRIPTION_EXPIRED
 
+@mock.patch("stripe.Subscription.retrieve")
 @mock.patch("stripe.Subscription.modify")
-def test_stripe_webhook_payment_succeeded(mock_subscription_modify, client, db_session, user_record):
+def test_stripe_webhook_payment_succeeded(
+    mock_subscription_modify,
+    mock_subscription_retrieve,
+    client,
+    db_session,
+    user_record
+):
+    mock_sub_obj = mock.MagicMock()
+    mock_sub_obj.blah = "blah"
+    mock_sub_obj.latest_invoice.payment_intent = None
+    mock_subscription_retrieve.return_value = mock_sub_obj
     user_record.stripe_customer_id = "test"
     user_record.state = UserState.PAYMENT_METHOD_REQUESTED
     user_record.secondary_state = UserSecondaryState.PAYMENT_VERIFICATION_PENDING

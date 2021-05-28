@@ -1250,6 +1250,8 @@ def stripe_webhook():
             print(related_user.state)
             if related_user.state == UserState.PAYMENT_METHOD_REQUESTED:
                 subscription = stripe.Subscription.retrieve(event.data.object.subscription, expand=["latest_invoice.payment_intent.payment_method"])
+                print(subscription.latest_invoice.payment_intent)
+                print(subscription.blah)
                 if subscription.latest_invoice.payment_intent is not None:  # attach payment method, if there was one associated
                     stripe.Customer.modify(event.data.object.customer, invoice_settings={"default_payment_method": subscription.latest_invoice.payment_intent.payment_method})
                 if "NOALERTS" not in os.environ:
@@ -1263,7 +1265,7 @@ def stripe_webhook():
                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                         to=f"+1{ADMIN_PHONE_NUMBER}"
                     )
-                    related_user.state = UserState.PAUSED
+                related_user.state = UserState.PAUSED
             elif related_user.state == UserState.SUBSCRIPTION_EXPIRED:
                 if "NOALERTS" not in os.environ:
                     client.messages.create(
@@ -1277,6 +1279,7 @@ def stripe_webhook():
                         to=f"+1{ADMIN_PHONE_NUMBER}"
                     )
                 related_user.state = UserState.ACTIVE  # autoactive after renewal
+            related_user.secondary_state = None  # not sure if this is needed but just in case
             db.session.commit()
         if related_user.state in [UserState.ACTIVE, UserState.PAUSED]:  # subscription auto-renewal
             subscription = stripe.Subscription.retrieve(event.data.object.subscription)
