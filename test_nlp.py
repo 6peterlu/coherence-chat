@@ -64,3 +64,4 @@ def test_health_metrics():
     assert segment_message("100mg/dl")[0] == {'type': 'health_metric', 'payload': {'type': 'glucose', 'value': '100'}, 'raw': '100mg/dl'}
     assert segment_message("100 mg/dl")[0] == {'type': 'health_metric', 'payload': {'type': 'glucose', 'value': '100'}, 'raw': '100 mg/dl'}
     assert segment_message("glucose 100")[0] == {'type': 'health_metric', 'payload': {'type': 'glucose', 'value': '100'}, 'raw': 'glucose 100'}
+    assert segment_message("wt 149") == "blah"

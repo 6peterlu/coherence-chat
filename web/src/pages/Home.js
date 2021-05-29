@@ -31,7 +31,10 @@ import 'chartjs-adapter-luxon';
 import TimeInput from "../components/TimeInput";
 import AnimatingButton from "../components/AnimatingButton";
 
+import { getCurrentStandardTimezone } from "../helpers/time";
+
 const Home = () => {
+    console.log(getCurrentStandardTimezone());
     const [cookies, setCookie, removeCookie] = useCookies(['token']);
     const [patientData, setPatientData] = React.useState(null);
     const [calendarMonth, setCalendarMonth] = React.useState(5);
