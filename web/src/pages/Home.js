@@ -26,7 +26,7 @@ import {
 } from '../analytics';
 import { Scatter } from 'react-chartjs-2';
 import { Box, Button, CheckBoxGroup, Calendar, DropButton, Grid, Heading, Layer, Paragraph, Select, Anchor } from "grommet";
-import { Add, Checkmark, CircleInformation, CirclePlay, Clear, Close, Fireball, FormNextLink, Logout, UserSettings} from "grommet-icons";
+import { Add, Checkmark, CircleInformation, CirclePlay, Clear, Close, Fireball, FormNextLink, FormPreviousLink, Logout, UserSettings} from "grommet-icons";
 import { DateTime } from 'luxon';
 import 'chartjs-adapter-luxon';
 import TimeInput from "../components/TimeInput";
@@ -38,7 +38,7 @@ const Home = () => {
     console.log(getCurrentStandardTimezone());
     const [cookies, setCookie, removeCookie] = useCookies(['token']);
     const [patientData, setPatientData] = React.useState(null);
-    const [calendarMonth, setCalendarMonth] = React.useState(5);
+    const [monthDelta, setMonthDelta] = React.useState(0);
     const [impersonateOptions, setImpersonateOptions] = React.useState(null);
     const [impersonating, setImpersonating] = React.useState(null);
     const [selectedDay, setSelectedDay] = React.useState(null);
@@ -50,7 +50,14 @@ const Home = () => {
     console.log(timeRange);
     const [animating, setAnimating] = React.useState(false);  // this is setting animating for ALL buttons for now
 
-    const dateRange = [DateTime.local(2021, 4, 1), DateTime.local(2021, 5, 31)]
+    const dateRange = React.useMemo(() => {;
+        const startOfCurrentMonth = DateTime.local(DateTime.local().year, DateTime.local().month, 1);
+        return [startOfCurrentMonth.plus({months: monthDelta - 1}), startOfCurrentMonth.plus({months: monthDelta + 1})]
+    }, [monthDelta]);
+
+    const calendarMonth = React.useMemo(() => {
+        return DateTime.local().plus({months: monthDelta}).month;
+    }, [monthDelta]);
 
     const loadData = React.useCallback(async () => {
         console.log("data load");
@@ -531,9 +538,36 @@ const Home = () => {
                     bounds={dateRange.map((date) => {return date.toString()})}
                     children={renderDay}
                     daysOfWeek={true}
-                    onReference={(date) => {
-                        setCalendarMonth(DateTime.fromISO(date).month);
-                        setPatientData({...patientData, eventData: []}); // hide event data while we load
+                    // onReference={(date) => {
+                    //     setCalendarMonth(DateTime.fromISO(date).month);
+                    //     setPatientData({...patientData, eventData: []}); // hide event data while we load
+                    // }}
+                    header={({
+                        date,
+                        onPreviousMonth,
+                        onNextMonth,
+                    }) => {
+                        return (
+                            <Box direction="row" justify="between">
+                                <Button
+                                    icon={<FormPreviousLink/>}
+                                    onClick={async () => {
+                                        setMonthDelta(monthDelta - 1);
+                                        await loadData();
+                                        onPreviousMonth();
+                                    }}
+                                />
+                                <Paragraph size="small">{DateTime.fromJSDate(date).toLocaleString({month: "long", year: "numeric"})}</Paragraph>
+                                <Button
+                                    icon={<FormNextLink/>}
+                                    onClick={async () => {
+                                        setMonthDelta(monthDelta + 1);
+                                        await loadData();
+                                        onNextMonth();
+                                    }}
+                                />
+                            </Box>
+                        );
                     }}
                     animate={false}
                 />
