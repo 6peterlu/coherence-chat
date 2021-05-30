@@ -923,6 +923,17 @@ def test_user_create_dose_window(client, db_session, user_record):
     assert len(db_session.query(DoseWindow).all()) == 1
     assert len(db_session.query(Medication).all()) == 1
 
+def test_user_update_timezone(client, db_session, user_record, dose_window_record):
+    client.post(
+        "/user/updateTimezone",
+        headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")},
+        json={"timezone": "US/Eastern"}
+    )
+    assert dose_window_record.start_hour == 13
+    assert dose_window_record.end_hour == 15
+
+
+# subscriptions
 
 @freeze_time("2012-01-01 17:00:00")
 def test_user_subscription_expire_bot_endpoint(client, db_session, user_record):

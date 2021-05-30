@@ -2,7 +2,7 @@ import { Box, Button, Heading, Layer, Paragraph, Select, Spinner, Tab, Tabs, Tex
 import { Calendar, ContactInfo, Close, Home, FormPreviousLink } from "grommet-icons";
 import React from "react";
 
-import { getUserProfile, updateUserPassword, updateUserProfile } from "../api";
+import { getUserProfile, updateUserPassword, updateUserTimezone } from "../api";
 import { useHistory } from "react-router-dom";
 import Payment from "./Payment";
 import AnimatingButton from "../components/AnimatingButton";
@@ -82,7 +82,7 @@ const Settings = () => {
                                             label="Update timezone"
                                             onClick={async () => {
                                                 setAnimating(true);
-                                                await updateUserProfile(userProfileData.updated);
+                                                await updateUserTimezone(userProfileData.updated.timezone);
                                                 await pullUserProfileData();
                                             }}
                                         />

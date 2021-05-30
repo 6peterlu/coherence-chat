@@ -9,6 +9,7 @@ import {
     resumeUser,
     setHealthMetricsTracking,
     updateDoseWindow,
+    updateUserTimezone
 } from '../api';
 import {
     trackStartAddingDoseWindow,
@@ -31,7 +32,10 @@ import 'chartjs-adapter-luxon';
 import TimeInput from "../components/TimeInput";
 import AnimatingButton from "../components/AnimatingButton";
 
+import { getCurrentStandardTimezone } from "../helpers/time";
+
 const Home = () => {
+    console.log(getCurrentStandardTimezone());
     const [cookies, setCookie, removeCookie] = useCookies(['token']);
     const [patientData, setPatientData] = React.useState(null);
     const [calendarMonth, setCalendarMonth] = React.useState(5);
@@ -238,6 +242,14 @@ const Home = () => {
         return data;
     }, [patientData, timeRange]);
 
+    const timezoneDiscrepancy = React.useMemo(() => {
+        const localtz = getCurrentStandardTimezone();
+        if (patientData && patientData.timezone !== localtz) {
+            return true;
+        }
+       return false;
+    }, [patientData]);
+
     const renderImpersonateListItem = React.useCallback((listItem) => {
         console.log(listItem);
         return listItem.label;
@@ -422,6 +434,27 @@ const Home = () => {
                 </Box>
                 :
                 null
+            }
+            {timezoneDiscrepancy ?
+                <Box
+                    align="center"
+                    background={{"color":"status-error", "dark": true}}
+                    round="medium"
+                    margin={{horizontal: "large", bottom: "medium"}}
+                    pad="medium"
+                >
+                    <Paragraph textAlign="center" margin={{vertical: "none"}}>Looks like you're in a new timezone.</Paragraph>
+                    <AnimatingButton
+                        label={`Update timezone to ${getCurrentStandardTimezone()}`}
+                        onClick={async () => {
+                            setAnimating(true);
+                            await updateUserTimezone(getCurrentStandardTimezone());
+                            await loadData();
+                        }}
+                        margin={{top: "small"}}
+                        animating={animating}
+                    />
+                </Box> : null
             }
             <Box>
                 {patientData && patientData.takeNow ?

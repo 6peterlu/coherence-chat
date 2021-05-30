@@ -448,7 +448,7 @@ def auth_patient_data():
         event.event_time < requested_time_window[1] and
         event.event_time > requested_time_window[0]
         ), relevant_events))
-    user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
+    # user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
     health_metric_events = list(filter(lambda event: event.event_type in health_metric_event_types, relevant_events))
     print(health_metric_events)
     event_data = []
@@ -506,6 +506,7 @@ def auth_patient_data():
         "healthMetricData": process_health_metric_event_stream(health_metric_events, user.tracked_health_metrics),
         "subscriptionEndDate": subscription_end_date,
         "earlyAdopterStatus": bool(user.early_adopter),
+        "timezone": user.timezone,
         "token": g.user.generate_auth_token().decode('ascii')  # refresh auth token
     })
 
@@ -615,8 +616,8 @@ def react_login():
                     from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                     to=phone_number_formatted
                 )
-                user.secret_text_code = secret_code
-                db.session.commit()
+            user.secret_text_code = secret_code
+            db.session.commit()
             return jsonify({"status": "2fa"})
         else:
             return jsonify({"status": "password"})
@@ -1014,6 +1015,7 @@ def user_edit_dose_window():
         return jsonify(), 401
     user_tz = timezone(relevant_dose_window.user.timezone)
     # TODO: move tz conversion logic to time_helpers.py
+    # TODO: stop hardcoding the day here, you're going to have daylight savings issues
     target_start_date = user_tz.localize(datetime(2012, 5, 12, start_hour, start_minute, 0, 0, tzinfo=None)).astimezone(pytzutc)
     target_end_date = user_tz.localize(datetime(2012, 5, 12, end_hour, end_minute, 0, 0, tzinfo=None)).astimezone(pytzutc)
     if relevant_dose_window is not None:
@@ -1029,16 +1031,26 @@ def user_edit_dose_window():
 def get_user_profile():
     return jsonify(UserSchema().dump(g.user))
 
-@app.route("/user/profile", methods=["POST"])
+@app.route("/user/updateTimezone", methods=["POST"])
 @auth.login_required
-def update_user_profile():
-    # payload has all user data, but we're only grabbing tz
+def update_user_timezone():
+    # first, check if user timezone changed
+    if request.json["timezone"] != g.user.timezone:
+        for dw in g.user.active_dose_windows:
+            # get original alarm time
+            dw_start_time = timezone(request.json["timezone"]).localize(get_time_now().replace(hour=dw.start_hour, minute=dw.start_minute).astimezone(timezone(g.user.timezone)).replace(tzinfo=None)).astimezone(pytzutc)
+            dw_end_time = timezone(request.json["timezone"]).localize(get_time_now().replace(hour=dw.end_hour, minute=dw.end_minute).astimezone(timezone(g.user.timezone)).replace(tzinfo=None)).astimezone(pytzutc)
+            dw.edit_window(
+                dw_start_time.hour, dw_start_time.minute, dw_end_time.hour, dw_end_time.minute,
+                scheduler, send_intro_text_new, send_boundary_text_new
+            )
     g.user.timezone = request.json["timezone"]
     db.session.commit()
     # HACK: nuclear option for handling timezones
     # this also disallows us from using this endpoint as currently constituted for any other profile updates.
-    g.user.pause(scheduler, send_pause_message, silent=True)
-    g.user.resume(scheduler, send_intro_text_new, send_upcoming_dose_message, silent=True)
+    if g.user.state == UserState.ACTIVE:
+        g.user.pause(scheduler, send_pause_message, silent=True)
+        g.user.resume(scheduler, send_intro_text_new, send_upcoming_dose_message, silent=True)
     return jsonify()
 
 @app.route("/user/password", methods=["POST"])
