@@ -68,13 +68,13 @@ export const login = async (phoneNumber, secretCode, password) => {
     return response;
 }
 
-export const pullPatientData = async (calendarMonth) => {
-  const response = await get("patientData/new", { calendarMonth });
+export const pullPatientData = async (calendarMonth, calendarYear) => {
+  const response = await get("patientData/new", { calendarMonth, calendarYear });
   return response;
 }
 
-export const pullPatientDataForNumber = async (phoneNumber, calendarMonth) => {
-  const response = await get("patientData/new", { phoneNumber, calendarMonth });
+export const pullPatientDataForNumber = async (phoneNumber, calendarMonth, calendarYear) => {
+  const response = await get("patientData/new", { phoneNumber, calendarMonth, calendarYear });
   return response;
 }
 
