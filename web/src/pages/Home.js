@@ -124,7 +124,7 @@ const Home = () => {
         let dayColor = null;
         const dt = DateTime.fromJSDate(date);
         const day = dt.day;
-        if (patientData !== null) {
+        if (patientData !== null && !shouldRerender) {
             if (patientData.eventData.length >= day) {
                 const dayOfMonthData = patientData.eventData[day - 1];
                 if (dt.month === calendarMonth) {
@@ -145,7 +145,7 @@ const Home = () => {
                 </Box>
             </Box>
         );
-    }, [calendarMonth, patientData]);
+    }, [calendarMonth, patientData, shouldRerender]);
 
     const formattedHealthMetricData = React.useMemo(() => {
         const units = {
