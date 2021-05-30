@@ -269,6 +269,8 @@ const Home = () => {
         return dt;
     }
 
+    const currentTimeUTC = DateTime.utc();
+
     const validDoseWindows = React.useMemo(() => {
         console.log("recomputing")
         if (editingDoseWindow === null) {
@@ -277,8 +279,15 @@ const Home = () => {
         if (patientData === null) {
             return true;  // if we have no patient data your dose windows are fine
         };
-        const editingStartTime = nextDayConversion(DateTime.utc(2021, 5, 1, editingDoseWindow.start_hour, editingDoseWindow.start_minute).setZone("local").set({month: 5, day: 1}));
-        const editingEndTime = nextDayConversion(DateTime.utc(2021, 5, 1, editingDoseWindow.end_hour, editingDoseWindow.end_minute).setZone("local").set({month: 5, day: 1}));
+        const editingStartTime = nextDayConversion(DateTime.utc(
+            currentTimeUTC.year, currentTimeUTC.month, currentTimeUTC.day,
+            editingDoseWindow.start_hour, editingDoseWindow.start_minute
+        ).setZone("local").set({month: currentTimeUTC.month, day: currentTimeUTC.day}));
+        const editingEndTime = nextDayConversion(
+            DateTime.utc(
+                currentTimeUTC.year, currentTimeUTC.month, currentTimeUTC.day,
+                editingDoseWindow.end_hour, editingDoseWindow.end_minute
+            ).setZone("local").set({month: currentTimeUTC.month, day: currentTimeUTC.day}));
         if (editingEndTime < editingStartTime.plus({minutes: 30})) {
             return false; // dose window is too short
         }
@@ -286,8 +295,20 @@ const Home = () => {
             if (dw.id === editingDoseWindow.id) {
                 continue;  // we don't compare to the one we're editing
             }
-            const existingStartTime = nextDayConversion(DateTime.utc(2021, 5, 1, dw.start_hour, dw.start_minute).setZone("local").set({month: 5, day: 1}));
-            const existingEndTime = nextDayConversion(DateTime.utc(2021, 5, 1, dw.end_hour, dw.end_minute).setZone("local").set({month: 5, day: 1}));
+            const existingStartTime = nextDayConversion(DateTime.utc(
+                currentTimeUTC.year, currentTimeUTC.month, currentTimeUTC.day,
+                dw.start_hour, dw.start_minute
+            ).setZone("local").set({
+                month: currentTimeUTC.month,
+                day: currentTimeUTC.day
+            }));
+            const existingEndTime = nextDayConversion(DateTime.utc(
+                currentTimeUTC.year, currentTimeUTC.month, currentTimeUTC.day,
+                dw.end_hour, dw.end_minute
+            ).setZone("local").set({
+                month: currentTimeUTC.month,
+                day: currentTimeUTC.day
+            }));
             if (editingStartTime <= existingStartTime && existingStartTime <= editingEndTime) {
                 return false;
             }
@@ -296,7 +317,7 @@ const Home = () => {
             }
         }
         return true;
-    }, [editingDoseWindow, patientData]);
+    }, [currentTimeUTC, editingDoseWindow, patientData]);
 
     const currentTimeOfDay = React.useMemo(() => {
         const currentTime = DateTime.local();
@@ -329,14 +350,24 @@ const Home = () => {
         if (patientData === null) {
             return null;
         }
-        const startTime = DateTime.utc(2021, 5, 1, editingDoseWindow.start_hour, editingDoseWindow.start_minute);
-        const endTime = DateTime.utc(2021, 5, 1, editingDoseWindow.end_hour, editingDoseWindow.end_minute);
+        const startTime = DateTime.utc(
+            currentTimeUTC.year, currentTimeUTC.month, currentTimeUTC.day,
+            editingDoseWindow.start_hour, editingDoseWindow.start_minute
+        );
+        const endTime = DateTime.utc(
+            currentTimeUTC.year, currentTimeUTC.month, currentTimeUTC.day,
+            editingDoseWindow.end_hour, editingDoseWindow.end_minute
+        );
+        const currentTimeLocal = DateTime.local();
         return (
             <>
                 <Paragraph size="small" margin={{bottom: "none"}}>Start time (earliest time you'll be reminded)</Paragraph>
                 <TimeInput value={startTime.setZone('local')} color="dark-3" onChangeTime={
                     (newTime) => {
-                        const newDwTime = DateTime.local(2021, 5, 1, newTime.hour, newTime.minute).setZone("UTC");
+                        const newDwTime = DateTime.local(
+                            currentTimeLocal.year, currentTimeLocal.month, currentTimeLocal.day,
+                            newTime.hour, newTime.minute
+                        ).setZone("UTC");
                         setEditingDoseWindow({...editingDoseWindow, start_hour: newDwTime.hour, start_minute: newDwTime.minute});
                     }}
                 />
@@ -344,7 +375,10 @@ const Home = () => {
                 <TimeInput value={endTime.setZone('local')} color="dark-3" onChangeTime={
                     (newTime) => {
                         console.log(`changed time to ${JSON.stringify(newTime)}`)
-                        const newDwTime = DateTime.local(2021, 5, 1, newTime.hour, newTime.minute).setZone("UTC");
+                        const newDwTime = DateTime.local(
+                            currentTimeLocal.year, currentTimeLocal.month, currentTimeLocal.day,
+                            newTime.hour, newTime.minute
+                        ).setZone("UTC");
                         setEditingDoseWindow({...editingDoseWindow, end_hour: newDwTime.hour, end_minute: newDwTime.minute});
                     }}
                 />
@@ -380,7 +414,7 @@ const Home = () => {
                 /> : null}
             </>
         )
-    }, [animating, editingDoseWindow, impersonateOptions, loadData, patientData, validDoseWindows]);
+    }, [animating, currentTimeUTC, editingDoseWindow, impersonateOptions, loadData, patientData, validDoseWindows]);
 
     if (!cookies.token) {
         return <Redirect to="/welcome"/>;
@@ -692,8 +726,14 @@ const Home = () => {
                 <Paragraph textAlign="center" margin={{vertical: "none"}}>Dose windows</Paragraph>
                     {
                         patientData ? patientData.doseWindows.map((dw) => {
-                            const startTime = DateTime.utc(2021, 5, 1, dw.start_hour, dw.start_minute);
-                            const endTime = DateTime.utc(2021, 5, 1, dw.end_hour, dw.end_minute);
+                            const startTime = DateTime.utc(
+                                currentTimeUTC.year, currentTimeUTC.month, currentTimeUTC.day,
+                                dw.start_hour, dw.start_minute
+                            );
+                            const endTime = DateTime.utc(
+                                currentTimeUTC.year, currentTimeUTC.month, currentTimeUTC.day,
+                                dw.end_hour, dw.end_minute
+                            );
                             return (
                                 <Grid key={`doseWindowContainer-${dw.id}`} columns={["small", "flex", "flex"]} align="center" pad={{horizontal: "large"}} alignContent="center" justifyContent="center" justify="center">
                                     <Box direction="row" align="center">
@@ -749,9 +789,15 @@ const Home = () => {
                         <Box align="center">
                             <Paragraph margin={{bottom: "none"}}>You're about to delete the dose window</Paragraph>
                             <Box direction="row" align="center" margin={{bottom: "medium"}}>
-                                <Paragraph>{DateTime.utc(2021, 5, 1, deletingDoseWindow.start_hour, deletingDoseWindow.start_minute).setZone('local').toLocaleString(DateTime.TIME_SIMPLE)}</Paragraph>
+                                <Paragraph>{DateTime.utc(
+                                    currentTimeUTC.year, currentTimeUTC.month, currentTimeUTC.day,
+                                    deletingDoseWindow.start_hour, deletingDoseWindow.start_minute
+                                ).setZone('local').toLocaleString(DateTime.TIME_SIMPLE)}</Paragraph>
                                 <FormNextLink/>
-                                <Paragraph>{DateTime.utc(2021, 5, 1, deletingDoseWindow.end_hour, deletingDoseWindow.end_minute).setZone('local').toLocaleString(DateTime.TIME_SIMPLE)}</Paragraph>
+                                <Paragraph>{DateTime.utc(
+                                    currentTimeUTC.year, currentTimeUTC.month, currentTimeUTC.day,
+                                    deletingDoseWindow.end_hour, deletingDoseWindow.end_minute
+                                ).setZone('local').toLocaleString(DateTime.TIME_SIMPLE)}</Paragraph>
                             </Box>
                             <AnimatingButton onClick={async () => {
                                 setAnimating(true);
