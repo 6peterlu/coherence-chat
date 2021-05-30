@@ -404,7 +404,7 @@ def get_patient_state():
 def auth_patient_data():
     user = g.user
     calendar_month = int(request.args.get("calendarMonth"))
-    print(calendar_month)
+    calendar_year = int(request.args.get("calendarYear"))
     impersonating = False
     if user.phone_number == ADMIN_PHONE_NUMBER:
         impersonating_phone_number = request.args.get("phoneNumber")
@@ -441,8 +441,8 @@ def auth_patient_data():
     print(EventLog.query.filter(EventLog.event_type == "hm_weight", EventLog.user == user).order_by(EventLog.event_time.asc()).all())
     relevant_events = EventLog.query.filter(EventLog.event_type.in_(combined_list), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
     requested_time_window = (
-        timezone(user.timezone).localize(datetime(2021, calendar_month, 1, 4, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None),
-        timezone(user.timezone).localize(datetime(2021, calendar_month, 1, 4, tzinfo=None) + relativedelta(months=1)).astimezone(pytzutc).replace(tzinfo=None)  # christ
+        timezone(user.timezone).localize(datetime(calendar_year, calendar_month, 1, 4, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None),
+        timezone(user.timezone).localize(datetime(calendar_year, calendar_month, 1, 4, tzinfo=None) + relativedelta(months=1)).astimezone(pytzutc).replace(tzinfo=None)  # christ
     )
     dose_history_events = list(filter(lambda event: (
         event.event_type in take_record_events and

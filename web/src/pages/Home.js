@@ -59,13 +59,17 @@ const Home = () => {
         return DateTime.local().plus({months: monthDelta}).month;
     }, [monthDelta]);
 
+    const calendarYear = React.useMemo(() => {
+        return DateTime.local().plus({months: monthDelta}).year;
+    }, [monthDelta]);
+
     const loadData = React.useCallback(async () => {
         console.log("data load");
         let loadedData = null;
         if (impersonating) {
-            loadedData = await pullPatientDataForNumber(impersonating.value, calendarMonth);
+            loadedData = await pullPatientDataForNumber(impersonating.value, calendarMonth, calendarYear);
         } else {
-            loadedData = await pullPatientData(calendarMonth);
+            loadedData = await pullPatientData(calendarMonth, calendarYear);
         };
         if (loadedData === null) {
             console.log("removing token");
