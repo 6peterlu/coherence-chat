@@ -82,7 +82,7 @@ const Settings = () => {
                                             label="Update timezone"
                                             onClick={async () => {
                                                 setAnimating(true);
-                                                await updateUserTimezone(userProfileData.updated);
+                                                await updateUserTimezone(userProfileData.updated.timezone);
                                                 await pullUserProfileData();
                                             }}
                                         />

@@ -448,7 +448,7 @@ const Home = () => {
                         label={`Update timezone to ${getCurrentStandardTimezone()}`}
                         onClick={async () => {
                             setAnimating(true);
-                            await updateUserTimezone({timezone: getCurrentStandardTimezone()});
+                            await updateUserTimezone(getCurrentStandardTimezone());
                             await loadData();
                         }}
                         margin={{top: "small"}}

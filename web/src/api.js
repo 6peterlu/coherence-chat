@@ -143,8 +143,8 @@ export const getUserProfile = async () => {
 }
 
 // TODO: only submit timezone
-export const updateUserTimezone = async (userData) => {
-  const response = await post("user/updateTimezone", userData);
+export const updateUserTimezone = async (timezone) => {
+  const response = await post("user/updateTimezone", { timezone });
   return response;
 }
 
