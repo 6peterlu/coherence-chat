@@ -50,6 +50,8 @@ from message_handlers import (
 )
 from time_helpers import convert_naive_to_local_machine_time, get_start_of_day, get_time_now
 
+from dateutil.relativedelta import relativedelta
+
 from ai import get_reminder_time_within_range
 
 from apscheduler.events import (
@@ -440,7 +442,7 @@ def auth_patient_data():
     relevant_events = EventLog.query.filter(EventLog.event_type.in_(combined_list), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
     requested_time_window = (
         timezone(user.timezone).localize(datetime(2021, calendar_month, 1, 4, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None),
-        timezone(user.timezone).localize(datetime(2021, calendar_month + 1, 1, 4, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None)  # christ
+        timezone(user.timezone).localize(datetime(2021, calendar_month, 1, 4, tzinfo=None) + relativedelta(months=1)).astimezone(pytzutc).replace(tzinfo=None)  # christ
     )
     dose_history_events = list(filter(lambda event: (
         event.event_type in take_record_events and

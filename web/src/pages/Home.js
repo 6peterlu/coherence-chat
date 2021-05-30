@@ -590,6 +590,7 @@ const Home = () => {
                                         await loadData();
                                         onPreviousMonth();
                                     }}
+                                    disabled={shouldRerender}
                                 />
                                 <Paragraph size="small">{DateTime.fromJSDate(date).toLocaleString({month: "long", year: "numeric"})}</Paragraph>
                                 <Button
@@ -599,6 +600,7 @@ const Home = () => {
                                         await loadData();
                                         onNextMonth();
                                     }}
+                                    disabled={shouldRerender}
                                 />
                             </Box>
                         );
