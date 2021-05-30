@@ -506,6 +506,7 @@ def auth_patient_data():
         "healthMetricData": process_health_metric_event_stream(health_metric_events, user.tracked_health_metrics),
         "subscriptionEndDate": subscription_end_date,
         "earlyAdopterStatus": bool(user.early_adopter),
+        "timezone": user.timezone,
         "token": g.user.generate_auth_token().decode('ascii')  # refresh auth token
     })
 
