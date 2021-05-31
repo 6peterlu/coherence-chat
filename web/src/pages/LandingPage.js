@@ -5,6 +5,8 @@ import { landingPageSignup } from "../api";
 import AnimatingButton from "../components/AnimatingButton";
 import { useHistory } from "react-router-dom"
 
+import { Helmet } from "react-helmet";
+
 const heading_copy_1 = "Peace of mind with your medication.";
 const heading_copy_2 = "Your personal medication companion is here at last. No more struggling with annoying alarms. No more wondering whether you've taken a dose or not.";
 const heading_copy_3 = "Sign up today!";
@@ -76,6 +78,10 @@ const LandingPage = ({size}) => {
     if (size === "large" || size === "xlarge") {
         return (
             <Box>
+                <Helmet>
+                    <title>Coherence</title>
+                    <meta name="description" content="An intelligent medication companion, just for you."/>
+                </Helmet>
                 <Box pad={{horizontal: "large"}} direction="row" justify="between" background="brand">
                     <Heading size="small">💊 coherence</Heading>
                     <Box direction="row" align="center">
@@ -228,6 +234,10 @@ const LandingPage = ({size}) => {
     if (size === "medium") {
         return (
             <Box>
+                <Helmet>
+                    <title>Coherence</title>
+                    <meta name="description" content="An intelligent medication companion, just for you."/>
+                </Helmet>
                 <Box pad={{horizontal: "medium"}} direction="row" justify="between" background="brand">
                     <Heading size="small">💊 coherence</Heading>
                     <Box direction="row" align="center">
@@ -380,6 +390,10 @@ const LandingPage = ({size}) => {
     if (size === "small" || size === "xsmall") {
         return (
             <Box>
+                <Helmet>
+                    <title>Coherence</title>
+                    <meta name="description" content="An intelligent medication companion, just for you."/>
+                </Helmet>
                 <Box pad={{horizontal: "large"}} direction="row" justify="between" background="brand">
                     <Heading size="small">💊 coherence</Heading>
                     <Box direction="row" align="center">
