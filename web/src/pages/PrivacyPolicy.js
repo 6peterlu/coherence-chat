@@ -6,8 +6,8 @@ const PrivacyPolicy = () => {
     return (
         <Box margin="large" style={{whiteSpace: "pre-wrap"}}>
             <Helmet>
-                <title>Coherence</title>
-                <meta name="description" content="Privacy policy for Coherence."/>
+                <meta name="title" content="Coherence"/>
+                <meta name="description" content="An intelligent medication companion, just for you."/>
             </Helmet>
             <Heading size="small" margin={{bottom: "none"}}>Coherence Privacy Policy</Heading>
             <p>

@@ -79,7 +79,7 @@ const LandingPage = ({size}) => {
         return (
             <Box>
                 <Helmet>
-                    <title>Coherence</title>
+                    <meta name="title" content="Coherence"/>
                     <meta name="description" content="An intelligent medication companion, just for you."/>
                 </Helmet>
                 <Box pad={{horizontal: "large"}} direction="row" justify="between" background="brand">
@@ -235,7 +235,7 @@ const LandingPage = ({size}) => {
         return (
             <Box>
                 <Helmet>
-                    <title>Coherence</title>
+                    <meta name="title" content="Coherence"/>
                     <meta name="description" content="An intelligent medication companion, just for you."/>
                 </Helmet>
                 <Box pad={{horizontal: "medium"}} direction="row" justify="between" background="brand">
@@ -391,7 +391,7 @@ const LandingPage = ({size}) => {
         return (
             <Box>
                 <Helmet>
-                    <title>Coherence</title>
+                    <meta name="title" content="Coherence"/>
                     <meta name="description" content="An intelligent medication companion, just for you."/>
                 </Helmet>
                 <Box pad={{horizontal: "large"}} direction="row" justify="between" background="brand">
