@@ -183,6 +183,10 @@ WEIGHT_MESSAGE = Template("🕒 $time\nWeight recorded: $weight lbs.\n📝📝�
 
 BLOOD_PRESSURE_MESSAGE = Template("🕒 $time\nBlood pressure recorded: $blood_pressure mm/hg.\n📝📝📝📝")
 
+PAUSE_RESPONSE_MESSAGE = "Your account is paused. You can unpause it at https://www.hellocoherence.com."
+
+SUBSCRIPTION_EXPIRED_RESPONSE_MESSAGE = "Your subscription has expired. You can renew it in the Subscriptions tab at https://www.hellocoherence.com/settings."
+
 SERVER_ERROR_ALERT = Template("Server has error. ($code, $name, $description)")
 
 PAYMENT_METHOD_FAILURE = "I wasn't able to charge your payment method. Please try visiting https://www.hellocoherence.com/payment to re-enter your information, or contact (650) 667-1146 if you need additional help. Thank you!"
