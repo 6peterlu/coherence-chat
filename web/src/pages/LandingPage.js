@@ -79,8 +79,8 @@ const LandingPage = ({size}) => {
         return (
             <Box>
                 <Helmet>
-                    <meta name="title" content="Coherence"/>
-                    <meta name="description" content="An intelligent medication companion, just for you."/>
+                    <meta name="title" content="Coherence - an intelligent medication companion, just for you."/>
+                    <meta name="description" content="Coherence is an AI companion designed to help you stick to your medications. Get set up in minutes. Available now."/>
                 </Helmet>
                 <Box pad={{horizontal: "large"}} direction="row" justify="between" background="brand">
                     <Heading size="small">💊 coherence</Heading>
@@ -235,8 +235,8 @@ const LandingPage = ({size}) => {
         return (
             <Box>
                 <Helmet>
-                    <meta name="title" content="Coherence"/>
-                    <meta name="description" content="An intelligent medication companion, just for you."/>
+                    <meta name="title" content="Coherence - an intelligent medication companion, just for you."/>
+                    <meta name="description" content="Coherence is an AI companion designed to help you stick to your medications. Get set up in minutes. Available now."/>
                 </Helmet>
                 <Box pad={{horizontal: "medium"}} direction="row" justify="between" background="brand">
                     <Heading size="small">💊 coherence</Heading>
@@ -391,8 +391,8 @@ const LandingPage = ({size}) => {
         return (
             <Box>
                 <Helmet>
-                    <meta name="title" content="Coherence"/>
-                    <meta name="description" content="An intelligent medication companion, just for you."/>
+                    <meta name="title" content="Coherence - an intelligent medication companion, just for you."/>
+                    <meta name="description" content="Coherence is an AI companion designed to help you stick to your medications. Get set up in minutes. Available now."/>
                 </Helmet>
                 <Box pad={{horizontal: "large"}} direction="row" justify="between" background="brand">
                     <Heading size="small">💊 coherence</Heading>
