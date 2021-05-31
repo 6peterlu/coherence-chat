@@ -109,6 +109,7 @@ from constants import (
     ONBOARDING_COMPLETE,
     PASSWORD_UPDATED_MESSAGE,
     PAUSE_MESSAGE,
+    PAUSE_RESPONSE_MESSAGE,
     PAYMENT_METHOD_FAILURE,
     REMINDER_OUT_OF_RANGE_MSG,
     REMINDER_TOO_CLOSE_MSG,
@@ -121,6 +122,7 @@ from constants import (
     SECRET_CODE_MESSAGE,
     SERVER_ERROR_ALERT,
     SKIP_MSG,
+    SUBSCRIPTION_EXPIRED_RESPONSE_MESSAGE,
     SUGGEST_DOSE_WINDOW_CHANGE,
     TAKE_MSG,
     TAKE_MSG_EXCITED,
@@ -840,6 +842,18 @@ def bot():
             timezone_requested_message_handler(user, incoming_phone_number, raw_message)
         elif user.state == UserState.PAYMENT_METHOD_REQUESTED:
             payment_requested_message_handler(user, incoming_phone_number, raw_message)
+        elif user.state == UserState.PAUSED:
+            client.messages.create(
+                body=PAUSE_RESPONSE_MESSAGE,
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=incoming_phone_number
+            )
+        elif user.state == UserState.SUBSCRIPTION_EXPIRED:
+            client.messages.create(
+                body=SUBSCRIPTION_EXPIRED_RESPONSE_MESSAGE,
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=incoming_phone_number
+            )
     return jsonify()
 
 
