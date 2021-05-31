@@ -1,9 +1,15 @@
 import { Box, Heading, Paragraph } from "grommet";
+import { Helmet } from "react-helmet";
 import React from "react";
 
 const PrivacyPolicy = () => {
     return (
         <Box margin="large" style={{whiteSpace: "pre-wrap"}}>
+            <Helmet>
+                <meta name="title" content="Coherence Privacy Policy"/>
+                <meta name="description" content="Privacy policy for Coherence"/>
+                <title>Coherence Privacy Policy</title>
+            </Helmet>
             <Heading size="small" margin={{bottom: "none"}}>Coherence Privacy Policy</Heading>
             <p>
 We believe your medication data is highly sensitive, and you should only share as much of it as you wish. We won't require you to share the names or dosages of your medication, or even install an app. Our software will be fully accessible through your text messages and a website. You can at any time request all information associated with your account to be deleted or sent to you for your perusal.
