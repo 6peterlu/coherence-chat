@@ -1056,3 +1056,11 @@ def test_trial_user_payment_endpoint_side_effects(mock_sub_create, mock_stripe_c
     client.get("/user/getPaymentData", headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")})
     assert user_record.stripe_customer_id == "cus_test"
 
+
+def test_postprocess_dose_history_events(user_record, dose_window_record, medication_record):
+    eastern_event = EventLog(
+        "take",
+        user_record.id,
+        dose_window_record.id,
+        medication_record.id
+    )

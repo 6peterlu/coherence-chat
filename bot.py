@@ -394,7 +394,7 @@ def landing_page_signup():
         client.messages.create(
             body=USER_SIGNUP_NOTIF.substitute(name=request.json["name"]),
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-            to=f"+1{request.json['name']}"
+            to=f"+1{ADMIN_PHONE_NUMBER}"
         )
     return jsonify()
 

@@ -88,7 +88,7 @@ const Home = () => {
             );
         }
         setAnimating(false);
-    }, [calendarMonth, impersonating, removeCookie, setCookie])
+    }, [calendarMonth, calendarYear, impersonating, removeCookie, setCookie])
 
     const shouldRerender = React.useMemo(() => {
         console.log("should rerender");
