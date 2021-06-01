@@ -1,5 +1,4 @@
 from flask import Flask, request, jsonify, send_from_directory, g
-import tzlocal
 from flask_cors import CORS
 # import Flask-APScheduler
 from flask_apscheduler import APScheduler
@@ -8,11 +7,10 @@ from sqlalchemy.orm.session import make_transient
 import os
 from twilio.rest import Client
 from datetime import datetime, timedelta
-from functools import wraps
 from pytz import timezone, utc as pytzutc
 import parsedatetime
 import random
-from itertools import groupby
+import re
 from werkzeug.middleware.proxy_fix import ProxyFix
 from models import (
     LandingPageSignup,
@@ -384,7 +382,7 @@ def get_time_of_day(dose_window_obj):
 def landing_page_signup():
     new_signup = LandingPageSignup(
         request.json["name"],
-        request.json["phoneNumber"],
+        re.sub("[^0-9]", "", request.json["phoneNumber"]),
         request.json["email"],
         request.json["trialCode"]
     )
