@@ -407,6 +407,7 @@ def get_patient_state():
 def postprocess_dose_history_events(event_list, user, dose_history_events, requested_time_window):
     relevant_events = list(filter(lambda e: e.event_type in dose_history_events, event_list))
     for event in relevant_events:  # exclude events from any potential db writes
+        _ = event.dose_window  # HACK: for some reason, this is needed? really sketchy
         db.session.expunge(event)
         make_transient(event)
     # transform event time that is written in different timezone
