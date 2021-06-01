@@ -953,7 +953,7 @@ def test_user_subscription_expire_other_endpoint(client, db_session, user_record
     assert user_record.state == UserState.ACTIVE
     client.get(
         "/patientData/new",
-        query_string={"calendarMonth": "5"},
+        query_string={"calendarMonth": "5", "calendarYear": "2021"},
         headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")}
     )
     assert user_record.state == UserState.SUBSCRIPTION_EXPIRED
