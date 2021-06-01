@@ -64,7 +64,8 @@ const LandingPage = ({size}) => {
             return { disabled: true, text: "Phone number is not 10 digits."}
         }
         if (freeTrialCode) {
-            if (freeTrialCode.toLowerCase() !== "vpc30") {
+            const freeTrialCodes = ["vpc30", "june30"]
+            if (!freeTrialCodes.includes(freeTrialCode.toLowerCase())) {
                 return { disabled: true, text: "Invalid trial code."}
             } else {
                 return { disabled: false, text: "Get your free 30-day trial!"}
