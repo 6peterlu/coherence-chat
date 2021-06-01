@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify, send_from_directory, g
+import tzlocal
 from flask_cors import CORS
 # import Flask-APScheduler
 from flask_apscheduler import APScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from sqlalchemy.orm.session import make_transient
 import os
 from twilio.rest import Client
 from datetime import datetime, timedelta
@@ -401,6 +403,30 @@ def landing_page_signup():
 def get_patient_state():
     return jsonify({"state": g.user.state.value})
 
+# expects event list which is a superset of history events
+def postprocess_dose_history_events(event_list, user, dose_history_events, requested_time_window):
+    relevant_events = list(filter(lambda e: e.event_type in dose_history_events, event_list))
+    for event in relevant_events:  # exclude events from any potential db writes
+        db.session.expunge(event)
+        make_transient(event)
+    # transform event time that is written in different timezone
+    def transform_event_time(event):
+        current_user_tz = timezone(user.timezone)
+        translated_event_time = current_user_tz.localize(
+            pytzutc.localize(event.event_time).astimezone(timezone(event.timezone)).replace(tzinfo=None)
+        )
+        event.event_time = translated_event_time.astimezone(pytzutc).replace(tzinfo=None)
+        return event
+
+    transformed_events = [transform_event_time(event) for event in relevant_events]
+    dose_history_events = list(filter(lambda event: (
+        event.dose_window in user.dose_windows and
+        event.event_time < requested_time_window[1] and
+        event.event_time > requested_time_window[0]
+        ), transformed_events))
+    return dose_history_events
+
+
 @app.route("/patientData/new", methods=["GET"])
 @auth.login_required
 def auth_patient_data():
@@ -446,12 +472,7 @@ def auth_patient_data():
         timezone(user.timezone).localize(datetime(calendar_year, calendar_month, 1, 4, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None),
         timezone(user.timezone).localize(datetime(calendar_year, calendar_month, 1, 4, tzinfo=None) + relativedelta(months=1)).astimezone(pytzutc).replace(tzinfo=None)  # christ
     )
-    dose_history_events = list(filter(lambda event: (
-        event.event_type in take_record_events and
-        event.dose_window in user.dose_windows and
-        event.event_time < requested_time_window[1] and
-        event.event_time > requested_time_window[0]
-        ), relevant_events))
+    dose_history_events = postprocess_dose_history_events(relevant_events, user, take_record_events, requested_time_window)
     # user_behavior_events = list(filter(lambda event: event.event_type in user_driven_events, relevant_events))
     health_metric_events = list(filter(lambda event: event.event_type in health_metric_event_types, relevant_events))
     print(health_metric_events)
@@ -843,17 +864,19 @@ def bot():
         elif user.state == UserState.PAYMENT_METHOD_REQUESTED:
             payment_requested_message_handler(user, incoming_phone_number, raw_message)
         elif user.state == UserState.PAUSED:
-            client.messages.create(
-                body=PAUSE_RESPONSE_MESSAGE,
-                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                to=incoming_phone_number
-            )
+            if "NOALERTS" not in os.environ:
+                client.messages.create(
+                    body=PAUSE_RESPONSE_MESSAGE,
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                    to=incoming_phone_number
+                )
         elif user.state == UserState.SUBSCRIPTION_EXPIRED:
-            client.messages.create(
-                body=SUBSCRIPTION_EXPIRED_RESPONSE_MESSAGE,
-                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                to=incoming_phone_number
-            )
+            if "NOALERTS" not in os.environ:
+                client.messages.create(
+                    body=SUBSCRIPTION_EXPIRED_RESPONSE_MESSAGE,
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                    to=incoming_phone_number
+                )
     return jsonify()
 
 
