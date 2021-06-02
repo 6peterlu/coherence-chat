@@ -210,7 +210,7 @@ const LandingPage = ({size}) => {
                                     onClick={async () => {
                                         setLoading(true);
                                         await landingPageSignup(name, email, phoneNumber, freeTrialCode);
-                                        await trackLandingPageSignup();
+                                        trackLandingPageSignup(phoneNumber);
                                         setLoading(false);
                                         setSubmittedForm(true);
                                     }}
@@ -367,7 +367,7 @@ const LandingPage = ({size}) => {
                                     onClick={async () => {
                                         setLoading(true);
                                         await landingPageSignup(name, email, phoneNumber, freeTrialCode);
-                                        await trackLandingPageSignup();
+                                        trackLandingPageSignup(phoneNumber);
                                         setLoading(false);
                                         setSubmittedForm(true);
                                     }}
@@ -522,7 +522,7 @@ const LandingPage = ({size}) => {
                                         onClick={async () => {
                                             setLoading(true);
                                             await landingPageSignup(name, email, phoneNumber, freeTrialCode);
-                                            await trackLandingPageSignup();
+                                            trackLandingPageSignup(phoneNumber);
                                             setLoading(false);
                                             setSubmittedForm(true);
                                         }}

@@ -115,12 +115,12 @@ export const trackResumedService = (userId) => {
 }
 
 
-export const trackLandingPageSignup = (userId) => {
+export const trackLandingPageSignup = (phoneNumber) => {
     if (shouldLogAnalytics) {
         ReactGA.event({
             category: "Growth",
             action: "Signed up on landing page",
-            label: userId
+            label: phoneNumber
         });
     }
 }
