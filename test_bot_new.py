@@ -1,4 +1,5 @@
 from bot import (
+    postprocess_dose_history_events,
     send_intro_text_new
 )
 import pytest
@@ -1030,3 +1031,24 @@ def test_trial_user_payment_endpoint_side_effects(mock_sub_create, mock_stripe_c
     client.get("/user/getPaymentData", headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")})
     assert user_record.stripe_customer_id == "cus_test"
 
+
+def test_timezone_change_idempotency(
+    user_record,
+    dose_window_record,
+    medication_record,
+    medication_take_event_record_in_dose_window,
+    db_session
+):
+    original_event_time = medication_take_event_record_in_dose_window.event_time
+    user_record.timezone = "US/Eastern"
+    db_session.add(user_record)
+    db_session.commit()
+    postprocess_dose_history_events(
+        [medication_take_event_record_in_dose_window],
+        user_record,
+        ["take", "skip", "boundary"],
+        [original_event_time - timedelta(days=1), original_event_time + timedelta(days=1)]
+    )
+    assert medication_take_event_record_in_dose_window.timezone == "US/Pacific"
+    assert user_record.timezone == "US/Eastern"
+    assert medication_take_event_record_in_dose_window.event_time == original_event_time
