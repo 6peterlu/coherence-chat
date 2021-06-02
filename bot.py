@@ -623,7 +623,7 @@ def react_login():
     user = User.query.filter_by(phone_number=phone_number).one_or_none()
     if not user:
         no_user_found_event = EventLog(
-            "login_flow", None, None, None, "failed: no user found"
+            "login_flow", None, None, None, description="failed: no user found"
         )
         db.session.add(no_user_found_event)
         db.session.commit()
@@ -631,14 +631,14 @@ def react_login():
     if user.verify_password(password):
         print("returning token")
         password_verified_event = EventLog(
-            "login_flow", user.id, None, None, "succeeded: password verified"
+            "login_flow", user.id, None, None, description="succeeded: password verified"
         )
         db.session.add(password_verified_event)
         db.session.commit()
         return jsonify({"token": user.generate_auth_token().decode('ascii'), "status": "success", "state": user.state.value}), 200  # return token
     if user.password_hash and password:
         incorrect_password_event = EventLog(
-            "login_flow", user.id, None, None, "failed: incorrect password"
+            "login_flow", user.id, None, None, description="failed: incorrect password"
         )
         db.session.add(incorrect_password_event)
         db.session.commit()
@@ -655,14 +655,14 @@ def react_login():
                 )
             user.secret_text_code = secret_code
             sending_secret_code_event = EventLog(
-                "login_flow", user.id, None, None, "in progress: secret code sent"
+                "login_flow", user.id, None, None, description="in progress: secret code sent"
             )
             db.session.add(sending_secret_code_event)
             db.session.commit()
             return jsonify({"status": "2fa"})
         else:
             requesting_password_event = EventLog(
-                "login_flow", user.id, None, None, "in progress: requesting password"
+                "login_flow", user.id, None, None, description="in progress: requesting password"
             )
             db.session.add(requesting_password_event)
             db.session.commit()
@@ -674,21 +674,21 @@ def react_login():
     if not secret_code_verified:
         print("failed here")
         invalid_secret_code_event = EventLog(
-            "login_flow", user.id, None, None, "failed: received invalid secret code"
+            "login_flow", user.id, None, None, description="failed: received invalid secret code"
         )
         db.session.add(invalid_secret_code_event)
         db.session.commit()
         return jsonify(), 401
     if not password:
         request_password_event = EventLog(
-            "login_flow", user.id, None, None, "in progress: requesting password"
+            "login_flow", user.id, None, None, description="in progress: requesting password"
         )
         db.session.add(request_password_event)
         db.session.commit()
         return jsonify({"status": "register"})
     user.set_password(password)
     create_password_event = EventLog(
-        "login_flow", user.id, None, None, "success: created password"
+        "login_flow", user.id, None, None, description="success: created password"
     )
     db.session.add(create_password_event)
     db.session.commit()
