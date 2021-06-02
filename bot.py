@@ -172,7 +172,6 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = os.environ['SQLALCHEMY_DATABASE_URI']
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SEND_FILE_MAX_AGE_DEFAULT = 0
-    SQLALCHEMY_ECHO = True
 
 # create app
 app = Flask(__name__, static_folder='./web/build', static_url_path='/')
