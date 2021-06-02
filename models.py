@@ -549,6 +549,7 @@ class UserSchema(Schema):
     state = EnumField(UserState, by_value=True)
     early_adopter = fields.Boolean()
     has_valid_payment_method = fields.Boolean()
+    end_of_service = fields.DateTime(format='%Y-%m-%dT%H:%M:%S+00:00')
 
 
 class DoseWindowSchema(Schema):

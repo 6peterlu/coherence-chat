@@ -120,6 +120,7 @@ from constants import (
     SERVER_ERROR_ALERT,
     SKIP_MSG,
     SUBSCRIPTION_EXPIRED_RESPONSE_MESSAGE,
+    SUBSCRIPTION_EXPIRING_MESSAGE,
     SUGGEST_DOSE_WINDOW_CHANGE,
     TAKE_MSG,
     TAKE_MSG_EXCITED,
@@ -1332,6 +1333,13 @@ def stripe_webhook():
         if related_user is None:
             return jsonify(), 401
         update_user_payment_method(related_user, event.data.object.payment_method, event.data.object.customer)
+        if event.type == "setup_intent.succeeded":
+            if "NOALERTS" not in os.environ:
+                client.messages.create(
+                    body=RENEWAL_COMPLETE,
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                    to=f"+1{related_user.phone_number}"
+                )
     elif event.type == "invoice.payment_succeeded":  # consider bill paid
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
         if related_user is None:
@@ -1409,6 +1417,17 @@ def stripe_webhook():
                 body=USER_PAYMENT_METHOD_FAIL_NOTIF.substitute(phone_number=related_user.phone_number),
                 from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                 to=f"+1{ADMIN_PHONE_NUMBER}"
+            )
+
+    elif event.type == "customer.subscription.trial_will_end":
+        related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
+        if related_user is None:
+            return jsonify(), 401
+        if "NOALERTS" not in os.environ:
+            client.messages.create(
+                body=SUBSCRIPTION_EXPIRING_MESSAGE,
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=f"+1{related_user.phone_number}"
             )
 
     else:

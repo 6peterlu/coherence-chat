@@ -185,7 +185,9 @@ BLOOD_PRESSURE_MESSAGE = Template("🕒 $time\nBlood pressure recorded: $blood_p
 
 PAUSE_RESPONSE_MESSAGE = "Your account is paused. You can unpause it at https://www.hellocoherence.com."
 
-SUBSCRIPTION_EXPIRED_RESPONSE_MESSAGE = "Your subscription has expired. You can renew it in the Subscriptions tab at https://www.hellocoherence.com/settings."
+SUBSCRIPTION_EXPIRING_MESSAGE = "Your free trial is expiring in a few days. Visit https://www.hellocoherence.com/settings if you'd like to add your payment information and avoid an interruption of service. Please reach out to our customer service line at (650) 667-1146 if you have any questions."
+
+SUBSCRIPTION_EXPIRED_RESPONSE_MESSAGE = "Your subscription has expired. You can renew it in the Subscriptions tab at https://www.hellocoherence.com/settings. Please reach out to our customer service line at (650) 667-1146 if you have any questions."
 
 SERVER_ERROR_ALERT = Template("Server has error. ($code, $name, $description)")
 

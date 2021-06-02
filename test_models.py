@@ -96,7 +96,8 @@ def test_user_schema(user_record, dose_window_record, medication_record, medicat
         'onboarding_type': 'standard',
         'state': 'active',
         'early_adopter': False,
-        'has_valid_payment_method': False
+        'has_valid_payment_method': False,
+        'end_of_service': None
     }
 
 def test_dose_window_schema(dose_window_record, medication_record, medication_record_2, user_record):
@@ -131,7 +132,8 @@ def test_dose_window_schema(dose_window_record, medication_record, medication_re
             'pending_announcement': None,
             'onboarding_type': 'standard',
             'state': 'active',
-            'has_valid_payment_method': False
+            'has_valid_payment_method': False,
+            'end_of_service': None
         }
     }
 
@@ -289,7 +291,8 @@ def test_medication_schema(dose_window_record, medication_record, user_record):
             'pending_announcement': None,
             'onboarding_type': 'standard',
             'state': 'active',
-            'has_valid_payment_method': False
+            'has_valid_payment_method': False,
+            'end_of_service': None
         },
         'active': True,
         'id': medication_record.id,

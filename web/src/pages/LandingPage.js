@@ -6,6 +6,7 @@ import AnimatingButton from "../components/AnimatingButton";
 import { useHistory } from "react-router-dom"
 
 import { Helmet } from "react-helmet";
+import { trackLandingPageSignup } from "../analytics";
 
 const heading_copy_1 = "Peace of mind with your medication.";
 const heading_copy_2 = "Your personal medication companion is here at last. No more struggling with annoying alarms. No more wondering whether you've taken a dose or not.";
@@ -209,6 +210,7 @@ const LandingPage = ({size}) => {
                                     onClick={async () => {
                                         setLoading(true);
                                         await landingPageSignup(name, email, phoneNumber, freeTrialCode);
+                                        await trackLandingPageSignup();
                                         setLoading(false);
                                         setSubmittedForm(true);
                                     }}
@@ -365,6 +367,7 @@ const LandingPage = ({size}) => {
                                     onClick={async () => {
                                         setLoading(true);
                                         await landingPageSignup(name, email, phoneNumber, freeTrialCode);
+                                        await trackLandingPageSignup();
                                         setLoading(false);
                                         setSubmittedForm(true);
                                     }}
@@ -519,6 +522,7 @@ const LandingPage = ({size}) => {
                                         onClick={async () => {
                                             setLoading(true);
                                             await landingPageSignup(name, email, phoneNumber, freeTrialCode);
+                                            await trackLandingPageSignup();
                                             setLoading(false);
                                             setSubmittedForm(true);
                                         }}

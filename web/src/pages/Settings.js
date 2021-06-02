@@ -33,6 +33,7 @@ const Settings = () => {
     },[history]);
 
     const shouldShowSubscriptionTab = React.useMemo(() => {
+        console.log(userProfileData);
         if (userProfileData === null) {
             return false;
         }
@@ -42,31 +43,33 @@ const Settings = () => {
         if (userProfileData.original.state === "subscription_expired") {
             return true;
         }
-        if (userProfileData.original.has_valid_payment_method) {
-            const daysRemaining = daysUntilDate(DateTime.fromHTTP(userProfileData.original.end_of_service));
+        if (!userProfileData.original.has_valid_payment_method) {
+            const daysRemaining = daysUntilDate(DateTime.fromISO(userProfileData.original.end_of_service));
+            console.log(daysRemaining);
             return daysRemaining <= 7;
+        } else {
+            return true;
         }
-        return false;
     }, [userProfileData])
     console.log(shouldShowSubscriptionTab);
     React.useEffect(() => {
         pullUserProfileData();
     }, [history, pullUserProfileData]);
     return (
-        <Box margin="large">
-            <Box align="start">
+        <Box margin="small">
+            <Box align="start" margin="large">
                 <Button
                     icon={<Box direction="row"><FormPreviousLink/><Home/></Box>}
                     label=" "
                     size="small"
                     onClick={() => {history.push("/")}}
                 />
+                <Heading size="small">Settings</Heading>
             </Box>
-            <Heading size="small">Settings</Heading>
             <Tabs alignSelf="stretch">
                 <Tab title="Profile" icon={<ContactInfo />}>
                     {userProfileData !== null ?
-                        <Box>
+                        <Box margin="medium">
                             <Box direction="row" align="center" justify="between">
                                 <Paragraph>Timezone: {userProfileData.original.timezone}</Paragraph>
                                 <Button label="edit" size="small" onClick={() => {setEditingField("timezone")}}/>
@@ -152,7 +155,9 @@ const Settings = () => {
                     }
                 </Tab>
                 {shouldShowSubscriptionTab ? (<Tab title="Subscription" icon={<Calendar/>}>
-                    <Payment />
+                    <Box margin={{horizontal: "medium"}}>
+                        <Payment />
+                    </Box>
                 </Tab>) : null}
             </Tabs>
         </Box>
