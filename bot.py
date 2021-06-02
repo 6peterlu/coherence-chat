@@ -172,6 +172,7 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = os.environ['SQLALCHEMY_DATABASE_URI']
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SEND_FILE_MAX_AGE_DEFAULT = 0
+    SQLALCHEMY_ECHO = True
 
 # create app
 app = Flask(__name__, static_folder='./web/build', static_url_path='/')
@@ -229,6 +230,7 @@ def verify_password(token, _):
     # I don't see how it would
     if g.user.end_of_service is not None and get_time_now() > convert_naive_to_local_machine_time(g.user.end_of_service):
         if g.user.state in [UserState.ACTIVE, UserState.PAUSED]:
+            g.user.pause(scheduler, send_pause_message, silent=True)
             g.user.state = UserState.SUBSCRIPTION_EXPIRED
             db.session.commit()
     return True
@@ -885,6 +887,7 @@ def bot():
         if user.end_of_service is not None:
             if get_time_now() > convert_naive_to_local_machine_time(user.end_of_service):
                 if user.state in [UserState.ACTIVE, UserState.PAUSED]:
+                    user.pause(scheduler, send_pause_message, silent=True)
                     user.state = UserState.SUBSCRIPTION_EXPIRED
                     db.session.commit()
         print(f"current user state: {user.state}")
@@ -1379,7 +1382,8 @@ def stripe_webhook():
                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                         to=f"+1{ADMIN_PHONE_NUMBER}"
                     )
-                related_user.state = UserState.ACTIVE  # autoactive after renewal
+                related_user.state = UserState.PAUSED  # autoactive after renewal
+                related_user.resume(scheduler, send_intro_text_new, send_upcoming_dose_message)  # not silent
             related_user.secondary_state = None  # not sure if this is needed but just in case
             db.session.commit()
         if related_user.state in [UserState.ACTIVE, UserState.PAUSED]:  # subscription auto-renewal

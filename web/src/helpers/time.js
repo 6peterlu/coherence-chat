@@ -18,3 +18,9 @@ export const getCurrentStandardTimezone = () => {
         return null;
     }
 }
+
+// accepts luxon dt object
+export const daysUntilDate = (dt) => {
+    const currentTime = DateTime.local();
+    return Math.floor(dt.diff(currentTime, 'days').days);
+}

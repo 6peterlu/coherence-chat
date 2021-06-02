@@ -524,6 +524,7 @@ class UserSchema(Schema):
     onboarding_type = fields.String()
     state = EnumField(UserState, by_value=True)
     early_adopter = fields.Boolean()
+    has_valid_payment_method = fields.Boolean()
 
 
 class DoseWindowSchema(Schema):

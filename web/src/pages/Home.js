@@ -32,7 +32,7 @@ import 'chartjs-adapter-luxon';
 import TimeInput from "../components/TimeInput";
 import AnimatingButton from "../components/AnimatingButton";
 
-import { getCurrentStandardTimezone } from "../helpers/time";
+import { daysUntilDate, getCurrentStandardTimezone } from "../helpers/time";
 
 const Home = () => {
     console.log(getCurrentStandardTimezone());
@@ -431,9 +431,7 @@ const Home = () => {
             buttonMessage = "Renew subscription";
         } else {
             if (patientData.subscriptionEndDate !== null && !patientData.hasValidPaymentMethod) {
-                const currentDay = DateTime.local();
-                const subscriptionEndDay = DateTime.fromHTTP(patientData.subscriptionEndDate);
-                const daysRemaining = Math.floor(subscriptionEndDay.diff(currentDay, 'days').days);
+                const daysRemaining = daysUntilDate(DateTime.fromHTTP(patientData.subscriptionEndDate));
                 if (daysRemaining <= 7) {
                     if (daysRemaining > 1 && daysRemaining <= 7) {
                         bodyMessage = `Your subscription expires in ${daysRemaining} days.`;

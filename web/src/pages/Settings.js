@@ -6,6 +6,9 @@ import { getUserProfile, updateUserPassword, updateUserTimezone } from "../api";
 import { useHistory } from "react-router-dom";
 import Payment from "./Payment";
 import AnimatingButton from "../components/AnimatingButton";
+import { daysUntilDate } from "../helpers/time";
+
+import { DateTime } from "luxon";
 
 const Settings = () => {
     const history = useHistory();
@@ -27,7 +30,25 @@ const Settings = () => {
         setUserProfileData({original: response, updated: response});
         setEditingField(null);
         setAnimating(false);
-    },[history])
+    },[history]);
+
+    const shouldShowSubscriptionTab = React.useMemo(() => {
+        if (userProfileData === null) {
+            return false;
+        }
+        if (userProfileData.original.end_of_service === null) {
+            return false;
+        }
+        if (userProfileData.original.state === "subscription_expired") {
+            return true;
+        }
+        if (userProfileData.original.has_valid_payment_method) {
+            const daysRemaining = daysUntilDate(DateTime.fromHTTP(userProfileData.original.end_of_service));
+            return daysRemaining <= 7;
+        }
+        return false;
+    }, [userProfileData])
+    console.log(shouldShowSubscriptionTab);
     React.useEffect(() => {
         pullUserProfileData();
     }, [history, pullUserProfileData]);
@@ -130,9 +151,7 @@ const Settings = () => {
                     ) : null
                     }
                 </Tab>
-                {userProfileData &&
-                !userProfileData.original.early_adopter &&
-                userProfileData.original.onboarding_type === "standard" ? (<Tab title="Subscription" icon={<Calendar/>}>
+                {shouldShowSubscriptionTab ? (<Tab title="Subscription" icon={<Calendar/>}>
                     <Payment />
                 </Tab>) : null}
             </Tabs>
