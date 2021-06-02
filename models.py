@@ -1,5 +1,5 @@
-import pytz
 from flask_sqlalchemy import SQLAlchemy
+import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 from datetime import datetime, timedelta, timezone as dt_timezone
 from pytz import utc as pytzutc, timezone
@@ -17,6 +17,18 @@ def get_time_now(tzaware=True):
     return datetime.now(pytzutc) if tzaware else datetime.utcnow()
 
 
+def duplicate_event(old_obj):
+    # SQLAlchemy related data class?
+    mapper = sa.inspect(type(old_obj))
+    print(type(old_obj))
+    new_obj = type(old_obj)(old_obj.phone_number, old_obj.name)
+
+    for name, col in mapper.columns.items():
+        # no PrimaryKey not Unique
+        if not col.primary_key and not col.unique:
+            setattr(new_obj, name, getattr(old_obj, name))
+
+    return new_obj
 # sqlalchemy models & deserializers
 
 dose_medication_linker = db.Table('dose_medication_linker',
@@ -481,6 +493,18 @@ class EventLog(db.Model):
     @property
     def aware_event_time(self):
         return self.event_time.replace(tzinfo=datetime.now().astimezone().tzinfo)
+
+    # TODO: make this automatic
+    def get_copy(self):
+        return EventLog(
+            self.event_type,
+            self.user_id,
+            self.dose_window_id,
+            self.medication_id,
+            self.event_time,
+            self.description,
+            self.timezone
+        )
 
 
 class Online(db.Model):

@@ -3,7 +3,6 @@ from flask_cors import CORS
 # import Flask-APScheduler
 from flask_apscheduler import APScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
-from sqlalchemy.orm.session import make_transient
 import os
 from twilio.rest import Client
 from datetime import datetime, timedelta
@@ -403,10 +402,7 @@ def get_patient_state():
 # expects event list which is a superset of history events
 def postprocess_dose_history_events(event_list, user, dose_history_events, requested_time_window):
     relevant_events = list(filter(lambda e: e.event_type in dose_history_events, event_list))
-    for event in relevant_events:  # exclude events from any potential db writes
-        _ = event.dose_window  # HACK: for some reason, this is needed? really sketchy
-        db.session.expunge(event)
-        make_transient(event)
+    copied_events = [event.get_copy() for event in relevant_events]
     # transform event time that is written in different timezone
     def transform_event_time(event):
         current_user_tz = timezone(user.timezone)
@@ -416,7 +412,7 @@ def postprocess_dose_history_events(event_list, user, dose_history_events, reque
         event.event_time = translated_event_time.astimezone(pytzutc).replace(tzinfo=None)
         return event
 
-    transformed_events = [transform_event_time(event) for event in relevant_events]
+    transformed_events = [transform_event_time(event) for event in copied_events]
     dose_history_events = list(filter(lambda event: (
         event.dose_window in user.dose_windows and
         event.event_time < requested_time_window[1] and
