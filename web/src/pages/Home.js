@@ -112,19 +112,6 @@ const Home = () => {
         return false;
     }, [calendarMonth, cookies, impersonating, patientData]);
 
-
-    // TODO: start here
-    const daysTillEndOfService = React.useMemo(() => {
-        if (patientData === null) {
-            return null;
-        }
-        if (patientData.subscriptionEndDate === null) {
-            return null;
-        }
-        const currentDay = DateTime.local();
-        console.log(patientData.subscriptionEndDate);
-    }, [patientData]);
-
     React.useEffect(() => {
         console.log("rerendering");
         console.log(shouldRerender);
@@ -433,6 +420,49 @@ const Home = () => {
         )
     }, [animating, currentTimeUTC, editingDoseWindow, impersonateOptions, loadData, patientData, validDoseWindows]);
 
+    const renderSubscriptionStatusNotification = React.useCallback(() => {
+        let bodyMessage = null;
+        let buttonMessage = null;
+        if (patientData === null) {
+            return null;
+        };
+        if (patientData.state === "subscription_expired") {
+            bodyMessage = `Your subscription expired on ${DateTime.fromHTTP(patientData.subscriptionEndDate).toLocaleString(DateTime.DATE_MED)}.`;
+            buttonMessage = "Renew subscription";
+        } else {
+            if (patientData.subscriptionEndDate !== null && !patientData.hasValidPaymentMethod) {
+                const currentDay = DateTime.local();
+                const subscriptionEndDay = DateTime.fromHTTP(patientData.subscriptionEndDate);
+                const daysRemaining = Math.floor(subscriptionEndDay.diff(currentDay, 'days').days);
+                if (daysRemaining <= 7) {
+                    if (daysRemaining > 1 && daysRemaining <= 7) {
+                        bodyMessage = `Your subscription expires in ${daysRemaining} days.`;
+                    } else if (daysRemaining === 1) {
+                        bodyMessage = `Your subscription expires in ${daysRemaining} day.`;
+                    } else {
+                        bodyMessage = `Your subscription is about to expire.`;
+                    }
+                    buttonMessage = "Add payment method";
+                }
+            }
+        }
+        if (bodyMessage === null || buttonMessage === null) {
+            return null;
+        }
+        return (
+            <Box
+                align="center"
+                background={{"color":"status-error", "dark": true}}
+                round="medium"
+                margin={{horizontal: "large", bottom: "medium"}}
+                pad="medium"
+            >
+                <Paragraph textAlign="center" margin={{vertical: "none"}}>{bodyMessage}</Paragraph>
+                <Button label={buttonMessage} onClick={() => { history.push("/settings") }} margin={{top: "small"}}/>
+            </Box>
+        );
+    }, [history, patientData]);
+
     if (!cookies.token) {
         return <Redirect to="/welcome"/>;
     }
@@ -479,20 +509,7 @@ const Home = () => {
             <Box align="center">
                 <Heading size="small">Good {currentTimeOfDay}{patientData ? `, ${patientData.patientName}` : ""}.</Heading>
             </Box>
-            { patientData && patientData.state === "subscription_expired" ?
-                <Box
-                    align="center"
-                    background={{"color":"status-error", "dark": true}}
-                    round="medium"
-                    margin={{horizontal: "large", bottom: "medium"}}
-                    pad="medium"
-                >
-                    <Paragraph textAlign="center" margin={{vertical: "none"}}>Your subscription expired on {DateTime.fromHTTP(patientData.subscriptionEndDate).toLocaleString(DateTime.DATE_MED)}.</Paragraph>
-                    <Button label="Renew subscription" onClick={() => { history.push("/payment") }} margin={{top: "small"}}/>
-                </Box>
-                :
-                null
-            }
+            { renderSubscriptionStatusNotification() }
             {timezoneDiscrepancy ?
                 <Box
                     align="center"

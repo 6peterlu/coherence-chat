@@ -85,6 +85,7 @@ class User(db.Model):
     stripe_customer_id = db.Column(db.String)  # cross reference for stripe customer object.
     early_adopter = db.Column(db.Boolean)  # just some special treats for our early users!
     secret_text_code = db.Column(db.Integer)  # 2FA codes
+    has_valid_payment_method = db.Column(db.Boolean)
 
     def __init__(
         self,
@@ -110,6 +111,7 @@ class User(db.Model):
         self.end_of_service = end_of_service
         self.state = state
         self.early_adopter = False  # all new created users are False
+        self.has_valid_payment_method = False  # no newly created users have payment methods
 
     # TODO: determine bounds from dose window settings. for now, it's hardcoded to 4AM (which is not gonna work).
     @property

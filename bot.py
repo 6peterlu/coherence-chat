@@ -529,6 +529,7 @@ def auth_patient_data():
         "subscriptionEndDate": subscription_end_date,
         "earlyAdopterStatus": bool(user.early_adopter),
         "timezone": user.timezone,
+        "hasValidPaymentMethod": user.has_valid_payment_method,
         "token": g.user.generate_auth_token().decode('ascii')  # refresh auth token
     })
 
@@ -1142,16 +1143,16 @@ def update_user_password():
     return jsonify()
 
 def get_stripe_data(user):
-    if g.user.stripe_customer_id is None:
-        customer = stripe.Customer.create(name=g.user.name, phone=g.user.phone_number)
-        g.user.stripe_customer_id = customer.id
+    if user.stripe_customer_id is None:
+        customer = stripe.Customer.create(name=user.name, phone=user.phone_number)
+        user.stripe_customer_id = customer.id
         db.session.commit()
     else:
         customer = stripe.Customer.retrieve(
-            g.user.stripe_customer_id,
+            user.stripe_customer_id,
             expand=["subscriptions", "invoice_settings.default_payment_method"]
         )
-    if g.user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
+    if user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
         return customer, None  # we're verifying, terminate early
     # TODO: allow people to change their payment methods.
     secret_key = None
@@ -1167,7 +1168,7 @@ def get_stripe_data(user):
                     stripe.Subscription.delete(subscription.id)
         # case 1: user is creating and paying for subscription, return payment_intent
         # criteria for case 1: user is in payment_method_requested or subscription_expired
-        if g.user.state in [UserState.PAYMENT_METHOD_REQUESTED, UserState.SUBSCRIPTION_EXPIRED]:
+        if user.state in [UserState.PAYMENT_METHOD_REQUESTED, UserState.SUBSCRIPTION_EXPIRED]:
             subscription = stripe.Subscription.create(
                 customer=customer.id,
                 items=[{
@@ -1180,7 +1181,7 @@ def get_stripe_data(user):
             secret_key = subscription.latest_invoice.payment_intent.client_secret
         # user is creating payment method but not paying immediately, return setup_intent
         # criteria for case 2: user is active or paused and has end_of_service
-        elif g.user.state in [UserState.ACTIVE, UserState.PAUSED] and g.user.end_of_service is not None:
+        elif user.state in [UserState.ACTIVE, UserState.PAUSED] and user.end_of_service is not None:
             active_subscription = None
             if hasattr(customer, "subscriptions"):
                 for subscription in customer.subscriptions.data:
@@ -1304,6 +1305,18 @@ def user_submit_payment_info():
     return jsonify()
 
 
+def update_user_payment_method(user, pm_id, stripe_customer_id):
+    stripe.Customer.modify(stripe_customer_id, invoice_settings={"default_payment_method": pm_id})
+    if not user.has_valid_payment_method:
+        user.has_valid_payment_method = True
+        db.session.add(user)
+        db.session.commit()
+    if user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
+        user.secondary_state = None
+        db.session.add(user)
+        db.session.commit()
+
+
 @app.route("/webhook/stripe", methods=["POST"])
 def stripe_webhook():
     payload = request.json
@@ -1318,14 +1331,9 @@ def stripe_webhook():
     if event.type in ["payment_intent.succeeded", "setup_intent.succeeded"]:
         # set submitted card as customer's default payment method for future charging
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
-        stripe.Customer.modify(event.data.object.customer, invoice_settings={"default_payment_method": event.data.object.payment_method})
         if related_user is None:
             return jsonify(), 401
-        print(f"secondary state: {related_user.secondary_state}")
-        if related_user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
-            related_user.secondary_state = None
-            db.session.add(related_user)
-            db.session.commit()
+        update_user_payment_method(related_user, event.data.object.payment_method, event.data.object.customer)
     elif event.type == "invoice.payment_succeeded":  # consider bill paid
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
         if related_user is None:
@@ -1346,7 +1354,7 @@ def stripe_webhook():
                 print(subscription.latest_invoice.payment_intent)
                 print(subscription.blah)
                 if subscription.latest_invoice.payment_intent is not None:  # attach payment method, if there was one associated
-                    stripe.Customer.modify(event.data.object.customer, invoice_settings={"default_payment_method": subscription.latest_invoice.payment_intent.payment_method})
+                    update_user_payment_method(related_user, subscription.latest_invoice.payment_intent.payment_method, event.data.object.customer)
                 if "NOALERTS" not in os.environ:
                     client.messages.create(
                         body=ONBOARDING_COMPLETE,
@@ -1384,21 +1392,26 @@ def stripe_webhook():
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
         if related_user is None:
             return jsonify(), 401
-        if related_user.state == UserState.PAYMENT_METHOD_REQUESTED:
-            if related_user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
-                related_user.secondary_state = None  # clear verifying status
-            if "NOALERTS" not in os.environ:
-                client.messages.create(
-                    body=PAYMENT_METHOD_FAILURE,
-                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                    to=f"+1{related_user.phone_number}"
-                )
-                client.messages.create(
-                    body=USER_PAYMENT_METHOD_FAIL_NOTIF.substitute(phone_number=related_user.phone_number),
-                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                    to=f"+1{ADMIN_PHONE_NUMBER}"
-                )
+        if related_user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
+            related_user.secondary_state = None  # clear verifying status
+            db.session.add(related_user)
             db.session.commit()
+        if related_user.has_valid_payment_method:
+            related_user.has_valid_payment_method = False
+            db.session.add(related_user)
+            db.session.commit()
+        if "NOALERTS" not in os.environ:
+            client.messages.create(
+                body=PAYMENT_METHOD_FAILURE,
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=f"+1{related_user.phone_number}"
+            )
+            client.messages.create(
+                body=USER_PAYMENT_METHOD_FAIL_NOTIF.substitute(phone_number=related_user.phone_number),
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=f"+1{ADMIN_PHONE_NUMBER}"
+            )
+
     else:
         print(f"unhandled event type {event.type}")
 
