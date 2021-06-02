@@ -464,15 +464,17 @@ class EventLog(db.Model):
     event_time = db.Column(db.DateTime, nullable=False)
     timezone = db.Column(db.String, nullable=False)
 
-    def __init__(self, event_type, user_id, dose_window_id, medication_id, event_time=None, description=None):
+    def __init__(self, event_type, user_id, dose_window_id, medication_id, event_time=None, description=None, timezone=None):
         self.event_type = event_type
         self.user_id = user_id
         self.dose_window_id = dose_window_id
         self.medication_id = medication_id
         self.event_time = get_time_now() if event_time is None else event_time
         self.description = description
-        associated_user = User.query.get(user_id)
-        self.timezone = associated_user.timezone
+        if timezone is None:
+            associated_user = User.query.get(user_id)
+            timezone = associated_user.timezone
+        self.timezone = timezone
 
     @property
     def aware_event_time(self):

@@ -112,6 +112,19 @@ const Home = () => {
         return false;
     }, [calendarMonth, cookies, impersonating, patientData]);
 
+
+    // TODO: start here
+    const daysTillEndOfService = React.useMemo(() => {
+        if (patientData === null) {
+            return null;
+        }
+        if (patientData.subscriptionEndDate === null) {
+            return null;
+        }
+        const currentDay = DateTime.local();
+        console.log(patientData.subscriptionEndDate);
+    }, [patientData]);
+
     React.useEffect(() => {
         console.log("rerendering");
         console.log(shouldRerender);
