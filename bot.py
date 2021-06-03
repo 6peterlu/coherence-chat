@@ -505,7 +505,7 @@ def auth_patient_data():
     dose_windows = [DoseWindowSchema().dump(dw) for dw in sorted(user.active_dose_windows, key=lambda dw: dw.bounds_for_current_day[0])]  # sort by start time
     subscription_end_date = None
     if user.end_of_service is not None:
-        if user.state == UserState.SUBSCRIPTION_EXPIRED:
+        if user.state == UserState.SUBSCRIPTION_EXPIRED or not user.has_valid_payment_method:
             subscription_end_date = convert_naive_to_local_machine_time(user.end_of_service)
         else:
             subscription_end_date = convert_naive_to_local_machine_time(user.charge_date)
