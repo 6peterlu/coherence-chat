@@ -883,6 +883,7 @@ def bot():
         if user.end_of_service is not None:
             localized_end_of_service = convert_naive_to_local_machine_time(user.end_of_service)
             now = get_time_now()
+            print(localized_end_of_service - now)
             if now > localized_end_of_service:
                 if user.state in [UserState.ACTIVE, UserState.PAUSED]:
                     user.pause(scheduler, send_pause_message, silent=True)
