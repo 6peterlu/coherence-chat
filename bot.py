@@ -880,6 +880,7 @@ def bot():
     incoming_phone_number = request.values.get('From', None)
     user, dose_window = get_current_user_and_dose_window(incoming_phone_number[2:])
     if user:
+        print(user.end_of_service)
         if user.end_of_service is not None:
             localized_end_of_service = convert_naive_to_local_machine_time(user.end_of_service)
             now = get_time_now()
