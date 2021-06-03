@@ -434,11 +434,11 @@ const Home = () => {
                 const daysRemaining = daysUntilDate(DateTime.fromHTTP(patientData.subscriptionEndDate));
                 if (daysRemaining <= 7) {
                     if (daysRemaining > 1 && daysRemaining <= 7) {
-                        bodyMessage = `Your subscription expires in ${daysRemaining} days.`;
+                        bodyMessage = `Your free trial expires in ${daysRemaining} days.`;
                     } else if (daysRemaining === 1) {
-                        bodyMessage = `Your subscription expires in ${daysRemaining} day.`;
+                        bodyMessage = `Your free trial expires in ${daysRemaining} day.`;
                     } else {
-                        bodyMessage = `Your subscription is about to expire.`;
+                        bodyMessage = `Your free trial is about to expire.`;
                     }
                     buttonMessage = "Add payment method";
                 }

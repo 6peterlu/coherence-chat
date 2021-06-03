@@ -881,11 +881,20 @@ def bot():
     user, dose_window = get_current_user_and_dose_window(incoming_phone_number[2:])
     if user:
         if user.end_of_service is not None:
-            if get_time_now() > convert_naive_to_local_machine_time(user.end_of_service):
+            localized_end_of_service = convert_naive_to_local_machine_time(user.end_of_service)
+            now = get_time_now()
+            if now > localized_end_of_service:
                 if user.state in [UserState.ACTIVE, UserState.PAUSED]:
                     user.pause(scheduler, send_pause_message, silent=True)
                     user.state = UserState.SUBSCRIPTION_EXPIRED
                     db.session.commit()
+            elif localized_end_of_service - now <= timedelta(days=3) and not user.has_valid_payment_method:
+                if "NOALERTS" not in os.environ:
+                    client.messages.create(
+                        body=SUBSCRIPTION_EXPIRING_MESSAGE,
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                        to=incoming_phone_number
+                    )
         print(f"current user state: {user.state}")
         if user.state == UserState.ACTIVE:
             active_state_message_handler(incoming_msg_list, user, dose_window, incoming_phone_number, raw_message)
@@ -1419,16 +1428,17 @@ def stripe_webhook():
                 to=f"+1{ADMIN_PHONE_NUMBER}"
             )
 
-    elif event.type == "customer.subscription.trial_will_end":
-        related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
-        if related_user is None:
-            return jsonify(), 401
-        if "NOALERTS" not in os.environ:
-            client.messages.create(
-                body=SUBSCRIPTION_EXPIRING_MESSAGE,
-                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                to=f"+1{related_user.phone_number}"
-            )
+    # we're going to manage this case on our end, since we're not guaranteed stripe connection
+    # elif event.type == "customer.subscription.trial_will_end":
+    #     related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
+    #     if related_user is None:
+    #         return jsonify(), 401
+    #     if "NOALERTS" not in os.environ:
+    #         client.messages.create(
+    #             body=SUBSCRIPTION_EXPIRING_MESSAGE,
+    #             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+    #             to=f"+1{related_user.phone_number}"
+    #         )
 
     else:
         print(f"unhandled event type {event.type}")
