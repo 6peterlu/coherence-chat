@@ -22,5 +22,6 @@ export const getCurrentStandardTimezone = () => {
 // accepts luxon dt object
 export const daysUntilDate = (dt) => {
     const currentTime = DateTime.local();
+    console.log(dt.diff(currentTime, 'days');
     return Math.floor(dt.diff(currentTime, 'days').days);
 }
