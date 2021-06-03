@@ -1,18 +1,15 @@
 from flask import Flask, request, jsonify, send_from_directory, g
-import tzlocal
 from flask_cors import CORS
 # import Flask-APScheduler
 from flask_apscheduler import APScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
-from sqlalchemy.orm.session import make_transient
 import os
 from twilio.rest import Client
 from datetime import datetime, timedelta
-from functools import wraps
 from pytz import timezone, utc as pytzutc
 import parsedatetime
 import random
-from itertools import groupby
+import re
 from werkzeug.middleware.proxy_fix import ProxyFix
 from models import (
     LandingPageSignup,
@@ -53,8 +50,6 @@ from message_handlers import (
 from time_helpers import convert_naive_to_local_machine_time, get_start_of_day, get_time_now
 
 from dateutil.relativedelta import relativedelta
-
-from ai import get_reminder_time_within_range
 
 from apscheduler.events import (
     EVENT_JOB_ERROR,
@@ -125,6 +120,7 @@ from constants import (
     SERVER_ERROR_ALERT,
     SKIP_MSG,
     SUBSCRIPTION_EXPIRED_RESPONSE_MESSAGE,
+    SUBSCRIPTION_EXPIRING_MESSAGE,
     SUGGEST_DOSE_WINDOW_CHANGE,
     TAKE_MSG,
     TAKE_MSG_EXCITED,
@@ -233,6 +229,7 @@ def verify_password(token, _):
     # I don't see how it would
     if g.user.end_of_service is not None and get_time_now() > convert_naive_to_local_machine_time(g.user.end_of_service):
         if g.user.state in [UserState.ACTIVE, UserState.PAUSED]:
+            g.user.pause(scheduler, send_pause_message, silent=True)
             g.user.state = UserState.SUBSCRIPTION_EXPIRED
             db.session.commit()
     return True
@@ -384,7 +381,7 @@ def get_time_of_day(dose_window_obj):
 def landing_page_signup():
     new_signup = LandingPageSignup(
         request.json["name"],
-        request.json["phoneNumber"],
+        re.sub("[^0-9]", "", request.json["phoneNumber"]),
         request.json["email"],
         request.json["trialCode"]
     )
@@ -394,7 +391,7 @@ def landing_page_signup():
         client.messages.create(
             body=USER_SIGNUP_NOTIF.substitute(name=request.json["name"]),
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-            to=f"+1{request.json['name']}"
+            to=f"+1{ADMIN_PHONE_NUMBER}"
         )
     return jsonify()
 
@@ -406,10 +403,7 @@ def get_patient_state():
 # expects event list which is a superset of history events
 def postprocess_dose_history_events(event_list, user, dose_history_events, requested_time_window):
     relevant_events = list(filter(lambda e: e.event_type in dose_history_events, event_list))
-    for event in relevant_events:  # exclude events from any potential db writes
-        _ = event.dose_window  # HACK: for some reason, this is needed? really sketchy
-        db.session.expunge(event)
-        make_transient(event)
+    copied_events = [event.get_copy() for event in relevant_events]
     # transform event time that is written in different timezone
     def transform_event_time(event):
         current_user_tz = timezone(user.timezone)
@@ -419,7 +413,7 @@ def postprocess_dose_history_events(event_list, user, dose_history_events, reque
         event.event_time = translated_event_time.astimezone(pytzutc).replace(tzinfo=None)
         return event
 
-    transformed_events = [transform_event_time(event) for event in relevant_events]
+    transformed_events = [transform_event_time(event) for event in copied_events]
     dose_history_events = list(filter(lambda event: (
         event.dose_window in user.dose_windows and
         event.event_time < requested_time_window[1] and
@@ -511,7 +505,7 @@ def auth_patient_data():
     dose_windows = [DoseWindowSchema().dump(dw) for dw in sorted(user.active_dose_windows, key=lambda dw: dw.bounds_for_current_day[0])]  # sort by start time
     subscription_end_date = None
     if user.end_of_service is not None:
-        if user.state == UserState.SUBSCRIPTION_EXPIRED:
+        if user.state == UserState.SUBSCRIPTION_EXPIRED or not user.has_valid_payment_method:
             subscription_end_date = convert_naive_to_local_machine_time(user.end_of_service)
         else:
             subscription_end_date = convert_naive_to_local_machine_time(user.charge_date)
@@ -533,6 +527,7 @@ def auth_patient_data():
         "subscriptionEndDate": subscription_end_date,
         "earlyAdopterStatus": bool(user.early_adopter),
         "timezone": user.timezone,
+        "hasValidPaymentMethod": user.has_valid_payment_method,
         "token": g.user.generate_auth_token().decode('ascii')  # refresh auth token
     })
 
@@ -626,11 +621,26 @@ def react_login():
     print(phone_number)
     user = User.query.filter_by(phone_number=phone_number).one_or_none()
     if not user:
+        no_user_found_event = EventLog(
+            "login_flow", None, None, None, description="failed: no user found"
+        )
+        db.session.add(no_user_found_event)
+        db.session.commit()
         return jsonify(), 401
     if user.verify_password(password):
         print("returning token")
+        password_verified_event = EventLog(
+            "login_flow", user.id, None, None, description="succeeded: password verified"
+        )
+        db.session.add(password_verified_event)
+        db.session.commit()
         return jsonify({"token": user.generate_auth_token().decode('ascii'), "status": "success", "state": user.state.value}), 200  # return token
     if user.password_hash and password:
+        incorrect_password_event = EventLog(
+            "login_flow", user.id, None, None, description="failed: incorrect password"
+        )
+        db.session.add(incorrect_password_event)
+        db.session.commit()
         return jsonify(), 401
     phone_number_formatted = f"+11{phone_number}"
     if not secret_code:
@@ -643,9 +653,18 @@ def react_login():
                     to=phone_number_formatted
                 )
             user.secret_text_code = secret_code
+            sending_secret_code_event = EventLog(
+                "login_flow", user.id, None, None, description="in progress: secret code sent"
+            )
+            db.session.add(sending_secret_code_event)
             db.session.commit()
             return jsonify({"status": "2fa"})
         else:
+            requesting_password_event = EventLog(
+                "login_flow", user.id, None, None, description="in progress: requesting password"
+            )
+            db.session.add(requesting_password_event)
+            db.session.commit()
             return jsonify({"status": "password"})
     print(user.secret_text_code)
     print(secret_code)
@@ -653,10 +672,25 @@ def react_login():
     secret_code_verified = user.secret_text_code == secret_code
     if not secret_code_verified:
         print("failed here")
+        invalid_secret_code_event = EventLog(
+            "login_flow", user.id, None, None, description="failed: received invalid secret code"
+        )
+        db.session.add(invalid_secret_code_event)
+        db.session.commit()
         return jsonify(), 401
     if not password:
+        request_password_event = EventLog(
+            "login_flow", user.id, None, None, description="in progress: requesting password"
+        )
+        db.session.add(request_password_event)
+        db.session.commit()
         return jsonify({"status": "register"})
     user.set_password(password)
+    create_password_event = EventLog(
+        "login_flow", user.id, None, None, description="success: created password"
+    )
+    db.session.add(create_password_event)
+    db.session.commit()
     return jsonify({"status": "success", "token": user.generate_auth_token().decode('ascii'), "state": user.state.value})
 
 @app.route("/admin", methods=["GET"])
@@ -846,11 +880,23 @@ def bot():
     incoming_phone_number = request.values.get('From', None)
     user, dose_window = get_current_user_and_dose_window(incoming_phone_number[2:])
     if user:
+        print(user.end_of_service)
         if user.end_of_service is not None:
-            if get_time_now() > convert_naive_to_local_machine_time(user.end_of_service):
+            localized_end_of_service = convert_naive_to_local_machine_time(user.end_of_service)
+            now = get_time_now()
+            print(localized_end_of_service - now)
+            if now > localized_end_of_service:
                 if user.state in [UserState.ACTIVE, UserState.PAUSED]:
+                    user.pause(scheduler, send_pause_message, silent=True)
                     user.state = UserState.SUBSCRIPTION_EXPIRED
                     db.session.commit()
+            elif localized_end_of_service - now <= timedelta(days=3) and not user.has_valid_payment_method:
+                if "NOALERTS" not in os.environ:
+                    client.messages.create(
+                        body=SUBSCRIPTION_EXPIRING_MESSAGE,
+                        from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                        to=incoming_phone_number
+                    )
         print(f"current user state: {user.state}")
         if user.state == UserState.ACTIVE:
             active_state_message_handler(incoming_msg_list, user, dose_window, incoming_phone_number, raw_message)
@@ -1107,16 +1153,16 @@ def update_user_password():
     return jsonify()
 
 def get_stripe_data(user):
-    if g.user.stripe_customer_id is None:
-        customer = stripe.Customer.create(name=g.user.name, phone=g.user.phone_number)
-        g.user.stripe_customer_id = customer.id
+    if user.stripe_customer_id is None:
+        customer = stripe.Customer.create(name=user.name, phone=user.phone_number)
+        user.stripe_customer_id = customer.id
         db.session.commit()
     else:
         customer = stripe.Customer.retrieve(
-            g.user.stripe_customer_id,
+            user.stripe_customer_id,
             expand=["subscriptions", "invoice_settings.default_payment_method"]
         )
-    if g.user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
+    if user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
         return customer, None  # we're verifying, terminate early
     # TODO: allow people to change their payment methods.
     secret_key = None
@@ -1132,7 +1178,7 @@ def get_stripe_data(user):
                     stripe.Subscription.delete(subscription.id)
         # case 1: user is creating and paying for subscription, return payment_intent
         # criteria for case 1: user is in payment_method_requested or subscription_expired
-        if g.user.state in [UserState.PAYMENT_METHOD_REQUESTED, UserState.SUBSCRIPTION_EXPIRED]:
+        if user.state in [UserState.PAYMENT_METHOD_REQUESTED, UserState.SUBSCRIPTION_EXPIRED]:
             subscription = stripe.Subscription.create(
                 customer=customer.id,
                 items=[{
@@ -1145,7 +1191,7 @@ def get_stripe_data(user):
             secret_key = subscription.latest_invoice.payment_intent.client_secret
         # user is creating payment method but not paying immediately, return setup_intent
         # criteria for case 2: user is active or paused and has end_of_service
-        elif g.user.state in [UserState.ACTIVE, UserState.PAUSED] and g.user.end_of_service is not None:
+        elif user.state in [UserState.ACTIVE, UserState.PAUSED] and user.end_of_service is not None:
             active_subscription = None
             if hasattr(customer, "subscriptions"):
                 for subscription in customer.subscriptions.data:
@@ -1269,6 +1315,18 @@ def user_submit_payment_info():
     return jsonify()
 
 
+def update_user_payment_method(user, pm_id, stripe_customer_id):
+    stripe.Customer.modify(stripe_customer_id, invoice_settings={"default_payment_method": pm_id})
+    if not user.has_valid_payment_method:
+        user.has_valid_payment_method = True
+        db.session.add(user)
+        db.session.commit()
+    if user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
+        user.secondary_state = None
+        db.session.add(user)
+        db.session.commit()
+
+
 @app.route("/webhook/stripe", methods=["POST"])
 def stripe_webhook():
     payload = request.json
@@ -1283,14 +1341,16 @@ def stripe_webhook():
     if event.type in ["payment_intent.succeeded", "setup_intent.succeeded"]:
         # set submitted card as customer's default payment method for future charging
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
-        stripe.Customer.modify(event.data.object.customer, invoice_settings={"default_payment_method": event.data.object.payment_method})
         if related_user is None:
             return jsonify(), 401
-        print(f"secondary state: {related_user.secondary_state}")
-        if related_user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
-            related_user.secondary_state = None
-            db.session.add(related_user)
-            db.session.commit()
+        update_user_payment_method(related_user, event.data.object.payment_method, event.data.object.customer)
+        if event.type == "setup_intent.succeeded":
+            if "NOALERTS" not in os.environ:
+                client.messages.create(
+                    body=RENEWAL_COMPLETE,
+                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                    to=f"+1{related_user.phone_number}"
+                )
     elif event.type == "invoice.payment_succeeded":  # consider bill paid
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
         if related_user is None:
@@ -1311,7 +1371,7 @@ def stripe_webhook():
                 print(subscription.latest_invoice.payment_intent)
                 print(subscription.blah)
                 if subscription.latest_invoice.payment_intent is not None:  # attach payment method, if there was one associated
-                    stripe.Customer.modify(event.data.object.customer, invoice_settings={"default_payment_method": subscription.latest_invoice.payment_intent.payment_method})
+                    update_user_payment_method(related_user, subscription.latest_invoice.payment_intent.payment_method, event.data.object.customer)
                 if "NOALERTS" not in os.environ:
                     client.messages.create(
                         body=ONBOARDING_COMPLETE,
@@ -1336,7 +1396,8 @@ def stripe_webhook():
                         from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
                         to=f"+1{ADMIN_PHONE_NUMBER}"
                     )
-                related_user.state = UserState.ACTIVE  # autoactive after renewal
+                related_user.state = UserState.PAUSED  # autoactive after renewal
+                related_user.resume(scheduler, send_intro_text_new, send_upcoming_dose_message)  # not silent
             related_user.secondary_state = None  # not sure if this is needed but just in case
             db.session.commit()
         if related_user.state in [UserState.ACTIVE, UserState.PAUSED]:  # subscription auto-renewal
@@ -1349,21 +1410,38 @@ def stripe_webhook():
         related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
         if related_user is None:
             return jsonify(), 401
-        if related_user.state == UserState.PAYMENT_METHOD_REQUESTED:
-            if related_user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
-                related_user.secondary_state = None  # clear verifying status
-            if "NOALERTS" not in os.environ:
-                client.messages.create(
-                    body=PAYMENT_METHOD_FAILURE,
-                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                    to=f"+1{related_user.phone_number}"
-                )
-                client.messages.create(
-                    body=USER_PAYMENT_METHOD_FAIL_NOTIF.substitute(phone_number=related_user.phone_number),
-                    from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
-                    to=f"+1{ADMIN_PHONE_NUMBER}"
-                )
+        if related_user.secondary_state == UserSecondaryState.PAYMENT_VERIFICATION_PENDING:
+            related_user.secondary_state = None  # clear verifying status
+            db.session.add(related_user)
             db.session.commit()
+        if related_user.has_valid_payment_method:
+            related_user.has_valid_payment_method = False
+            db.session.add(related_user)
+            db.session.commit()
+        if "NOALERTS" not in os.environ:
+            client.messages.create(
+                body=PAYMENT_METHOD_FAILURE,
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=f"+1{related_user.phone_number}"
+            )
+            client.messages.create(
+                body=USER_PAYMENT_METHOD_FAIL_NOTIF.substitute(phone_number=related_user.phone_number),
+                from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+                to=f"+1{ADMIN_PHONE_NUMBER}"
+            )
+
+    # we're going to manage this case on our end, since we're not guaranteed stripe connection
+    # elif event.type == "customer.subscription.trial_will_end":
+    #     related_user = User.query.filter(User.stripe_customer_id == event.data.object.customer).one_or_none()
+    #     if related_user is None:
+    #         return jsonify(), 401
+    #     if "NOALERTS" not in os.environ:
+    #         client.messages.create(
+    #             body=SUBSCRIPTION_EXPIRING_MESSAGE,
+    #             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+    #             to=f"+1{related_user.phone_number}"
+    #         )
+
     else:
         print(f"unhandled event type {event.type}")
 

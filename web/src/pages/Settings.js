@@ -6,6 +6,9 @@ import { getUserProfile, updateUserPassword, updateUserTimezone } from "../api";
 import { useHistory } from "react-router-dom";
 import Payment from "./Payment";
 import AnimatingButton from "../components/AnimatingButton";
+import { daysUntilDate } from "../helpers/time";
+
+import { DateTime } from "luxon";
 
 const Settings = () => {
     const history = useHistory();
@@ -27,25 +30,46 @@ const Settings = () => {
         setUserProfileData({original: response, updated: response});
         setEditingField(null);
         setAnimating(false);
-    },[history])
+    },[history]);
+
+    const shouldShowSubscriptionTab = React.useMemo(() => {
+        console.log(userProfileData);
+        if (userProfileData === null) {
+            return false;
+        }
+        if (userProfileData.original.end_of_service === null) {
+            return false;
+        }
+        if (userProfileData.original.state === "subscription_expired") {
+            return true;
+        }
+        if (!userProfileData.original.has_valid_payment_method) {
+            const daysRemaining = daysUntilDate(DateTime.fromISO(userProfileData.original.end_of_service));
+            console.log(daysRemaining);
+            return daysRemaining <= 7;
+        } else {
+            return true;
+        }
+    }, [userProfileData])
+    console.log(shouldShowSubscriptionTab);
     React.useEffect(() => {
         pullUserProfileData();
     }, [history, pullUserProfileData]);
     return (
-        <Box margin="large">
-            <Box align="start">
+        <Box margin="small">
+            <Box align="start" margin="large">
                 <Button
                     icon={<Box direction="row"><FormPreviousLink/><Home/></Box>}
                     label=" "
                     size="small"
                     onClick={() => {history.push("/")}}
                 />
+                <Heading size="small">Settings</Heading>
             </Box>
-            <Heading size="small">Settings</Heading>
             <Tabs alignSelf="stretch">
                 <Tab title="Profile" icon={<ContactInfo />}>
                     {userProfileData !== null ?
-                        <Box>
+                        <Box margin="medium">
                             <Box direction="row" align="center" justify="between">
                                 <Paragraph>Timezone: {userProfileData.original.timezone}</Paragraph>
                                 <Button label="edit" size="small" onClick={() => {setEditingField("timezone")}}/>
@@ -130,10 +154,10 @@ const Settings = () => {
                     ) : null
                     }
                 </Tab>
-                {userProfileData &&
-                !userProfileData.original.early_adopter &&
-                userProfileData.original.onboarding_type === "standard" ? (<Tab title="Subscription" icon={<Calendar/>}>
-                    <Payment />
+                {shouldShowSubscriptionTab ? (<Tab title="Subscription" icon={<Calendar/>}>
+                    <Box margin={{horizontal: "medium"}}>
+                        <Payment />
+                    </Box>
                 </Tab>) : null}
             </Tabs>
         </Box>

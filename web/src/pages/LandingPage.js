@@ -3,9 +3,10 @@ import { Clear, Favorite, Info, Star } from "grommet-icons";
 import React from "react";
 import { landingPageSignup } from "../api";
 import AnimatingButton from "../components/AnimatingButton";
-import { useHistory } from "react-router-dom"
+import { useHistory, useLocation } from "react-router-dom"
 
 import { Helmet } from "react-helmet";
+import { trackLandingPageSignup } from "../analytics";
 
 const heading_copy_1 = "Peace of mind with your medication.";
 const heading_copy_2 = "Your personal medication companion is here at last. No more struggling with annoying alarms. No more wondering whether you've taken a dose or not.";
@@ -33,6 +34,7 @@ const reviews_copy_7 = "\"I find Coherence very uplifting, and it makes it so ea
 
 const cta_copy_1 = "We can't wait to be a part of your medication journey.";
 const cta_copy_2 = "Coherence is available now for $6.99 / month. Sign up below for free information!";
+const cta_copy_3 = "Sign up below to try Coherence free for 30 days. Cancel anytime.";
 
 
 const LandingPage = ({size}) => {
@@ -44,6 +46,8 @@ const LandingPage = ({size}) => {
     const [loading, setLoading] = React.useState(false);
     const [submittedForm, setSubmittedForm] = React.useState(false);
     const history = useHistory();
+    const location = useLocation();
+    const enableFreeTrial = location.pathname === "/signup";
 
     const formButtonState = React.useMemo(() => {
         if (!name) {
@@ -64,7 +68,8 @@ const LandingPage = ({size}) => {
             return { disabled: true, text: "Phone number is not 10 digits."}
         }
         if (freeTrialCode) {
-            if (freeTrialCode.toLowerCase() !== "vpc30") {
+            const freeTrialCodes = ["vpc30", "june30"]
+            if (!freeTrialCodes.includes(freeTrialCode.toLowerCase())) {
                 return { disabled: true, text: "Invalid trial code."}
             } else {
                 return { disabled: false, text: "Get your free 30-day trial!"}
@@ -184,7 +189,7 @@ const LandingPage = ({size}) => {
                 </Box>
                 <Box id="signup" align="center" pad="large">
                     <Heading size="small" textAlign="center" color="status-warning">{cta_copy_1}</Heading>
-                    <Paragraph textAlign="center">{cta_copy_2}</Paragraph>
+                    <Paragraph textAlign="center">{enableFreeTrial ? cta_copy_3 : cta_copy_2}</Paragraph>
                     {submittedForm ?
                         <Box width="large" background="white" round={true} pad="large" align="center">
                             <Paragraph textAlign="center">We've received your submission and will reach out to you shortly to complete signup. We can't wait for you to try Coherence!</Paragraph>
@@ -196,8 +201,12 @@ const LandingPage = ({size}) => {
                             <TextInput placeholder="kari@gmail.com" value={email} onChange={(e) => {setEmail(e.target.value)}}/>
                             <Paragraph>Phone number</Paragraph>
                             <TextInput placeholder="(123) 456-7890" value={phoneNumber} onChange={(e) => {setPhoneNumber(e.target.value)}}/>
-                            <Paragraph>Free trial code (optional)</Paragraph>
-                            <TextInput value={freeTrialCode} onChange={(e) => {setFreeTrialCode(e.target.value)}}/>
+                            {!enableFreeTrial ?
+                                <>
+                                    <Paragraph>Free trial code (optional)</Paragraph>
+                                    <TextInput value={freeTrialCode} onChange={(e) => {setFreeTrialCode(e.target.value)}}/>
+                                </> : null
+                            }
                             <Box width="small" alignSelf="center" margin={{vertical: "large"}}>
                                 <AnimatingButton
                                     label={formButtonState.text}
@@ -207,7 +216,8 @@ const LandingPage = ({size}) => {
                                     animating={loading}
                                     onClick={async () => {
                                         setLoading(true);
-                                        await landingPageSignup(name, email, phoneNumber, freeTrialCode);
+                                        await landingPageSignup(name, email, phoneNumber, enableFreeTrial ? "google" : freeTrialCode);
+                                        trackLandingPageSignup(phoneNumber);
                                         setLoading(false);
                                         setSubmittedForm(true);
                                     }}
@@ -340,7 +350,7 @@ const LandingPage = ({size}) => {
                 </Box>
                 <Box id="signup" align="center" pad="large">
                     <Heading size="small" textAlign="center" color="status-warning">{cta_copy_1}</Heading>
-                    <Paragraph textAlign="center">{cta_copy_2}</Paragraph>
+                    <Paragraph textAlign="center">{enableFreeTrial ? cta_copy_3 : cta_copy_2}</Paragraph>
                     {submittedForm ?
                         <Box width="large" background="white" round={true} pad="large" align="center">
                             <Paragraph textAlign="center">We've received your submission and will reach out to you shortly to complete signup. We can't wait for you to try Coherence!</Paragraph>
@@ -352,8 +362,12 @@ const LandingPage = ({size}) => {
                             <TextInput placeholder="kari@gmail.com" value={email} onChange={(e) => {setEmail(e.target.value)}}/>
                             <Paragraph>Phone number</Paragraph>
                             <TextInput placeholder="(123) 456-7890" value={phoneNumber} onChange={(e) => {setPhoneNumber(e.target.value)}}/>
-                            <Paragraph>Free trial code (optional)</Paragraph>
-                            <TextInput value={freeTrialCode} onChange={(e) => {setFreeTrialCode(e.target.value)}}/>
+                            {!enableFreeTrial ?
+                                <>
+                                    <Paragraph>Free trial code (optional)</Paragraph>
+                                    <TextInput value={freeTrialCode} onChange={(e) => {setFreeTrialCode(e.target.value)}}/>
+                                </> : null
+                            }
                             <Box width="small" alignSelf="center" margin={{vertical: "large"}}>
                                 <AnimatingButton
                                     label={formButtonState.text}
@@ -363,7 +377,8 @@ const LandingPage = ({size}) => {
                                     animating={loading}
                                     onClick={async () => {
                                         setLoading(true);
-                                        await landingPageSignup(name, email, phoneNumber, freeTrialCode);
+                                        await landingPageSignup(name, email, phoneNumber, enableFreeTrial ? "google" : freeTrialCode);
+                                        trackLandingPageSignup(phoneNumber);
                                         setLoading(false);
                                         setSubmittedForm(true);
                                     }}
@@ -494,7 +509,7 @@ const LandingPage = ({size}) => {
                 <Box id="signup">
                     <Box align="center" margin="small">
                         <Heading size="small" textAlign="center" color="status-warning">{cta_copy_1}</Heading>
-                        <Paragraph textAlign="center">{cta_copy_2}</Paragraph>
+                        <Paragraph textAlign="center">{enableFreeTrial ? cta_copy_3 : cta_copy_2}</Paragraph>
                         {submittedForm ?
                             <Box width="large" background="white" round={true} pad="large">
                                 <Paragraph textAlign="center">We've received your submission and will reach out to you shortly to complete signup. We can't wait for you to try Coherence!</Paragraph>
@@ -506,8 +521,12 @@ const LandingPage = ({size}) => {
                                 <TextInput placeholder="kari@gmail.com" value={email} onChange={(e) => {setEmail(e.target.value)}}/>
                                 <Paragraph>Phone number</Paragraph>
                                 <TextInput placeholder="(123) 456-7890" value={phoneNumber} onChange={(e) => {setPhoneNumber(e.target.value)}}/>
-                                <Paragraph>Free trial code (optional)</Paragraph>
-                                <TextInput value={freeTrialCode} onChange={(e) => {setFreeTrialCode(e.target.value)}}/>
+                                {!enableFreeTrial ?
+                                    <>
+                                        <Paragraph>Free trial code (optional)</Paragraph>
+                                        <TextInput value={freeTrialCode} onChange={(e) => {setFreeTrialCode(e.target.value)}}/>
+                                    </> : null
+                                }
                                 <Box width="small" alignSelf="center" margin={{vertical: "large"}}>
                                     <AnimatingButton
                                         label={formButtonState.text}
@@ -517,7 +536,8 @@ const LandingPage = ({size}) => {
                                         animating={loading}
                                         onClick={async () => {
                                             setLoading(true);
-                                            await landingPageSignup(name, email, phoneNumber, freeTrialCode);
+                                            await landingPageSignup(name, email, phoneNumber, enableFreeTrial ? "google" : freeTrialCode);
+                                            trackLandingPageSignup(phoneNumber);
                                             setLoading(false);
                                             setSubmittedForm(true);
                                         }}

@@ -553,7 +553,7 @@ def payment_requested_message_handler(
     user, incoming_phone_number, raw_message
 ):
     from bot import client
-    valid_free_trial_codes = ["vpc30"]
+    valid_free_trial_codes = ["vpc30", "june30"]
     if raw_message.lower() in valid_free_trial_codes:
         user.onboarding_type = "free trial"
         user.state = UserState.PAUSED

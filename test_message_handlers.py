@@ -257,6 +257,37 @@ def test_activity(
     assert scheduled_job is not None
     assert scheduled_job.next_run_time == datetime(2012, 1, 1, 17, 25, tzinfo=utc)
 
+@freeze_time("2012-01-01 17:55:00")
+@mock.patch("ai.get_reminder_time_within_range")
+def test_activity_too_late(
+    get_reminder_time_mock,
+    client, db_session, user_record, dose_window_record,
+    medication_record, scheduler
+):
+    get_reminder_time_mock.return_value = datetime(2012, 1, 1, 18, 5, tzinfo=utc)
+    active_state_message_handler(
+        [{
+            'type': 'activity',
+            'payload': {
+                'type': 'short',
+                'response': "Computing ideal reminder time...done. Enjoy your walk! We'll check in later.",
+                'concept': 'leisure'
+            },
+            'raw': 'walking'
+        }],
+        user_record,
+        dose_window_record,
+        f"+1{user_record.phone_number}",
+        'walking'
+    )
+    all_events = db_session.query(EventLog).all()
+    assert len(all_events) == 1
+    assert all_events[0].event_type == "activity"
+    assert all_events[0].user_id == user_record.id
+    assert all_events[0].dose_window_id == dose_window_record.id
+    assert all_events[0].medication_id is None
+    scheduled_job = scheduler.get_job(f"{dose_window_record.id}-followup-new")
+    assert scheduled_job is None
 
 @freeze_time("2012-01-01 17:00:00")
 @mock.patch("message_handlers.remove_jobs_helper")

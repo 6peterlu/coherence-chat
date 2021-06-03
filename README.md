@@ -33,3 +33,6 @@ push a non master branch to heroku master: `git push heroku +HEAD:master`
 
 ## data analysis
 dump prod DB to local: delete local analysis_db, then `heroku pg:pull postgresql-slippery-57674 analysis_db --app coherence-chat`
+
+## stripe local testing setup
+open new terminal tab and do `stripe listen --forward-to 5000` to forward stripe test events to local

@@ -1,9 +1,12 @@
-from bot import maybe_schedule_absent_new, send_absent_text_new, send_followup_text_new, send_intro_text_new
+from bot import (
+    postprocess_dose_history_events,
+    send_intro_text_new
+)
 import pytest
 from unittest import mock
 import os
 from freezegun import freeze_time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pytz import utc, timezone
 import tzlocal
 from requests.auth import _basic_auth_str
@@ -768,34 +771,6 @@ def test_requested_alarm_time_out_of_range(
     assert local_tz.localize(all_events[0].event_time) == datetime(2012, 1, 1, 17, tzinfo=utc)
 
 
-@freeze_time("2012-01-01 17:55:00")
-@mock.patch("bot.segment_message")
-@mock.patch("bot.get_reminder_time_within_range")
-def test_activity_too_late(
-    get_reminder_time_mock,  segment_message_mock,
-    client, db_session, user_record, dose_window_record,
-    medication_record, scheduler
-):
-    get_reminder_time_mock.return_value = datetime(2012, 1, 1, 18, 5, tzinfo=utc)
-    segment_message_mock.return_value = [{
-        'type': 'activity',
-        'payload': {
-            'type': 'short',
-            'response': "Computing ideal reminder time...done. Enjoy your walk! We'll check in later.",
-            'concept': 'leisure'
-        },
-        'raw': 'walking'
-    }]
-    client.post("/bot", query_string={"From": "+13604508655"})
-    all_events = db_session.query(EventLog).all()
-    assert len(all_events) == 1
-    assert all_events[0].event_type == "activity"
-    assert all_events[0].user_id == user_record.id
-    assert all_events[0].dose_window_id == dose_window_record.id
-    assert all_events[0].medication_id is None
-    scheduled_job = scheduler.get_job(f"{dose_window_record.id}-followup-new")
-    assert scheduled_job is None
-
 @freeze_time("2012-01-01 17:00:00")
 @mock.patch("bot.segment_message")
 def test_activity_out_of_range(
@@ -996,6 +971,45 @@ def test_stripe_webhook_payment_succeeded(
     assert user_record.secondary_state is None
 
 
+
+@mock.patch("stripe.Subscription.retrieve")
+@mock.patch("stripe.Subscription.modify")
+def test_stripe_webhook_payment_succeeded_on_expired_account(
+    mock_subscription_modify,
+    mock_subscription_retrieve,
+    client,
+    db_session,
+    user_record
+):
+    mock_sub_obj = mock.MagicMock()
+    mock_sub_obj.blah = "blah"
+    mock_sub_obj.latest_invoice.payment_intent = None
+    mock_subscription_retrieve.return_value = mock_sub_obj
+    user_record.stripe_customer_id = "test"
+    user_record.state = UserState.SUBSCRIPTION_EXPIRED
+    user_record.secondary_state = UserSecondaryState.PAYMENT_VERIFICATION_PENDING
+    db_session.add(user_record)
+    db_session.commit()
+    client.post("/webhook/stripe", json={
+        'id':'evt_1IszINEInVrsQDJovXQvGKYh',
+        'object':'event',
+        'api_version':'2020-08-27',
+        'created':1621468762,
+        'data':{
+            'object':{
+                'id':'in_1IszIDEInVrsQDJopu5m7WwQ',
+                'object':'invoice',
+                'customer':'test',
+                'subscription':'sub_JW1KsvWg7fF0dq'
+            },
+        },
+        'type':'invoice.payment_succeeded'
+    })
+    assert mock_subscription_modify.called
+    assert user_record.state == UserState.ACTIVE
+    assert user_record.secondary_state is None
+
+
 def test_stripe_webhook_payment_failed(client, db_session, user_record):
     user_record.stripe_customer_id = "test"
     user_record.state = UserState.PAYMENT_METHOD_REQUESTED
@@ -1056,3 +1070,24 @@ def test_trial_user_payment_endpoint_side_effects(mock_sub_create, mock_stripe_c
     client.get("/user/getPaymentData", headers = {'Authorization': _basic_auth_str(user_record.generate_auth_token(), "")})
     assert user_record.stripe_customer_id == "cus_test"
 
+
+def test_timezone_change_idempotency(
+    user_record,
+    dose_window_record,
+    medication_record,
+    medication_take_event_record_in_dose_window,
+    db_session
+):
+    original_event_time = medication_take_event_record_in_dose_window.event_time
+    user_record.timezone = "US/Eastern"
+    db_session.add(user_record)
+    db_session.commit()
+    postprocess_dose_history_events(
+        [medication_take_event_record_in_dose_window],
+        user_record,
+        ["take", "skip", "boundary"],
+        [original_event_time - timedelta(days=1), original_event_time + timedelta(days=1)]
+    )
+    assert medication_take_event_record_in_dose_window.timezone == "US/Pacific"
+    assert user_record.timezone == "US/Eastern"
+    assert medication_take_event_record_in_dose_window.event_time == original_event_time

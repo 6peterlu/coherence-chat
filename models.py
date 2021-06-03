@@ -1,5 +1,5 @@
-import pytz
 from flask_sqlalchemy import SQLAlchemy
+import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 from datetime import datetime, timedelta, timezone as dt_timezone
 from pytz import utc as pytzutc, timezone
@@ -17,6 +17,18 @@ def get_time_now(tzaware=True):
     return datetime.now(pytzutc) if tzaware else datetime.utcnow()
 
 
+def duplicate_event(old_obj):
+    # SQLAlchemy related data class?
+    mapper = sa.inspect(type(old_obj))
+    print(type(old_obj))
+    new_obj = type(old_obj)(old_obj.phone_number, old_obj.name)
+
+    for name, col in mapper.columns.items():
+        # no PrimaryKey not Unique
+        if not col.primary_key and not col.unique:
+            setattr(new_obj, name, getattr(old_obj, name))
+
+    return new_obj
 # sqlalchemy models & deserializers
 
 dose_medication_linker = db.Table('dose_medication_linker',
@@ -85,6 +97,7 @@ class User(db.Model):
     stripe_customer_id = db.Column(db.String)  # cross reference for stripe customer object.
     early_adopter = db.Column(db.Boolean)  # just some special treats for our early users!
     secret_text_code = db.Column(db.Integer)  # 2FA codes
+    has_valid_payment_method = db.Column(db.Boolean)
 
     def __init__(
         self,
@@ -110,6 +123,7 @@ class User(db.Model):
         self.end_of_service = end_of_service
         self.state = state
         self.early_adopter = False  # all new created users are False
+        self.has_valid_payment_method = False  # no newly created users have payment methods
 
     # TODO: determine bounds from dose window settings. for now, it's hardcoded to 4AM (which is not gonna work).
     @property
@@ -464,19 +478,33 @@ class EventLog(db.Model):
     event_time = db.Column(db.DateTime, nullable=False)
     timezone = db.Column(db.String, nullable=False)
 
-    def __init__(self, event_type, user_id, dose_window_id, medication_id, event_time=None, description=None):
+    def __init__(self, event_type, user_id, dose_window_id, medication_id, event_time=None, description=None, timezone=None):
         self.event_type = event_type
         self.user_id = user_id
         self.dose_window_id = dose_window_id
         self.medication_id = medication_id
         self.event_time = get_time_now() if event_time is None else event_time
         self.description = description
-        associated_user = User.query.get(user_id)
-        self.timezone = associated_user.timezone
+        if timezone is None:
+            associated_user = User.query.get(user_id)
+            timezone = associated_user.timezone
+        self.timezone = timezone
 
     @property
     def aware_event_time(self):
         return self.event_time.replace(tzinfo=datetime.now().astimezone().tzinfo)
+
+    # TODO: make this automatic
+    def get_copy(self):
+        return EventLog(
+            self.event_type,
+            self.user_id,
+            self.dose_window_id,
+            self.medication_id,
+            self.event_time,
+            self.description,
+            self.timezone
+        )
 
 
 class Online(db.Model):
@@ -520,6 +548,8 @@ class UserSchema(Schema):
     onboarding_type = fields.String()
     state = EnumField(UserState, by_value=True)
     early_adopter = fields.Boolean()
+    has_valid_payment_method = fields.Boolean()
+    end_of_service = fields.DateTime(format='%Y-%m-%dT%H:%M:%S+00:00')
 
 
 class DoseWindowSchema(Schema):
