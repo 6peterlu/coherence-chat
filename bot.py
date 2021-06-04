@@ -133,7 +133,9 @@ from constants import (
     USER_ERROR_RESPONSE,
     USER_PAYMENT_METHOD_FAIL_NOTIF,
     USER_RENEWED_NOTIF,
+    USER_SIGNUP_FREE_TRIAL_STANDARD_RESPONSE,
     USER_SIGNUP_NOTIF,
+    USER_SIGNUP_STANDARD_RESPONSE,
     USER_SUBSCRIBED_NOTIF,
     WEIGHT_MESSAGE,
     WELCOME_BACK_MESSAGES
@@ -379,12 +381,15 @@ def get_time_of_day(dose_window_obj):
 
 @app.route("/user/landingPageSignup", methods=["POST"])
 def landing_page_signup():
+    stripped_phone_number = re.sub("[^0-9]", "", request.json["phoneNumber"])
     new_signup = LandingPageSignup(
         request.json["name"],
-        re.sub("[^0-9]", "", request.json["phoneNumber"]),
+        stripped_phone_number,
         request.json["email"],
         request.json["trialCode"]
     )
+    new_user = User(stripped_phone_number, request.json["name"], onboarding_type="free trial" if request.json["trialCode"] else "standard")
+    db.session.add(new_user)
     db.session.add(new_signup)
     db.session.commit()
     if "NOALERTS" not in os.environ:
@@ -392,6 +397,11 @@ def landing_page_signup():
             body=USER_SIGNUP_NOTIF.substitute(name=request.json["name"]),
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
             to=f"+1{ADMIN_PHONE_NUMBER}"
+        )
+        client.messages.create(
+            body=USER_SIGNUP_FREE_TRIAL_STANDARD_RESPONSE if request.json["trialCode"] else USER_SIGNUP_STANDARD_RESPONSE,
+            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+            to=f"+1{stripped_phone_number}"
         )
     return jsonify()
 

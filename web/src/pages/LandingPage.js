@@ -33,7 +33,7 @@ const reviews_copy_7 = "\"I find Coherence very uplifting, and it makes it so ea
 
 
 const cta_copy_1 = "We can't wait to be a part of your medication journey.";
-const cta_copy_2 = "Coherence is available now for $6.99 / month. Sign up below for free information!";
+const cta_copy_2 = "Coherence is available now for $6.99 / month. Sign up below!";
 const cta_copy_3 = "Sign up below to try Coherence free for 30 days. Cancel anytime.";
 
 

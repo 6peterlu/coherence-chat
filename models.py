@@ -110,7 +110,7 @@ class User(db.Model):
         timezone="US/Pacific",
         end_of_service=None,
         onboarding_type="standard",  # paying user
-        state=UserState.INTRO
+        state=UserState.DOSE_WINDOWS_REQUESTED
     ):
         self.phone_number = phone_number
         self.name = name
