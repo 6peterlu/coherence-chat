@@ -145,7 +145,7 @@ THANKS_MESSAGES = [
     "No problem at all."
 ]
 
-ALREADY_RECORDED = "We already have a record of this dose. If this is incorrect, feel free to report this error by texting 'x'."
+ALREADY_RECORDED = "I already have a record of this dose. If this is incorrect, feel free to report this error by texting 'x'."
 
 REQUEST_WEBSITE = "You can access your medication take history and much more at https://www.hellocoherence.com. Also, you can text us at our customer service number (650) 667-1146‬, and we'll back to you within 1 business day."
 
