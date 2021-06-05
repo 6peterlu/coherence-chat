@@ -414,6 +414,8 @@ def get_patient_state():
 def postprocess_dose_history_events(event_list, user, dose_history_events, requested_time_window):
     relevant_events = list(filter(lambda e: e.event_type in dose_history_events, event_list))
     copied_events = [event.get_copy() for event in relevant_events]
+    # for event in copied_events:
+    #     print(event.dose_window_id)
     # transform event time that is written in different timezone
     def transform_event_time(event):
         current_user_tz = timezone(user.timezone)
@@ -425,7 +427,7 @@ def postprocess_dose_history_events(event_list, user, dose_history_events, reque
 
     transformed_events = [transform_event_time(event) for event in copied_events]
     dose_history_events = list(filter(lambda event: (
-        event.dose_window in user.dose_windows and
+        event.dose_window_id in [dw.id for dw in user.dose_windows] and
         event.event_time < requested_time_window[1] and
         event.event_time > requested_time_window[0]
         ), transformed_events))
@@ -471,7 +473,6 @@ def auth_patient_data():
     ]
     health_metric_event_types = [f"hm_{name}" for name in METRIC_LIST]
     combined_list = list(set(take_record_events) | set(user_driven_events) | set(health_metric_event_types))
-    print(EventLog.query.filter(EventLog.event_type == "hm_weight", EventLog.user == user).order_by(EventLog.event_time.asc()).all())
     relevant_events = EventLog.query.filter(EventLog.event_type.in_(combined_list), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
     requested_time_window = (
         timezone(user.timezone).localize(datetime(calendar_year, calendar_month, 1, 4, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None),

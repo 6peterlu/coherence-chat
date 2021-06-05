@@ -496,7 +496,7 @@ class EventLog(db.Model):
 
     # TODO: make this automatic
     def get_copy(self):
-        return EventLog(
+        event = EventLog(
             self.event_type,
             self.user_id,
             self.dose_window_id,
@@ -505,6 +505,7 @@ class EventLog(db.Model):
             self.description,
             self.timezone
         )
+        return event
 
 
 class Online(db.Model):
