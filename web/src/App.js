@@ -33,6 +33,13 @@ const App = () => {
                 }}
               </ResponsiveContext.Consumer>
             )}/>
+            <Route exact path={'/ai'} render={() => (
+              <ResponsiveContext.Consumer>
+                {(size) => {
+                  return <LandingPage size={size}/>
+                }}
+              </ResponsiveContext.Consumer>
+            )}/>
             <Route exact path={"/privacy"} render={() => <PrivacyPolicy />}/>
             <Route exact path={"/settings"} render={() => <Settings />}/>
         </Switch>
