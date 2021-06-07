@@ -9,9 +9,9 @@ import { Helmet } from "react-helmet";
 import { trackLandingPageSignup } from "../analytics";
 
 const heading_copy_1 = "Peace of mind with your medication.";
-const heading_copy_1a = "Your own AI for remembering medications."
+const heading_copy_1a = "86% of Coherence users achieve medication adherence."
 const heading_copy_2 = "Your personal medication companion is here at last. No more struggling with annoying alarms. No more wondering whether you've taken a dose or not.";
-const heading_copy_2a = "Cutting edge behavioral AI developed at Stanford University, dedicated to remembering your medications. Because your health deserves the latest technology."
+const heading_copy_2a = "Coherence is a cutting edge behavioral AI developed at Stanford University, dedicated to remembering your medications. Because your health deserves the latest technology."
 const heading_copy_3 = "Sign up today!";
 
 const differentiator_copy_1 = "Here's what makes us different.";
