@@ -9,6 +9,9 @@ import matplotlib.pyplot as plt
 from sklearn.neighbors import KernelDensity
 from sklearn.model_selection import GridSearchCV
 
+from math import floor, sqrt
+from statistics import stdev
+
 DATABASE_URI = 'postgres+psycopg2://peterlu:hello@localhost:5432/analysis_db'
 
 engine = create_engine(DATABASE_URI)
@@ -76,10 +79,16 @@ def compute_adherence_metrics():
     active_user_list = s.query(User).filter(User.state.in_([UserState.ACTIVE, UserState.PAUSED, UserState.SUBSCRIPTION_EXPIRED])).all()
     adherent_user_count = 0
     nonadherent_user_count = 0
+    global_adherence_by_day = []
     for user in active_user_list:
         if user.phone_number == "3604508655":
             continue
-        dose_history_events = s.query(EventLog).filter(EventLog.user_id == user.id, EventLog.event_type.in_(["take", "boundary", "skip"])).all()
+        dose_history_events = s.query(EventLog).filter(
+            EventLog.user_id == user.id,
+            EventLog.event_type.in_(["take", "boundary", "skip"]
+        )).order_by(EventLog.event_time.asc()).all()
+        first_event_time = dose_history_events[0].event_time
+        adherence_fraction_by_day = []
         take_count = 0
         miss_count = 0
         skip_count = 0
@@ -90,13 +99,47 @@ def compute_adherence_metrics():
                 miss_count += 1
             elif event.event_type == "skip":
                 skip_count += 1
+            days_since_start = floor((event.event_time - first_event_time).days)
+            while days_since_start >= len(global_adherence_by_day):
+                global_adherence_by_day.append([0, 0, 0])
+            while days_since_start >= len(adherence_fraction_by_day):
+                adherence_fraction_by_day.append(None)
+                global_adherence_by_day[days_since_start][2] += 1
+
+            adherence_fraction_to_date = (take_count + skip_count) / (take_count + skip_count + miss_count)
+            adherence_fraction_by_day[days_since_start] = adherence_fraction_to_date
+            if adherence_fraction_to_date >= 0.8:
+                global_adherence_by_day[days_since_start][0] += 1
+            else:
+                global_adherence_by_day[days_since_start][1] += 1
+
         adherence_fraction = (take_count + skip_count) / (take_count + skip_count + miss_count)
         print(f"{user.name} {adherence_fraction}")
+        print(adherence_fraction_by_day)
         if adherence_fraction < 0.8:
             nonadherent_user_count += 1
         else:
             adherent_user_count += 1
     print(f"adherent user fraction = {adherent_user_count}/{adherent_user_count + nonadherent_user_count} = {adherent_user_count/(adherent_user_count + nonadherent_user_count)}")
+    print([(x[0] / (x[0] + x[1]), x[2]) for x in global_adherence_by_day])
+    adherence_by_day = [x[0] / (x[0] + x[1]) if x[2] > 1 else float("NaN") for x in global_adherence_by_day]
+    std_errors = [stdev([1] * x[0] + [0] * x[1]) / sqrt(x[2]) if x[2] > 1 else float("NaN") for x in global_adherence_by_day]
+    print(std_errors)
+    plt.plot(adherence_by_day)
+    plt.errorbar(
+        range(len(adherence_by_day)),
+        adherence_by_day,
+        yerr=std_errors,
+        ecolor=(0.5, 0.5, 0.5, 0.3),
+        capsize=3,
+        elinewidth=1,
+        linewidth=4
+    )
+    plt.ylim(0, 1)
+    plt.xlabel("days since starting Coherence")
+    plt.ylabel("Percent of users taking >= 80% of medications")
+    plt.grid(axis='y', linestyle='--', linewidth=1)
+    plt.show()
     # close the session to free resources
     s.close()
 
