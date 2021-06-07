@@ -1101,31 +1101,6 @@ def admin_deactivate_dose_window():
     return jsonify()
 
 
-@app.route("/user/updateDoseWindow", methods=["POST"])
-@auth.login_required
-def user_edit_dose_window():
-    incoming_data = request.json
-    start_hour = incoming_data["startHour"]
-    start_minute = incoming_data["startMinute"]
-    end_hour = incoming_data["endHour"]
-    end_minute = incoming_data["endMinute"]
-    dose_window_id = incoming_data["doseWindowId"]
-    relevant_dose_window = DoseWindow.query.get(dose_window_id)
-    if relevant_dose_window.user.id != g.user.id:
-        return jsonify(), 401
-    user_tz = timezone(relevant_dose_window.user.timezone)
-    # TODO: move tz conversion logic to time_helpers.py
-    # TODO: stop hardcoding the day here, you're going to have daylight savings issues
-    target_start_date = user_tz.localize(datetime(2012, 5, 12, start_hour, start_minute, 0, 0, tzinfo=None)).astimezone(pytzutc)
-    target_end_date = user_tz.localize(datetime(2012, 5, 12, end_hour, end_minute, 0, 0, tzinfo=None)).astimezone(pytzutc)
-    if relevant_dose_window is not None:
-        log_event_new("edit_dose_window", relevant_dose_window.user.id, relevant_dose_window.id)
-        relevant_dose_window.edit_window(target_start_date.hour,
-            target_start_date.minute, target_end_date.hour, target_end_date.minute,
-            scheduler, send_intro_text_new, send_boundary_text_new
-        )
-    return jsonify()
-
 @app.route("/user/profile", methods=["GET"])
 @auth.login_required
 def get_user_profile():
