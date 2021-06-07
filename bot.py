@@ -558,11 +558,18 @@ def update_dose_window_new():
         db.session.commit()
     if dose_window is None:
         return jsonify(), 400
-    dose_window.start_hour = int(incoming_dw_data["start_hour"])
-    dose_window.start_minute = int(incoming_dw_data["start_minute"])
-    dose_window.end_hour = int(incoming_dw_data["end_hour"])
-    dose_window.end_minute = int(incoming_dw_data["end_minute"])
-    db.session.commit()
+    user_tz = timezone(dose_window.user.timezone)
+    now = get_time_now()
+    start_hour = int(incoming_dw_data["start_hour"])
+    start_minute = int(incoming_dw_data["start_minute"])
+    end_hour = int(incoming_dw_data["end_hour"])
+    end_minute = int(incoming_dw_data["end_minute"])
+    target_start_date = user_tz.localize(datetime(now.year, now.month, now.day, start_hour, start_minute, 0, 0, tzinfo=None)).astimezone(pytzutc)
+    target_end_date = user_tz.localize(datetime(now.year, now.month, now.day, end_hour, end_minute, 0, 0, tzinfo=None)).astimezone(pytzutc)
+    dose_window.edit_window(target_start_date.hour,
+        target_start_date.minute, target_end_date.hour, target_end_date.minute,
+        scheduler, send_intro_text_new, send_boundary_text_new
+    )
     return jsonify()
 
 
