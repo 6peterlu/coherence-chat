@@ -203,6 +203,6 @@ USER_CANCELLED_NOTIF = Template("User with phone number $phone_number cancelled.
 
 USER_SIGNUP_NOTIF = Template("User with name $name signed up on landing page.")
 
-USER_SIGNUP_FREE_TRIAL_STANDARD_RESPONSE = "Hello and welcome to your free trial for Coherence, a new, more human way to help you achieve peace of mind with your medications. Here is an introductory video explaining our product and it’s features, so you can get a better idea of how Coherence can help you: https://youtu.be/2kH0-IE1QvU. How many dose windows would you like to set up today?"
+USER_SIGNUP_FREE_TRIAL_STANDARD_RESPONSE = "Hello and welcome to your free trial for Coherence, a new, more human way to help you achieve peace of mind with your medications. Here is an introductory video explaining our product and it’s features, so you can get a better idea of how Coherence can help you: https://www.hellocoherence.com/video. How many dose windows would you like to set up today?"
 
-USER_SIGNUP_STANDARD_RESPONSE = "Hello and welcome to Coherence, a new, more human way to help you achieve peace of mind with your medications. Here is an introductory video explaining our product and it’s features, so you can get a better idea of how Coherence can help you: https://youtu.be/2kH0-IE1QvU. How many dose windows would you like to set up today?"
+USER_SIGNUP_STANDARD_RESPONSE = "Hello and welcome to Coherence, a new, more human way to help you achieve peace of mind with your medications. Here is an introductory video explaining our product and it’s features, so you can get a better idea of how Coherence can help you: https://www.hellocoherence.com/video. How many dose windows would you like to set up today?"
