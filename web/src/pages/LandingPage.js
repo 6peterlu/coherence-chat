@@ -9,7 +9,7 @@ import { Helmet } from "react-helmet";
 import { trackLandingPageSignup } from "../analytics";
 
 const heading_copy_1 = "Peace of mind with your medication.";
-const heading_copy_1a = "86% of Coherence users achieve medication adherence."
+const heading_copy_1a = "86% of Coherence users achieve their medication goals."
 const heading_copy_2 = "Your personal medication companion is here at last. No more struggling with annoying alarms. No more wondering whether you've taken a dose or not.";
 const heading_copy_2a = "Coherence is a cutting edge behavioral AI developed at Stanford University, dedicated to remembering your medications. Because your health deserves the latest technology."
 const heading_copy_3 = "Sign up today!";
@@ -37,6 +37,9 @@ const reviews_copy_7 = "\"I find Coherence very uplifting, and it makes it so ea
 const cta_copy_1 = "We can't wait to be a part of your medication journey.";
 const cta_copy_2 = "Coherence is available now for $4 / month. Sign up below!";
 const cta_copy_3 = "Sign up below to try Coherence free for 30 days, then it's $4 / month. Cancel anytime.";
+
+
+const post_sub_copy_1 = "We've received your submission! Check your text messages for a message from us (:";
 
 
 const LandingPage = ({size}) => {
@@ -194,7 +197,7 @@ const LandingPage = ({size}) => {
                     <Paragraph textAlign="center">{enableFreeTrial ? cta_copy_3 : cta_copy_2}</Paragraph>
                     {submittedForm ?
                         <Box width="large" background="white" round={true} pad="large" align="center">
-                            <Paragraph textAlign="center">We've received your submission and will reach out to you shortly to complete signup. We can't wait for you to try Coherence!</Paragraph>
+                            <Paragraph textAlign="center">{post_sub_copy_1}</Paragraph>
                         </Box> :
                         <Box width="medium">
                             <Paragraph>Name</Paragraph>
@@ -355,7 +358,7 @@ const LandingPage = ({size}) => {
                     <Paragraph textAlign="center">{enableFreeTrial ? cta_copy_3 : cta_copy_2}</Paragraph>
                     {submittedForm ?
                         <Box width="large" background="white" round={true} pad="large" align="center">
-                            <Paragraph textAlign="center">We've received your submission and will reach out to you shortly to complete signup. We can't wait for you to try Coherence!</Paragraph>
+                            <Paragraph textAlign="center">{post_sub_copy_1}</Paragraph>
                         </Box> :
                         <Box width="large">
                             <Paragraph>Name</Paragraph>
@@ -514,7 +517,7 @@ const LandingPage = ({size}) => {
                         <Paragraph textAlign="center">{enableFreeTrial ? cta_copy_3 : cta_copy_2}</Paragraph>
                         {submittedForm ?
                             <Box width="large" background="white" round={true} pad="large">
-                                <Paragraph textAlign="center">We've received your submission and will reach out to you shortly to complete signup. We can't wait for you to try Coherence!</Paragraph>
+                                <Paragraph textAlign="center">{post_sub_copy_1}</Paragraph>
                             </Box> :
                             <Box width="large">
                                 <Paragraph>Name</Paragraph>
