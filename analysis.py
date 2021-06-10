@@ -29,7 +29,9 @@ def compute_activity_densities():
         "out_of_range",
         "not_interpretable",
         "requested_time_delay",
-        "activity"
+        "activity",
+        "manually_silenced",
+        "attempted_rerecord"
     ]
 
     qualifying_users = [
@@ -81,7 +83,7 @@ def compute_adherence_metrics():
     nonadherent_user_count = 0
     global_adherence_by_day = []
     for user in active_user_list:
-        if user.phone_number == "3604508655":
+        if user.phone_number == "3604508655" or user.phone_number == "3605214193":
             continue
         dose_history_events = s.query(EventLog).filter(
             EventLog.user_id == user.id,
@@ -100,6 +102,8 @@ def compute_adherence_metrics():
             elif event.event_type == "skip":
                 skip_count += 1
             days_since_start = floor((event.event_time - first_event_time).days)
+            if days_since_start > 60:
+                continue
             while days_since_start >= len(global_adherence_by_day):
                 global_adherence_by_day.append([0, 0, 0])
             while days_since_start >= len(adherence_fraction_by_day):
@@ -122,26 +126,78 @@ def compute_adherence_metrics():
             adherent_user_count += 1
     print(f"adherent user fraction = {adherent_user_count}/{adherent_user_count + nonadherent_user_count} = {adherent_user_count/(adherent_user_count + nonadherent_user_count)}")
     print([(x[0] / (x[0] + x[1]), x[2]) for x in global_adherence_by_day])
-    adherence_by_day = [x[0] / (x[0] + x[1]) if x[2] > 1 else float("NaN") for x in global_adherence_by_day]
+    adherence_by_day = [x[0] / (x[0] + x[1]) * 100 if x[2] > 1 else float("NaN") for x in global_adherence_by_day]
     std_errors = [stdev([1] * x[0] + [0] * x[1]) / sqrt(x[2]) if x[2] > 1 else float("NaN") for x in global_adherence_by_day]
     print(std_errors)
     plt.plot(adherence_by_day)
-    plt.errorbar(
-        range(len(adherence_by_day)),
-        adherence_by_day,
-        yerr=std_errors,
-        ecolor=(0.5, 0.5, 0.5, 0.3),
-        capsize=3,
-        elinewidth=1,
-        linewidth=4
-    )
-    plt.ylim(0, 1)
+    # plt.errorbar(
+    #     range(len(adherence_by_day)),
+    #     adherence_by_day,
+    #     yerr=std_errors,
+    #     ecolor=(0.5, 0.5, 0.5, 0.3),
+    #     capsize=3,
+    #     elinewidth=1,
+    #     linewidth=4
+    # )
+    plt.ylim(0, 100)
     plt.xlabel("days since starting Coherence")
     plt.ylabel("Percent of users taking >= 80% of medications")
+    plt.yticks(range(0, 100, 10))
     plt.grid(axis='y', linestyle='--', linewidth=1)
+    plt.title("Medication adherence under Coherence, 60 days")
     plt.show()
     # close the session to free resources
     s.close()
 
 
+def compute_engagement_metrics():
+    s = Session()
+    active_user_list = s.query(User).filter(User.state.in_([UserState.ACTIVE, UserState.PAUSED, UserState.SUBSCRIPTION_EXPIRED])).all()
+    users_active_by_day = []
+    for user in active_user_list:
+        if user.phone_number == "3604508655" or user.phone_number == "3605214193":
+            continue
+        user_driven_events = [
+            "take",
+            "skip",
+            "paused",
+            "resumed",
+            "user_reported_error",
+            "out_of_range",
+            "not_interpretable",
+            "requested_time_delay",
+            "activity",
+            "manually_silenced",
+            "attempted_rerecord"
+        ]
+        dose_history_events = s.query(EventLog).filter(
+            EventLog.user_id == user.id,
+            EventLog.event_type.in_(user_driven_events
+        )).order_by(EventLog.event_time.asc()).all()
+        first_event_time = dose_history_events[0].event_time
+        days_active_for_current_user = set()
+        for event in dose_history_events:
+            days_since_start = floor((event.event_time - first_event_time).days)
+            if days_since_start <= 60:
+                days_active_for_current_user.add(days_since_start)
+        days_active_for_current_user = sorted(list(days_active_for_current_user))
+        while days_active_for_current_user[-1] >= len(users_active_by_day):
+            users_active_by_day.append([0, 0])
+        for i in range(days_active_for_current_user[-1] + 1):
+            users_active_by_day[i][1] += 1
+        print(days_active_for_current_user)
+        for active_day in days_active_for_current_user:
+            users_active_by_day[active_day][0] += 1
+    engagement_percentages = [x[0] / x[1] * 100 for x in users_active_by_day]
+    plt.plot(engagement_percentages)
+    plt.ylim(0, 100)
+    plt.xlabel("days since starting Coherence")
+    plt.ylabel("Percent of users engaging with Coherence")
+    plt.grid(axis='y', linestyle='--', linewidth=1)
+    plt.title("Engagement percentage for Coherence, 60 days")
+    plt.show()
+    print(engagement_percentages)
+
+
 compute_adherence_metrics()
+# compute_engagement_metrics()
