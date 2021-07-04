@@ -110,7 +110,7 @@ class User(db.Model):
         timezone="US/Pacific",
         end_of_service=None,
         onboarding_type="standard",  # paying user
-        state=UserState.INTRO
+        state=UserState.DOSE_WINDOWS_REQUESTED
     ):
         self.phone_number = phone_number
         self.name = name
@@ -496,7 +496,7 @@ class EventLog(db.Model):
 
     # TODO: make this automatic
     def get_copy(self):
-        return EventLog(
+        event = EventLog(
             self.event_type,
             self.user_id,
             self.dose_window_id,
@@ -505,6 +505,7 @@ class EventLog(db.Model):
             self.description,
             self.timezone
         )
+        return event
 
 
 class Online(db.Model):

@@ -145,7 +145,7 @@ THANKS_MESSAGES = [
     "No problem at all."
 ]
 
-ALREADY_RECORDED = "We already have a record of this dose. If this is incorrect, feel free to report this error by texting 'x'."
+ALREADY_RECORDED = "I already have a record of this dose. If this is incorrect, feel free to report this error by texting 'x'."
 
 REQUEST_WEBSITE = "You can access your medication take history and much more at https://www.hellocoherence.com. Also, you can text us at our customer service number (650) 667-1146‬, and we'll back to you within 1 business day."
 
@@ -202,3 +202,7 @@ USER_PAYMENT_METHOD_FAIL_NOTIF = Template("User with phone number $phone_number 
 USER_CANCELLED_NOTIF = Template("User with phone number $phone_number cancelled.")
 
 USER_SIGNUP_NOTIF = Template("User with name $name signed up on landing page.")
+
+USER_SIGNUP_FREE_TRIAL_STANDARD_RESPONSE = "Hello and welcome to your free trial for Coherence, a new, more human way to help you achieve peace of mind with your medications. Here is an introductory video explaining our product and it’s features, so you can get a better idea of how Coherence can help you: https://www.hellocoherence.com/video. How many dose windows would you like to set up today?"
+
+USER_SIGNUP_STANDARD_RESPONSE = "Hello and welcome to Coherence, a new, more human way to help you achieve peace of mind with your medications. Here is an introductory video explaining our product and it’s features, so you can get a better idea of how Coherence can help you: https://www.hellocoherence.com/video. How many dose windows would you like to set up today?"

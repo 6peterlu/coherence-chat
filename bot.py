@@ -133,7 +133,9 @@ from constants import (
     USER_ERROR_RESPONSE,
     USER_PAYMENT_METHOD_FAIL_NOTIF,
     USER_RENEWED_NOTIF,
+    USER_SIGNUP_FREE_TRIAL_STANDARD_RESPONSE,
     USER_SIGNUP_NOTIF,
+    USER_SIGNUP_STANDARD_RESPONSE,
     USER_SUBSCRIBED_NOTIF,
     WEIGHT_MESSAGE,
     WELCOME_BACK_MESSAGES
@@ -379,12 +381,15 @@ def get_time_of_day(dose_window_obj):
 
 @app.route("/user/landingPageSignup", methods=["POST"])
 def landing_page_signup():
+    stripped_phone_number = re.sub("[^0-9]", "", request.json["phoneNumber"])
     new_signup = LandingPageSignup(
         request.json["name"],
-        re.sub("[^0-9]", "", request.json["phoneNumber"]),
+        stripped_phone_number,
         request.json["email"],
         request.json["trialCode"]
     )
+    new_user = User(stripped_phone_number, request.json["name"], onboarding_type="free trial" if request.json["trialCode"] else "standard")
+    db.session.add(new_user)
     db.session.add(new_signup)
     db.session.commit()
     if "NOALERTS" not in os.environ:
@@ -392,6 +397,11 @@ def landing_page_signup():
             body=USER_SIGNUP_NOTIF.substitute(name=request.json["name"]),
             from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
             to=f"+1{ADMIN_PHONE_NUMBER}"
+        )
+        client.messages.create(
+            body=USER_SIGNUP_FREE_TRIAL_STANDARD_RESPONSE if request.json["trialCode"] else USER_SIGNUP_STANDARD_RESPONSE,
+            from_=f"+1{TWILIO_PHONE_NUMBERS[os.environ['FLASK_ENV']]}",
+            to=f"+1{stripped_phone_number}"
         )
     return jsonify()
 
@@ -404,6 +414,8 @@ def get_patient_state():
 def postprocess_dose_history_events(event_list, user, dose_history_events, requested_time_window):
     relevant_events = list(filter(lambda e: e.event_type in dose_history_events, event_list))
     copied_events = [event.get_copy() for event in relevant_events]
+    # for event in copied_events:
+    #     print(event.dose_window_id)
     # transform event time that is written in different timezone
     def transform_event_time(event):
         current_user_tz = timezone(user.timezone)
@@ -415,7 +427,7 @@ def postprocess_dose_history_events(event_list, user, dose_history_events, reque
 
     transformed_events = [transform_event_time(event) for event in copied_events]
     dose_history_events = list(filter(lambda event: (
-        event.dose_window in user.dose_windows and
+        event.dose_window_id in [dw.id for dw in user.dose_windows] and
         event.event_time < requested_time_window[1] and
         event.event_time > requested_time_window[0]
         ), transformed_events))
@@ -461,7 +473,6 @@ def auth_patient_data():
     ]
     health_metric_event_types = [f"hm_{name}" for name in METRIC_LIST]
     combined_list = list(set(take_record_events) | set(user_driven_events) | set(health_metric_event_types))
-    print(EventLog.query.filter(EventLog.event_type == "hm_weight", EventLog.user == user).order_by(EventLog.event_time.asc()).all())
     relevant_events = EventLog.query.filter(EventLog.event_type.in_(combined_list), EventLog.user == user).order_by(EventLog.event_time.asc()).all()
     requested_time_window = (
         timezone(user.timezone).localize(datetime(calendar_year, calendar_month, 1, 4, tzinfo=None)).astimezone(pytzutc).replace(tzinfo=None),
@@ -547,11 +558,14 @@ def update_dose_window_new():
         db.session.commit()
     if dose_window is None:
         return jsonify(), 400
-    dose_window.start_hour = int(incoming_dw_data["start_hour"])
-    dose_window.start_minute = int(incoming_dw_data["start_minute"])
-    dose_window.end_hour = int(incoming_dw_data["end_hour"])
-    dose_window.end_minute = int(incoming_dw_data["end_minute"])
-    db.session.commit()
+    start_hour = int(incoming_dw_data["start_hour"])
+    start_minute = int(incoming_dw_data["start_minute"])
+    end_hour = int(incoming_dw_data["end_hour"])
+    end_minute = int(incoming_dw_data["end_minute"])
+    dose_window.edit_window(start_hour,
+        start_minute, end_hour, end_minute,
+        scheduler, send_intro_text_new, send_boundary_text_new
+    )
     return jsonify()
 
 
@@ -1086,31 +1100,6 @@ def admin_deactivate_dose_window():
         dw.deactivate(scheduler)
     return jsonify()
 
-
-@app.route("/user/updateDoseWindow", methods=["POST"])
-@auth.login_required
-def user_edit_dose_window():
-    incoming_data = request.json
-    start_hour = incoming_data["startHour"]
-    start_minute = incoming_data["startMinute"]
-    end_hour = incoming_data["endHour"]
-    end_minute = incoming_data["endMinute"]
-    dose_window_id = incoming_data["doseWindowId"]
-    relevant_dose_window = DoseWindow.query.get(dose_window_id)
-    if relevant_dose_window.user.id != g.user.id:
-        return jsonify(), 401
-    user_tz = timezone(relevant_dose_window.user.timezone)
-    # TODO: move tz conversion logic to time_helpers.py
-    # TODO: stop hardcoding the day here, you're going to have daylight savings issues
-    target_start_date = user_tz.localize(datetime(2012, 5, 12, start_hour, start_minute, 0, 0, tzinfo=None)).astimezone(pytzutc)
-    target_end_date = user_tz.localize(datetime(2012, 5, 12, end_hour, end_minute, 0, 0, tzinfo=None)).astimezone(pytzutc)
-    if relevant_dose_window is not None:
-        log_event_new("edit_dose_window", relevant_dose_window.user.id, relevant_dose_window.id)
-        relevant_dose_window.edit_window(target_start_date.hour,
-            target_start_date.minute, target_end_date.hour, target_end_date.minute,
-            scheduler, send_intro_text_new, send_boundary_text_new
-        )
-    return jsonify()
 
 @app.route("/user/profile", methods=["GET"])
 @auth.login_required

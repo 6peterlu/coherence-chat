@@ -9,6 +9,7 @@ import { ResponsiveContext } from "grommet";
 import LandingPage from './pages/LandingPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Settings from './pages/Settings';
+import OnboardingVideo from './pages/OnboardingVideo';
 
 
 const App = () => {
@@ -33,8 +34,16 @@ const App = () => {
                 }}
               </ResponsiveContext.Consumer>
             )}/>
+            <Route exact path={'/ai'} render={() => (
+              <ResponsiveContext.Consumer>
+                {(size) => {
+                  return <LandingPage size={size}/>
+                }}
+              </ResponsiveContext.Consumer>
+            )}/>
             <Route exact path={"/privacy"} render={() => <PrivacyPolicy />}/>
             <Route exact path={"/settings"} render={() => <Settings />}/>
+            <Route exact path={"/video"} render={() => <OnboardingVideo />}/>
         </Switch>
     </BrowserRouter>
   );

@@ -9,16 +9,18 @@ import { Helmet } from "react-helmet";
 import { trackLandingPageSignup } from "../analytics";
 
 const heading_copy_1 = "Peace of mind with your medication.";
+const heading_copy_1a = "86% of Coherence users achieve their medication goals."
 const heading_copy_2 = "Your personal medication companion is here at last. No more struggling with annoying alarms. No more wondering whether you've taken a dose or not.";
+const heading_copy_2a = "Coherence is a cutting edge behavioral AI developed at Stanford University, dedicated to remembering your medications. Because your health deserves the latest technology."
 const heading_copy_3 = "Sign up today!";
 
 const differentiator_copy_1 = "Here's what makes us different.";
 const differentiator_copy_2 = "Collaborative";
 const differentiator_copy_3 = "No apps needed";
-const differentiator_copy_4 = "Personalized";
+const differentiator_copy_4 = "Intelligent";
 const differentiator_copy_5 = "Coherence works with you to remind you when it's most convenient for you.";
 const differentiator_copy_6 = "Coherence will text you at your phone number, no downloads needed.";
-const differentiator_copy_7 = "Coherence learns about your habits over time and tailors its texting frequency and style around your preferences.";
+const differentiator_copy_7 = "Coherence uses advanced algorithms to learn about your habits over time and remind you about your medications when you're available.";
 
 const feature_copy_1 = "More than just a reminder.";
 
@@ -33,8 +35,11 @@ const reviews_copy_7 = "\"I find Coherence very uplifting, and it makes it so ea
 
 
 const cta_copy_1 = "We can't wait to be a part of your medication journey.";
-const cta_copy_2 = "Coherence is available now for $6.99 / month. Sign up below for free information!";
-const cta_copy_3 = "Sign up below to try Coherence free for 30 days. Cancel anytime.";
+const cta_copy_2 = "Coherence is available now for $6.99 / month. Sign up below!";
+const cta_copy_3 = "Sign up below to try Coherence free for 30 days, then it's $6.99 / month. Cancel anytime.";
+
+
+const post_sub_copy_1 = "We've received your submission! Check your text messages for a message from us (:";
 
 
 const LandingPage = ({size}) => {
@@ -97,8 +102,8 @@ const LandingPage = ({size}) => {
                 <Box align="center">
                     <Box direction="row" justify="evenly" align="center" fill="horizontal">
                         <Box direction="column" width="medium" margin="small">
-                            <Heading size="medium" color="status-warning">{heading_copy_1}</Heading>
-                            <Paragraph>{heading_copy_2}</Paragraph>
+                            <Heading size="medium" color="status-warning">{enableFreeTrial ? heading_copy_1a : heading_copy_1}</Heading>
+                            <Paragraph>{enableFreeTrial ? heading_copy_2a : heading_copy_2}</Paragraph>
                             <Box align="center">
                                 <Button label={heading_copy_3} primary={true} href="#signup" color="status-warning"/>
                             </Box>
@@ -192,7 +197,7 @@ const LandingPage = ({size}) => {
                     <Paragraph textAlign="center">{enableFreeTrial ? cta_copy_3 : cta_copy_2}</Paragraph>
                     {submittedForm ?
                         <Box width="large" background="white" round={true} pad="large" align="center">
-                            <Paragraph textAlign="center">We've received your submission and will reach out to you shortly to complete signup. We can't wait for you to try Coherence!</Paragraph>
+                            <Paragraph textAlign="center">{post_sub_copy_1}</Paragraph>
                         </Box> :
                         <Box width="medium">
                             <Paragraph>Name</Paragraph>
@@ -353,7 +358,7 @@ const LandingPage = ({size}) => {
                     <Paragraph textAlign="center">{enableFreeTrial ? cta_copy_3 : cta_copy_2}</Paragraph>
                     {submittedForm ?
                         <Box width="large" background="white" round={true} pad="large" align="center">
-                            <Paragraph textAlign="center">We've received your submission and will reach out to you shortly to complete signup. We can't wait for you to try Coherence!</Paragraph>
+                            <Paragraph textAlign="center">{post_sub_copy_1}</Paragraph>
                         </Box> :
                         <Box width="large">
                             <Paragraph>Name</Paragraph>
@@ -512,7 +517,7 @@ const LandingPage = ({size}) => {
                         <Paragraph textAlign="center">{enableFreeTrial ? cta_copy_3 : cta_copy_2}</Paragraph>
                         {submittedForm ?
                             <Box width="large" background="white" round={true} pad="large">
-                                <Paragraph textAlign="center">We've received your submission and will reach out to you shortly to complete signup. We can't wait for you to try Coherence!</Paragraph>
+                                <Paragraph textAlign="center">{post_sub_copy_1}</Paragraph>
                             </Box> :
                             <Box width="large">
                                 <Paragraph>Name</Paragraph>
